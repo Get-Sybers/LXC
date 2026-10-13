@@ -1,0 +1,124 @@
+---
+argument_specs:
+  main:
+    short_description: "Ensure a hardened LXC exists, is running, is reachable over pct exec, and sits where Proxmox says it does."
+    description:
+      - >-
+        Runs on the Proxmox node (hosts: localhost, connection: local): facts,
+        preflight, create, start, connect (add_host over
+        community.proxmox.proxmox_pct_remote into lxc_guest_group), postcheck.
+        PVE API auth for the create comes from the play's
+        group/community.proxmox.proxmox module defaults (PROXMOX_* env).
+    options: &lxc_guest_options
+      lxc_guest_node:
+        type: str
+        required: false
+        description: "Proxmox node the CT is created on. Computed default: the collection variable lxc_node. The play must be executing on it."
+      lxc_guest_vmid:
+        type: int
+        required: false
+        default: 0
+        description: "CT id. Required in practice: preflight refuses 0."
+      lxc_guest_hostname:
+        type: str
+        required: false
+        default: ""
+        description: "Hostname of the CT and its name in the play inventory. Required in practice: preflight refuses an empty value."
+      lxc_guest_purpose:
+        type: str
+        required: false
+        default: ""
+        description: "Free text appended to the container description after the ownership marker. Never a secret."
+      lxc_guest_template:
+        type: str
+        required: false
+        description: "storage:vztmpl/<file> OS template. Computed default: the collection variable lxc_template."
+      lxc_guest_storage:
+        type: str
+        required: false
+        description: "Storage for the CT rootfs. Computed default: the collection variable lxc_storage."
+      lxc_guest_rootfs_gb:
+        type: int
+        required: false
+        default: 4
+      lxc_guest_cores:
+        type: int
+        required: false
+        default: 1
+      lxc_guest_memory_mb:
+        type: int
+        required: false
+        default: 512
+      lxc_guest_swap_mb:
+        type: int
+        required: false
+        default: 0
+      lxc_guest_net0:
+        type: str
+        required: false
+        description: "Full Proxmox net0 spec. Computed default: DHCP on the collection variable lxc_bridge. Must carry bridge=<name>."
+      lxc_guest_nameserver:
+        type: str
+        required: false
+        default: ""
+        description: "Optional DNS server for the CT (empty => inherit from DHCP/host)."
+      lxc_guest_features:
+        type: list
+        elements: str
+        required: false
+        default: []
+        description: "Extra container features, e.g. nesting=1. The container is unprivileged regardless."
+      lxc_guest_onboot:
+        type: bool
+        required: false
+        default: true
+      lxc_guest_pool:
+        type: str
+        required: false
+        default: ""
+        description: "Resource pool to place the CT in; empty for none."
+      lxc_guest_group:
+        type: str
+        required: false
+        default: lxc_guests
+        description: "Play-inventory group connect adds the running CT to."
+      lxc_guest_create_timeout:
+        type: int
+        required: false
+        default: 300
+      lxc_guest_baseline_marker:
+        type: str
+        required: false
+        description: "Path of the baseline marker inside the guest. Computed default: the collection variable lxc_baseline_marker_path."
+      lxc_guest_baseline_extra_purge:
+        type: list
+        elements: str
+        required: false
+        default: []
+        description: "Packages this guest must additionally never carry; baseline purges them."
+      lxc_guest_confirm_destroy:
+        type: bool
+        required: false
+        default: false
+        description: "remove refuses without this set true on the command line."
+  facts:
+    short_description: "Node-side discovery of the node, the template, the bridge and the CT id — writes nothing."
+    options: *lxc_guest_options
+  preflight:
+    short_description: "Assert every precondition before any write (read-only; needs facts first)."
+    options: *lxc_guest_options
+  create:
+    short_description: "Create and start the container, then connect (needs facts + preflight first)."
+    options: *lxc_guest_options
+  connect:
+    short_description: "Assert the CT is running, wait for its init, add it to the play inventory over proxmox_pct_remote."
+    options: *lxc_guest_options
+  postcheck:
+    short_description: "Re-read the CT config from Proxmox and assert ownership, placement, unprivileged, features and onboot."
+    options: *lxc_guest_options
+  baseline:
+    short_description: "Runs INSIDE the guest: purge the SSH server, refuse container runtimes, write the baseline marker."
+    options: *lxc_guest_options
+  remove:
+    short_description: "Opt-in destroy of a CT this role created — refuses without lxc_guest_confirm_destroy and refuses a CT that is not ours."
+    options: *lxc_guest_options

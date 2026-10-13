@@ -1,0 +1,11 @@
+---
+# A library of task files driven across plays: `container` (node side, via
+# lxc_guest), `server` (inside the guest), `remove` (node side, via lxc_guest).
+# A bare include is a mistake.
+- name: "Refuse a bare include — use a tasks_from entry point"
+  ansible.builtin.fail:
+    msg: >-
+      lxc_onepassword_connect has no default entry point. Drive it with
+      playbooks/deploy-onepassword-connect.yml, or include it with
+      tasks_from: container (on the node), then lxc_guest tasks_from: baseline
+      and this role's tasks_from: server (in the CT).

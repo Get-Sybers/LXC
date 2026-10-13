@@ -1,0 +1,15 @@
+---
+# Connection to the 1Password Connect server. The reflect playbook supplies
+# these from the vaulted inventory/secrets/onepassword.yml. The token is a SECRET
+# with no real default — the role fails fast when it is empty (standards §7).
+lxc_onepassword_item_host: ""
+lxc_onepassword_item_token: ""
+lxc_onepassword_item_vault_id: ""
+lxc_onepassword_item_validate_certs: true
+lxc_onepassword_item_health_path: /health
+# The item to upsert. fields is a list of {label, value, field_type, section?}
+# dicts; field_type is one of string/email/concealed/url/otp/date/month_year.
+lxc_onepassword_item_title: ""
+lxc_onepassword_item_category: api_credential
+lxc_onepassword_item_fields: []
+lxc_onepassword_item_state: present

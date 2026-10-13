@@ -1,0 +1,10 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Run the guest baseline (no sshd, no container runtime, marker)
+      ansible.builtin.include_role:
+        name: get_sybers.lxc.lxc_guest
+        tasks_from: baseline

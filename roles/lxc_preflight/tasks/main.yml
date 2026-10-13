@@ -1,0 +1,5 @@
+---
+- name: "Prove we run as root"
+  ansible.builtin.include_tasks: root.yml
+- name: "Prove this host is a Proxmox VE node with pct"
+  ansible.builtin.include_tasks: pve_node.yml

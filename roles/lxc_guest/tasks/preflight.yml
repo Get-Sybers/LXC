@@ -1,0 +1,103 @@
+---
+- name: "preflight | Facts must have run first"
+  ansible.builtin.assert:
+    that:
+      - __lxc_guest_nodename is defined
+      - __lxc_guest_ct_exists is defined
+    fail_msg: "Include tasks_from: facts.yml before preflight.yml (tasks/main.yml does)."
+    quiet: true
+- name: "preflight | The required placement inputs are present"
+  ansible.builtin.assert:
+    that:
+      - lxc_guest_node | length > 0
+      - lxc_guest_vmid | int > 0
+      - lxc_guest_hostname | length > 0
+      - lxc_guest_template is match('^[a-z0-9_-]+:vztmpl/.+')
+      - lxc_guest_storage | length > 0
+      - __lxc_guest_bridge | length > 0
+    fail_msg: >-
+      lxc_guest needs lxc_guest_node, a non-zero lxc_guest_vmid, lxc_guest_hostname,
+      a storage:vztmpl/<file> lxc_guest_template, lxc_guest_storage and a
+      lxc_guest_net0 that names bridge=<name> (got node='{{ lxc_guest_node }}',
+      vmid={{ lxc_guest_vmid }}, hostname='{{ lxc_guest_hostname }}',
+      template='{{ lxc_guest_template }}', storage='{{ lxc_guest_storage }}',
+      net0='{{ lxc_guest_net0 }}').
+    quiet: true
+- name: "preflight | The container is unprivileged — the premise, not an option"
+  ansible.builtin.assert:
+    that: lxc_guest_unprivileged | bool
+    fail_msg: >-
+      lxc_guest_unprivileged has been overridden to false. Every container in
+      this collection is unprivileged (docs/01-Hardened-LXC-Premise.md); a
+      service that needs a privileged container does not belong here.
+    quiet: true
+- name: "preflight | The pct binary is present (this role runs on a Proxmox VE node)"
+  ansible.builtin.assert:
+    that: __lxc_guest_pct.stat.exists
+    fail_msg: >-
+      /usr/sbin/pct was not found — lxc_guest must run on a Proxmox VE node
+      (the playbook uses hosts: localhost, connection: local on the node).
+    quiet: true
+- name: "preflight | This play is executing on the node it will build on"
+  ansible.builtin.assert:
+    that: lxc_guest_node == __lxc_guest_nodename
+    fail_msg: >-
+      lxc_guest_node is '{{ lxc_guest_node }}' but this play is executing on
+      '{{ __lxc_guest_nodename }}'. pct is node-local, so every check here
+      would have been made against a different node than the one the API
+      call would create on. Run the play on {{ lxc_guest_node }}.
+    quiet: true
+- name: "preflight | The template storage could be listed"
+  ansible.builtin.assert:
+    that: __lxc_guest_templates_listed | bool
+    fail_msg: >-
+      Could not list vztmpl content on storage '{{ __lxc_guest_template_storage }}'
+      of node {{ lxc_guest_node }}
+      ({{ __lxc_guest_templates_raw.stderr | default('') | trim or 'no output' }}).
+      Refusing to guess whether the template exists.
+    quiet: true
+- name: "preflight | The OS template is on that storage"
+  ansible.builtin.assert:
+    that: lxc_guest_template in __lxc_guest_templates
+    fail_msg: >-
+      {{ lxc_guest_template }} is not on {{ __lxc_guest_template_storage }}
+      (present: {{ __lxc_guest_templates | join(', ') or 'none' }}). Download it
+      first: `pveam update && pveam download {{ __lxc_guest_template_storage }}
+      {{ (lxc_guest_template | string).split('/') | last }}`.
+    quiet: true
+- name: "preflight | The bridge exists on this node"
+  ansible.builtin.assert:
+    that: __lxc_guest_bridge_present | bool
+    fail_msg: >-
+      net0 names bridge={{ __lxc_guest_bridge }} but
+      /sys/class/net/{{ __lxc_guest_bridge }} does not exist on
+      {{ __lxc_guest_nodename }}. A CT on a nonexistent bridge boots looking
+      healthy with no network.
+    quiet: true
+- name: "preflight | The CT id is free, or is already ours"
+  ansible.builtin.assert:
+    that: (not __lxc_guest_ct_exists) or __lxc_guest_ct_is_ours
+    fail_msg: >-
+      CT {{ lxc_guest_vmid }} exists on {{ lxc_guest_node }} and its description
+      does not carry '{{ lxc_guest_description_marker }}', so it belongs to
+      something else (description:
+      '{{ __lxc_guest_config_json['description'] | default('<none>') }}').
+      Refusing to touch it. Pick a different lxc_guest_vmid, or — if this is a
+      container this collection inherited — adopt it deliberately:
+      `pct set {{ lxc_guest_vmid }} --description
+      "{{ lxc_guest_description_marker }} | {{ lxc_guest_purpose }}"`.
+    quiet: true
+- name: "preflight | The CT id is not held by a guest elsewhere in the cluster"
+  ansible.builtin.assert:
+    that: __lxc_guest_id_elsewhere | length == 0
+    fail_msg: >-
+      VMID {{ lxc_guest_vmid }} is in use on another node:
+      {{ __lxc_guest_id_elsewhere | join(', ') }}. IDs are cluster-wide.
+    quiet: true
+- name: "preflight | Passed"
+  ansible.builtin.debug:
+    msg: >-
+      LXC GUEST PREFLIGHT OK — will ensure CT {{ lxc_guest_vmid }}
+      ({{ lxc_guest_hostname }}) on {{ lxc_guest_node }} from
+      {{ lxc_guest_template }} on {{ lxc_guest_storage }}, net0={{ lxc_guest_net0 }},
+      unprivileged, features={{ lxc_guest_features | join(',') or '<none>' }}.

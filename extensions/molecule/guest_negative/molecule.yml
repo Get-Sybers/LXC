@@ -1,0 +1,11 @@
+---
+# lxc_guest negative — the ensure path must refuse to run where pct is absent
+# (i.e. not a PVE node), stopping at the labelled preflight assertion rather
+# than crashing in the proxmox module. No prepare; converge drives it.
+scenario:
+  test_sequence:
+    - dependency
+    - syntax
+    - create
+    - converge
+    - destroy

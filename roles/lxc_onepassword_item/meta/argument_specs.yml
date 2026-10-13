@@ -1,0 +1,62 @@
+---
+argument_specs:
+  main:
+    short_description: "Upsert one item into a 1Password Connect vault (the credential-mirror primitive), under no_log."
+    description:
+      - >-
+        Asserts the connection inputs, probes the Connect health endpoint so an
+        unreachable server becomes a labelled diagnostic (not a raw uri crash),
+        then upserts the item with onepassword.connect.generic_item. The module
+        reconciles by title, so re-running is idempotent. The secret-bearing
+        tasks are no_log and only the item shape (title + field count) is reported.
+    options:
+      lxc_onepassword_item_host:
+        type: str
+        required: false
+        default: ""
+        description: "Base URL of the 1Password Connect server, e.g. http://10.0.0.5:8080."
+      lxc_onepassword_item_token:
+        type: str
+        required: false
+        default: ""
+        description: "Connect access token (SECRET — supplied from the vaulted secrets file; no real default)."
+      lxc_onepassword_item_vault_id:
+        type: str
+        required: false
+        default: ""
+        description: "The 1Password vault id (or name) the token may write to."
+      lxc_onepassword_item_validate_certs:
+        type: bool
+        required: false
+        default: true
+        description: "Whether to validate the Connect server's TLS certificate (ignored for http://)."
+      lxc_onepassword_item_health_path:
+        type: str
+        required: false
+        default: "/health"
+        description: "Unauthenticated readiness path probed before the upsert (use /heartbeat for a pure liveness check)."
+      lxc_onepassword_item_title:
+        type: str
+        required: false
+        default: ""
+        description: "Item title — the identity generic_item reconciles on."
+      lxc_onepassword_item_category:
+        type: str
+        required: false
+        default: "api_credential"
+        description: "1Password item category (e.g. api_credential, password, database, login)."
+      lxc_onepassword_item_fields:
+        type: list
+        elements: dict
+        required: false
+        default: []
+        description: >-
+          Fields to set: a list of {label, value, field_type, section?} dicts
+          (field_type one of string/email/concealed/url/otp/date/month_year).
+          Values are SECRET — callers set them from the vaulted secrets file.
+      lxc_onepassword_item_state:
+        type: str
+        required: false
+        default: "present"
+        choices: ["present", "absent"]
+        description: "present upserts the item; absent removes it."

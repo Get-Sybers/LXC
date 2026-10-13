@@ -1,0 +1,32 @@
+---
+- name: Converge (expect a controlled failure)
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: The ensure path must refuse to run off a PVE node
+      block:
+        - name: Run lxc_guest where pct is absent
+          ansible.builtin.include_role:
+            name: get_sybers.lxc.lxc_guest
+          vars:
+            lxc_guest_vmid: 999
+            lxc_guest_hostname: molecule-guest
+      rescue:
+        - name: The role stopped at the pct preflight assertion
+          ansible.builtin.assert:
+            that:
+              - ansible_failed_result is defined
+              - "'/usr/sbin/pct was not found' in (ansible_failed_result.msg | default(''))"
+            fail_msg: >-
+              failed, but not at the pct preflight assertion:
+              {{ ansible_failed_result | default({}) }}
+            quiet: true
+        - name: Record the controlled failure
+          ansible.builtin.set_fact:
+            __lxc_guest_failed_cleanly: true
+    - name: The failure path was taken
+      ansible.builtin.assert:
+        that: __lxc_guest_failed_cleanly | default(false)
+        fail_msg: "lxc_guest did not fail cleanly when pct is absent"
+        quiet: true

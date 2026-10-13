@@ -1,0 +1,67 @@
+---
+# get_sybers.lxc — collection manifest.
+# ansible-standards §2: one fully-qualified name (directory, `name`, and every
+# role's prefix agree); each dependency bounded `>=x.y.z,<next-major`, with the
+# exact pin living only in requirements.yml.
+namespace: get_sybers
+name: lxc
+version: 0.1.0
+readme: README.md
+authors:
+  - get-sybers <99623331+Get-Sybers@users.noreply.github.com>
+description: >-
+  The hardened LXC tier of the Get-Sybers lab: one role that builds every
+  container the same way (unprivileged, no SSH, no container runtime, reached
+  only through pct exec from the node), plus one build role and one API-client
+  role per service that lives in such a container. A container is touched only
+  through the API it serves or through the roles in this collection.
+license:
+  - AGPL-3.0-only
+tags:
+  - proxmox
+  - lxc
+  - infrastructure
+  - onepassword
+repository: https://github.com/get-sybers/lxc
+documentation: https://github.com/get-sybers/lxc/blob/main/README.md
+homepage: https://github.com/get-sybers/lxc
+issues: https://github.com/get-sybers/lxc/issues
+dependencies:
+  # lxc_guest creates the container and reaches into it: community.proxmox.proxmox
+  # for the create and the proxmox_pct_remote connection plugin for every task
+  # that runs inside a guest.
+  "community.proxmox": ">=2.1.0,<3.0.0"
+  # lxc_onepassword_item mirrors credentials into the self-hosted 1Password
+  # Connect server via onepassword.connect.generic_item.
+  "onepassword.connect": ">=2.4.0,<3.0.0"
+build_ignore:
+  - .git*
+  - .github
+  - .ansible
+  - .cache
+  - dist
+  - .pre-commit-config.yaml
+  - .ansible-lint
+  - .yamllint
+  - .markdownlint-cli2.yaml
+  - .editorconfig
+  - .editorconfig-checker.json
+  - .pinact.yaml
+  - .gitleaks.toml
+  - .gitleaksignore
+  - .shellcheckrc
+  - lychee.toml
+  - .lycheeignore
+  - tox.ini
+  - tox-ansible.ini
+  - test-requirements.txt
+  - tests
+  - extensions
+  - scripts
+  - inventory
+  - docs
+  - SECURITY.md
+  - changelogs/.plugin-cache.yaml
+  - changelogs/fragments
+  - Makefile
+  - "*.tar.gz"

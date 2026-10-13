@@ -1,0 +1,4 @@
+# gitleaks fingerprint allowlist (docs/04). One `commit:path:rule:line`
+# fingerprint per line, each with a comment stating why it is a false positive.
+# Empty for now — real secrets are gitignored (inventory/secrets/) and never
+# committed; push protection and the gitleaks hook/CI keep it that way.

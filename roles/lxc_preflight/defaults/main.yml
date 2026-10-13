@@ -1,0 +1,8 @@
+---
+# The host every check executes on (the play's target unless a caller that
+# delegates its own work passes the same value).
+lxc_preflight_delegate_to: "{{ inventory_hostname }}"
+# The inventory group the Proxmox nodes belong to (a host not yet in `pvecm
+# nodes` — a single node, or one joining — is still admitted when it is a
+# member of this group).
+lxc_preflight_cluster_group: proxmox_nodes

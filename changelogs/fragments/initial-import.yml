@@ -1,0 +1,43 @@
+---
+release_summary: >-
+  First release of ``get_sybers.lxc``: the hardened LXC tier, moved out of the
+  ``get-sybers/proxmox`` repository (``get_sybers.cluster``) into a collection
+  that owns both the build of every container and every sanctioned way of
+  interacting with one.
+added:
+  - >-
+    ``lxc_guest`` — the one lifecycle every container goes through: facts,
+    preflight (the CT id is free or carries this collection's marker, the
+    bridge exists on the node, the container is unprivileged — a privileged
+    request is refused outright), create via ``community.proxmox.proxmox``,
+    start, wait for init, add to the play inventory over
+    ``community.proxmox.proxmox_pct_remote`` (``pct exec``; no SSH), post-check
+    the config from Proxmox, and an opt-in ``remove`` that refuses without
+    ``lxc_guest_confirm_destroy`` and refuses a CT that is not ours. Its
+    ``baseline`` entry point runs inside the guest: purges ``openssh-server``,
+    refuses a container runtime, and writes the baseline marker every service
+    role asserts before it configures anything.
+  - >-
+    ``lxc_preflight`` — the admission gate every node-side play includes first:
+    running as root, on a Proxmox VE node (``/etc/pve``, cluster membership or
+    the ``lxc_preflight_cluster_group`` inventory group), with ``pct`` present.
+  - >-
+    ``lxc_onepassword_connect`` and play ``deploy-onepassword-connect`` (moved
+    from ``cluster_onepassword_connect`` / ``cluster-onepassword-connect``):
+    the Connect LXC is created through ``lxc_guest``; inside it the
+    ``connect-api``/``connect-sync`` binaries are extracted from their pinned
+    official images via the Docker registry API and run as native ``systemd``
+    services under an unprivileged user. ``server`` now refuses a guest that
+    has not been through the ``lxc_guest`` baseline.
+  - >-
+    ``lxc_onepassword_item`` and play ``reflect-onepassword-credentials``
+    (moved from ``cluster_onepassword_item`` / ``cluster-onepassword-reflect``):
+    the API-client side — upsert one credential per entry of the vaulted
+    ``inventory/secrets/onepassword.yml`` into the Connect vault via
+    ``onepassword.connect.generic_item``, under ``no_log``.
+  - >-
+    ``scripts/check_lxc_boundary.py`` — the detector for the premise: only
+    ``lxc_guest`` may call ``pct``/``pvesh`` or ``community.proxmox.proxmox``,
+    no play or role may reach a guest over SSH or ``raw``, and every service
+    role's in-guest entry point asserts the baseline marker. Runs in
+    ``make conform`` and CI.

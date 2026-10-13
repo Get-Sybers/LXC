@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: lxc_onepassword_connect
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    Deploy a self-hosted 1Password Connect server as native systemd services in
+    a hardened Debian LXC — the connect-api/connect-sync binaries are extracted
+    from their official images; no Docker and no OCI runtime. The container
+    itself comes from lxc_guest.
+  company: Get-Sybers
+  license: AGPL-3.0-only
+  min_ansible_version: "2.19.0"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [onepassword, connect, proxmox, lxc, secrets]
+dependencies: []

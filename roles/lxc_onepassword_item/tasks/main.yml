@@ -1,0 +1,65 @@
+---
+- name: "Required mirror inputs are present"
+  ansible.builtin.assert:
+    that:
+      - lxc_onepassword_item_host | length > 0
+      - lxc_onepassword_item_vault_id | length > 0
+      - lxc_onepassword_item_title | length > 0
+      - lxc_onepassword_item_fields | length > 0
+    fail_msg: >-
+      lxc_onepassword_item needs lxc_onepassword_item_host,
+      lxc_onepassword_item_vault_id, lxc_onepassword_item_title and a
+      non-empty lxc_onepassword_item_fields.
+    quiet: true
+- name: "A Connect access token must be supplied from the vault"
+  ansible.builtin.assert:
+    that:
+      - lxc_onepassword_item_token | length > 0
+    fail_msg: >-
+      lxc_onepassword_item_token is empty — supply the 1Password Connect
+      access token from your vaulted inventory/secrets/onepassword.yml.
+    quiet: true
+  no_log: true
+- name: "Probe the 1Password Connect health endpoint"
+  ansible.builtin.uri:
+    url: "{{ lxc_onepassword_item_host }}{{ lxc_onepassword_item_health_path }}"
+    method: GET
+    validate_certs: "{{ lxc_onepassword_item_validate_certs }}"
+    status_code: [200]
+  register: __lxc_onepassword_item_health
+  check_mode: false
+  changed_when: false
+  # A transport failure (refused/timeout/DNS) must become a clean diagnostic at
+  # the assert below, not an uncaught uri crash. -1 status is captured, not raised.
+  failed_when: false
+- name: "Assert the Connect server is reachable and healthy"
+  ansible.builtin.assert:
+    that:
+      - (__lxc_onepassword_item_health.status | default(-1)) == 200
+    fail_msg: >-
+      1Password Connect did not return a healthy 200 at
+      {{ lxc_onepassword_item_host }}{{ lxc_onepassword_item_health_path }}
+      (got {{ __lxc_onepassword_item_health.status | default('unreachable') }}:
+      {{ __lxc_onepassword_item_health.msg | default('no response') }}). Check
+      lxc_onepassword_item_host, that the op-connect-api service is running,
+      and network reachability, then re-run.
+    success_msg: "1Password Connect is reachable and healthy (HTTP 200)."
+    quiet: true
+- name: "Upsert the 1Password item — {{ lxc_onepassword_item_title }}"
+  onepassword.connect.generic_item:
+    hostname: "{{ lxc_onepassword_item_host }}"
+    token: "{{ lxc_onepassword_item_token }}"
+    vault_id: "{{ lxc_onepassword_item_vault_id }}"
+    title: "{{ lxc_onepassword_item_title }}"
+    category: "{{ lxc_onepassword_item_category }}"
+    state: "{{ lxc_onepassword_item_state }}"
+    fields: "{{ lxc_onepassword_item_fields }}"
+  register: __lxc_onepassword_item_result
+  no_log: true
+- name: "Report SHAPE only (title + field count, never values)"
+  ansible.builtin.debug:
+    msg: >-
+      1Password item '{{ lxc_onepassword_item_title }}'
+      [{{ lxc_onepassword_item_state }}]:
+      changed={{ __lxc_onepassword_item_result.changed | default(false) }},
+      fields={{ lxc_onepassword_item_fields | length }}.

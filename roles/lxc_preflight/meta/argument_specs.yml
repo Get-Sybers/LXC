@@ -1,0 +1,20 @@
+---
+argument_specs:
+  main:
+    short_description: "Admission gate the node-side LXC plays include FIRST: running as root, on a PVE node, with pct present."
+    description:
+      - >-
+        Three read-only checks: effective uid is 0, the host is a Proxmox VE
+        node (/etc/pve present and the host in `pvecm nodes` or in the
+        lxc_preflight_cluster_group inventory group), and /usr/sbin/pct exists.
+        Nothing here reads a credential.
+    options:
+      lxc_preflight_delegate_to:
+        type: str
+        required: false
+        description: "The host every check here executes on. Computed default: {{ inventory_hostname }} (the play's target, no delegation)."
+      lxc_preflight_cluster_group:
+        type: str
+        required: false
+        default: proxmox_nodes
+        description: "Inventory group of the Proxmox nodes; membership admits a host that `pvecm nodes` does not list."

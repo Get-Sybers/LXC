@@ -1,0 +1,48 @@
+---
+# Runs INSIDE the guest (hosts: <lxc_guest_group>, over proxmox_pct_remote).
+# The guest is reached only through pct exec from the node, so it carries no
+# SSH server; it runs its service natively under systemd, so it carries no
+# container runtime. The marker written last is what every service role asserts
+# before it configures anything.
+- name: "baseline | Purge the SSH server and anything this guest must never carry"
+  ansible.builtin.apt:
+    name: "{{ lxc_guest_baseline_purge_packages + lxc_guest_baseline_extra_purge }}"
+    state: absent
+    purge: true
+- name: "baseline | Stat every forbidden binary"
+  ansible.builtin.stat:
+    path: "{{ __lxc_guest_forbidden }}"
+  register: __lxc_guest_forbidden_stat
+  loop: "{{ lxc_guest_baseline_forbidden_binaries }}"
+  loop_control:
+    loop_var: __lxc_guest_forbidden
+- name: "baseline | Refuse a guest that carries an SSH daemon or a container runtime"
+  ansible.builtin.assert:
+    that: __lxc_guest_forbidden_stat.results | selectattr('stat.exists') | list | length == 0
+    fail_msg: >-
+      Present inside the guest:
+      {{ __lxc_guest_forbidden_stat.results | selectattr('stat.exists')
+         | map(attribute='__lxc_guest_forbidden') | list | join(', ') }}.
+      A hardened guest is reached only through pct exec and runs its service
+      natively under systemd (docs/01-Hardened-LXC-Premise.md). Something put
+      this here on purpose; refusing to configure the guest until it is gone.
+    quiet: true
+- name: "baseline | Write the baseline marker"
+  ansible.builtin.copy:
+    content: |
+      baseline={{ lxc_guest_baseline_version }}
+      role=get_sybers.lxc.lxc_guest
+    dest: "{{ lxc_guest_baseline_marker }}"
+    owner: root
+    group: root
+    mode: "0644"
+- name: "baseline | Stat the marker"
+  ansible.builtin.stat:
+    path: "{{ lxc_guest_baseline_marker }}"
+  register: __lxc_guest_marker_stat
+- name: "baseline | Assert the marker landed"
+  ansible.builtin.assert:
+    that: __lxc_guest_marker_stat.stat.exists
+    fail_msg: "{{ lxc_guest_baseline_marker }} was not written."
+    success_msg: "Guest baseline {{ lxc_guest_baseline_version }} holds: no sshd, no container runtime."
+    quiet: true

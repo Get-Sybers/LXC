@@ -1,0 +1,29 @@
+---
+# Docker Hub always 307-redirects a blob GET to a short-lived signed CDN URL that
+# serves the bytes WITHOUT the registry Authorization header. Capture the redirect
+# (no follow), then download the signed URL cleanly.
+- name: "fetch_layer | Resolve the blob CDN redirect"
+  ansible.builtin.uri:
+    url: "{{ __lxc_onepassword_connect_base }}/blobs/{{ __lxc_onepassword_connect_layer }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ __lxc_onepassword_connect_tok.json.token }}"
+    follow_redirects: none
+    status_code: [307, 302]
+    return_content: false
+  register: __lxc_onepassword_connect_blob
+  changed_when: false
+  no_log: true
+- name: "fetch_layer | Download the layer blob"
+  ansible.builtin.get_url:
+    url: "{{ __lxc_onepassword_connect_blob.location }}"
+    dest: "{{ __lxc_onepassword_connect_root }}/{{ __lxc_onepassword_connect_layer | replace(':', '_') }}.tar.gz"
+    mode: "0600"
+  changed_when: false
+- name: "fetch_layer | Unpack the layer into the staging rootfs"
+  ansible.builtin.unarchive:
+    src: "{{ __lxc_onepassword_connect_root }}/{{ __lxc_onepassword_connect_layer | replace(':', '_') }}.tar.gz"
+    remote_src: true
+    dest: "{{ __lxc_onepassword_connect_root }}/rootfs"
+    extra_opts: ["--no-same-owner"]
+  changed_when: false

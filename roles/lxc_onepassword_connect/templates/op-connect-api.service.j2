@@ -1,0 +1,18 @@
+# {{ ansible_managed }}
+[Unit]
+Description=1Password Connect API
+Documentation=https://developer.1password.com/docs/connect/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ lxc_onepassword_connect_user }}
+WorkingDirectory={{ lxc_onepassword_connect_home }}
+Environment=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ExecStart={{ lxc_onepassword_connect_bin_dir }}/connect-api
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

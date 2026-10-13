@@ -1,0 +1,23 @@
+---
+- name: "verify | Probe the Connect API health endpoint"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ lxc_onepassword_connect_api_port }}/health"
+    method: GET
+    status_code: [200]
+  register: __lxc_onepassword_connect_verify
+  until: (__lxc_onepassword_connect_verify.status | default(-1)) == 200
+  retries: 15
+  delay: 2
+  changed_when: false
+  check_mode: false
+  failed_when: false
+- name: "verify | Assert op-connect-api is healthy"
+  ansible.builtin.assert:
+    that:
+      - (__lxc_onepassword_connect_verify.status | default(-1)) == 200
+    fail_msg: >-
+      op-connect-api did not become healthy at
+      http://127.0.0.1:{{ lxc_onepassword_connect_api_port }}/health. Inspect
+      `journalctl -u op-connect-api -u op-connect-sync` inside the container.
+    success_msg: "op-connect-api is healthy (HTTP 200 at /health)."
+    quiet: true

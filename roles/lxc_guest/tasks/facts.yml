@@ -1,0 +1,107 @@
+---
+- name: "facts | Read this node's name"
+  ansible.builtin.command:
+    argv: [hostname, -s]
+  register: __lxc_guest_hostname_raw
+  changed_when: false
+  check_mode: false
+- name: "facts | Stat the pct binary"
+  ansible.builtin.stat:
+    path: /usr/sbin/pct
+  register: __lxc_guest_pct
+  check_mode: false
+- name: "facts | Derive the node name, the template's storage and file, and the bridge"
+  ansible.builtin.set_fact:
+    __lxc_guest_nodename: "{{ __lxc_guest_hostname_raw.stdout | trim }}"
+    __lxc_guest_template_storage: "{{ (lxc_guest_template | string).split(':', 1) | first }}"
+    __lxc_guest_bridge: "{{ (lxc_guest_net0 | string) | regex_search('(?:^|,)bridge=([^,]+)', '\\1') | default([''], true) | first }}"
+- name: "facts | List the templates the template storage holds"
+  ansible.builtin.command:
+    argv:
+      - pvesh
+      - get
+      - "/nodes/{{ lxc_guest_node }}/storage/{{ __lxc_guest_template_storage }}/content"
+      - --content
+      - vztmpl
+      - --output-format
+      - json
+  register: __lxc_guest_templates_raw
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  when: __lxc_guest_pct.stat.exists
+- name: "facts | Stat the bridge on this node"
+  ansible.builtin.stat:
+    path: "/sys/class/net/{{ __lxc_guest_bridge }}"
+  register: __lxc_guest_bridge_stat
+  check_mode: false
+  when: __lxc_guest_bridge | length > 0
+- name: "facts | Read the CT id's status"
+  ansible.builtin.command:
+    argv: [pct, status, "{{ lxc_guest_vmid }}"]
+  register: __lxc_guest_status
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  when: __lxc_guest_pct.stat.exists
+- name: "facts | Read the CT id's config (decoded)"
+  ansible.builtin.command:
+    argv:
+      - pvesh
+      - get
+      - "/nodes/{{ lxc_guest_node }}/lxc/{{ lxc_guest_vmid }}/config"
+      - --output-format
+      - json
+  register: __lxc_guest_config
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  when: __lxc_guest_pct.stat.exists
+- name: "facts | Read the guests the cluster knows about"
+  ansible.builtin.command:
+    argv: [pvesh, get, /cluster/resources, --type, vm, --output-format, json]
+  register: __lxc_guest_resources_raw
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  when: __lxc_guest_pct.stat.exists
+- name: "facts | Parse what the node reported"
+  ansible.builtin.set_fact:
+    __lxc_guest_templates: >-
+      {{ ((__lxc_guest_templates_raw.stdout | from_json)
+          if ((__lxc_guest_templates_raw.rc | default(1)) == 0
+              and (__lxc_guest_templates_raw.stdout | default('') | trim).startswith('['))
+          else []) | map(attribute='volid') | list }}
+    __lxc_guest_templates_listed: "{{ (__lxc_guest_templates_raw.rc | default(1)) == 0 }}"
+    __lxc_guest_bridge_present: "{{ __lxc_guest_bridge_stat.stat.exists | default(false) }}"
+    __lxc_guest_ct_exists: "{{ (__lxc_guest_status.rc | default(1)) == 0 }}"
+    __lxc_guest_config_json: >-
+      {{ (__lxc_guest_config.stdout | from_json)
+         if ((__lxc_guest_config.rc | default(1)) == 0
+             and (__lxc_guest_config.stdout | default('') | trim).startswith('{'))
+         else {} }}
+    __lxc_guest_resources: >-
+      {{ (__lxc_guest_resources_raw.stdout | from_json)
+         if ((__lxc_guest_resources_raw.rc | default(1)) == 0
+             and (__lxc_guest_resources_raw.stdout | default('') | trim).startswith('['))
+         else [] }}
+- name: "facts | Derive ownership and the guests holding this id elsewhere"
+  ansible.builtin.set_fact:
+    __lxc_guest_ct_is_ours: >-
+      {{ (__lxc_guest_config_json['description'] | default(''))
+         is contains(lxc_guest_description_marker) }}
+    __lxc_guest_id_elsewhere: >-
+      {{ __lxc_guest_resources
+         | selectattr('vmid', 'defined')
+         | selectattr('vmid', 'equalto', lxc_guest_vmid | int)
+         | rejectattr('node', 'equalto', lxc_guest_node)
+         | map(attribute='node') | list }}
+- name: "facts | What was discovered"
+  ansible.builtin.debug:
+    msg: >-
+      LXC GUEST FACTS — node={{ __lxc_guest_nodename }} pct={{ __lxc_guest_pct.stat.exists }}
+      template={{ lxc_guest_template }} listed={{ __lxc_guest_templates_listed }}
+      present={{ lxc_guest_template in __lxc_guest_templates }}
+      bridge={{ __lxc_guest_bridge or '<none>' }} present={{ __lxc_guest_bridge_present }}
+      ct{{ lxc_guest_vmid }}_exists={{ __lxc_guest_ct_exists }} ours={{ __lxc_guest_ct_is_ours }}
+      id_elsewhere={{ __lxc_guest_id_elsewhere | join(',') or '<none>' }}

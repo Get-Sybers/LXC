@@ -1,0 +1,17 @@
+---
+# The collection variables every lxc_* role default points at (standards §4d):
+# defined once here, overridable per guest through that role's own inputs.
+
+# The node a container is created on unless its role says otherwise. Membership
+# of lxc_hosts in hosts.yml IS the declaration; no other file encodes it.
+lxc_node: "{{ groups['lxc_hosts'] | first }}"
+# The plain Debian template every guest is built from. Confirm it is on the
+# node: `pveam list local`; fetch it: `pveam update && pveam download local <file>`.
+lxc_template: "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+# Rootfs storage (use the shared Ceph pool for HA).
+lxc_storage: local-zfs
+# The management bridge a guest's net0 sits on by default.
+lxc_bridge: vmbr0
+# The marker lxc_guest's baseline writes inside a guest and every service role
+# asserts before configuring anything.
+lxc_baseline_marker_path: /etc/get-sybers-lxc-baseline

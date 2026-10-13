@@ -1,0 +1,56 @@
+---
+- name: "pve_node | Stat /etc/pve (pmxcfs mountpoint)"
+  ansible.builtin.stat:
+    path: /etc/pve
+  register: __lpf_etc_pve
+  check_mode: false
+  delegate_to: "{{ lxc_preflight_delegate_to }}"
+- name: "pve_node | Assert /etc/pve exists"
+  ansible.builtin.assert:
+    that:
+      - __lpf_etc_pve.stat.exists
+      - __lpf_etc_pve.stat.isdir
+    fail_msg: >-
+      /etc/pve is absent — this host is not a Proxmox VE node. The LXC plays
+      run only on a node (the {{ lxc_preflight_cluster_group }} group).
+    quiet: true
+- name: "pve_node | Stat the pct binary"
+  ansible.builtin.stat:
+    path: /usr/sbin/pct
+  register: __lpf_pct
+  check_mode: false
+  delegate_to: "{{ lxc_preflight_delegate_to }}"
+- name: "pve_node | Assert pct is present"
+  ansible.builtin.assert:
+    that: __lpf_pct.stat.exists
+    fail_msg: >-
+      /usr/sbin/pct was not found — every container here is created and
+      reached through pct, so this host cannot run the LXC plays.
+    quiet: true
+- name: "pve_node | Read the execution host's name"
+  ansible.builtin.command:
+    argv: [hostname]
+  register: __lpf_hostname
+  changed_when: false
+  check_mode: false
+  delegate_to: "{{ lxc_preflight_delegate_to }}"
+- name: "pve_node | Read cluster membership"
+  ansible.builtin.command:
+    argv: [pvecm, nodes]
+  register: __lpf_pvecm
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  delegate_to: "{{ lxc_preflight_delegate_to }}"
+- name: "pve_node | Assert this host is a known node"
+  ansible.builtin.assert:
+    that: >-
+      (__lpf_pvecm.rc == 0
+       and (__lpf_hostname.stdout | trim) in __lpf_pvecm.stdout.split())
+      or ((__lpf_hostname.stdout | trim) in (groups[lxc_preflight_cluster_group] | default([])))
+    fail_msg: >-
+      Host '{{ __lpf_hostname.stdout | trim }}' is not in `pvecm nodes`
+      (rc={{ __lpf_pvecm.rc }}) and not in inventory group
+      {{ lxc_preflight_cluster_group }}. The LXC plays run only on a node this
+      inventory declares.
+    quiet: true

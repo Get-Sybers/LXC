@@ -1,0 +1,64 @@
+---
+# get_sybers.lxc — shared molecule base config (the cluster collection's docs/04 §9).
+#
+# Molecule auto-discovers this file as the collection base config
+# (MOLECULE_COLLECTION_ROOT = extensions/molecule) and deep-merges each
+# scenario's molecule.yml on top. Everything common to every scenario lives here
+# once; a scenario overrides only what differs (usually just
+# scenario.test_sequence, and its own prepare/converge/verify playbooks).
+#
+# Substrate: a throwaway official Debian 13 container, driven by the
+# community.docker driver. It is NOT a Proxmox node and NOT a Proxmox CT — it is
+# a disposable Debian userspace in which the logic that does not need a live
+# node runs hermetically in CI: the guest-side baseline (positive, idempotent)
+# and every role's refusal path. Anything that needs real Proxmox is exercised
+# against a live node by the plays, not faked in a container.
+dependency:
+  name: galaxy
+  # Single source of pins (docs/02 §13): the collections come from the root
+  # requirements.yml, installed once by `make deps` / CI before the test loop.
+  enabled: false
+driver:
+  name: docker
+platforms:
+  # One shared container for every scenario. `molecule test --all` runs scenarios
+  # sequentially (create ... destroy each), so a single fixed name is safe and
+  # keeps the substrate identical across roles. Built from the shared
+  # ../Dockerfile (digest-pinned Debian); no privileged, no systemd, no volumes.
+  - name: lxc-instance
+    image: lxc-debian-trixie
+    dockerfile: ../Dockerfile
+    pre_build_image: false
+    command: sleep infinity
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      # §28: registered/internal facts are addressed explicitly, never injected
+      # as bare top-level vars.
+      inject_facts_as_vars: false
+  inventory:
+    group_vars:
+      all:
+        # The collection variables the roles' defaults reference (standards
+        # §4d), which the real inventory defines once. The test container is
+        # both the node and the guest, so the values are the fixture's own.
+        lxc_node: "{{ inventory_hostname }}"
+        lxc_template: "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+        lxc_storage: local-zfs
+        lxc_bridge: vmbr0
+        lxc_baseline_marker_path: /etc/get-sybers-lxc-baseline
+verifier:
+  name: ansible
+scenario:
+  # The full gate every positive scenario runs. Negative scenarios trim this to
+  # the failure path (they override scenario.test_sequence in their molecule.yml).
+  test_sequence:
+    - dependency
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - verify
+    - destroy

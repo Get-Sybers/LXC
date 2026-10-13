@@ -1,0 +1,56 @@
+---
+- name: "connect | Query the container status"
+  ansible.builtin.command:
+    argv: [pct, status, "{{ lxc_guest_vmid }}"]
+  register: __lxc_guest_conn_status
+  changed_when: false
+  check_mode: false
+  failed_when: false
+- name: "connect | Assert the container is running"
+  ansible.builtin.assert:
+    that:
+      - __lxc_guest_conn_status.rc == 0
+      - "'status: running' in __lxc_guest_conn_status.stdout"
+    fail_msg: >-
+      CT {{ lxc_guest_vmid }} is not running on {{ lxc_guest_node }}
+      ({{ __lxc_guest_conn_status.stdout
+          | default(__lxc_guest_conn_status.stderr | default('no such container'))
+          | trim }}). Create it first (the ensure path of lxc_guest).
+    quiet: true
+- name: "connect | Wait until the container init answers"
+  ansible.builtin.command:
+    argv: [pct, exec, "{{ lxc_guest_vmid }}", --, "true"]
+  register: __lxc_guest_conn_ready
+  until: __lxc_guest_conn_ready.rc == 0
+  retries: 15
+  delay: 2
+  changed_when: false
+  check_mode: false
+- name: "connect | Wait for the container boot to finish"
+  ansible.builtin.command:
+    argv: [pct, exec, "{{ lxc_guest_vmid }}", --, systemctl, is-system-running]
+  register: __lxc_guest_conn_boot
+  until: (__lxc_guest_conn_boot.stdout | default('') | trim) in ['running', 'degraded']
+  retries: 30
+  delay: 2
+  changed_when: false
+  check_mode: false
+  failed_when: false
+- name: "connect | Add the container to the play inventory (pct exec, never SSH)"
+  ansible.builtin.add_host:
+    name: "{{ lxc_guest_hostname }}"
+    groups: "{{ lxc_guest_group }}"
+    ansible_connection: community.proxmox.proxmox_pct_remote
+    ansible_host: "{{ inventory_hostname }}"
+    ansible_user: root
+    proxmox_vmid: "{{ lxc_guest_vmid }}"
+  changed_when: false
+- name: "connect | Assert the container joined the play inventory"
+  ansible.builtin.assert:
+    that: lxc_guest_hostname in (groups[lxc_guest_group] | default([]))
+    fail_msg: >-
+      {{ lxc_guest_hostname }} is not in the '{{ lxc_guest_group }}' group after
+      add_host — the guest-side play would match no hosts and exit green with
+      the container unconfigured. Check for a --limit that excludes it.
+    quiet: true
+  check_mode: false
