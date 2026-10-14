@@ -1,0 +1,9 @@
+---
+fixed:
+  - >-
+    ``lxc_distrobuilder`` ``bake`` verifies the built binary from its Go
+    build info (``go version -m``: the module path and version it was built
+    from) instead of running ``distrobuilder --version``, which cannot run in
+    the build chroot: at start it unshares a mount namespace and marks ``/``
+    private, and a chroot's ``/`` is not a mount point. The ``distrobuilder``
+    template is ``0.1.1``.
