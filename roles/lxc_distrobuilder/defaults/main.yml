@@ -16,7 +16,7 @@ lxc_distrobuilder_hostname: distrobuilder
 # release tag and the template marker, and server refuses a guest baked at
 # another. Raised with every change to the image; the service version below
 # is what the image carries.
-lxc_distrobuilder_template_version: "0.1.1"
+lxc_distrobuilder_template_version: "0.1.2"
 lxc_distrobuilder_template_file: >-
   debian-13-distrobuilder_{{ lxc_distrobuilder_template_version }}_{{ lxc_distrobuilder_arch }}.tar.zst
 lxc_distrobuilder_template: "local:vztmpl/{{ lxc_distrobuilder_template_file }}"

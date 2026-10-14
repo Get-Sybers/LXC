@@ -35,7 +35,7 @@ health check. After deployment the server is touched two ways only: its web UI a
 | --- | --- | --- |
 | `lxc_semaphore_node` | `{{ lxc_node }}` | PVE node the CT lives on. |
 | `lxc_semaphore_vmid` | `0` (refused) | CT id; the inventory sets it. |
-| `lxc_semaphore_template_version` | `0.1.0` | This repository's release of the `semaphore` template (the manifest's `lxc_template_version`): names the artifact and the tag; `server` refuses a guest baked at another. |
+| `lxc_semaphore_template_version` | `0.1.1` | This repository's release of the `semaphore` template (the manifest's `lxc_template_version`): names the artifact and the tag; `server` refuses a guest baked at another. |
 | `lxc_semaphore_template` | `local:vztmpl/debian-13-semaphore_<template release>_<arch>.tar.zst` | The released template. |
 | `lxc_semaphore_template_checksum` | `""` (fetch refused) | The release's `sha256:`, pinned in the inventory. |
 | `lxc_semaphore_storage` | `{{ lxc_storage }}` | CT rootfs storage. |

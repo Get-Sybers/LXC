@@ -23,7 +23,7 @@ It runs as root on a build host (the GitHub Actions runner) and never touches a 
 
 | Step | What happens |
 | --- | --- |
-| base | The stock `debian-13-standard` template is downloaded from `download.proxmox.com` and verified against the `sha512` Proxmox publishes for it in its own index, pinned in the manifest. |
+| base | The stock `debian-13-standard` template is downloaded from `download.proxmox.com` over plain HTTP, as `pveam` fetches it (the host is not served over TLS), and verified against the `sha512` Proxmox publishes for it in its own signed index, pinned in the manifest: the checksum is the verification. |
 | unpack | `tar --zstd --numeric-owner --xattrs` into a work rootfs; `/proc`, `/sys`, `/dev`, `/dev/pts` are mounted; a resolver and a `policy-rc.d` that refuses service starts are dropped in for the duration of the bake. |
 | bake steps | Each `lxc_template_bake` entry runs inside the rootfs over `community.general.chroot`: first `lxc_guest` `baseline` (purge `openssh-server`, refuse any container runtime, write the baseline marker), then the service role's `bake` (install, service user, units, `multi-user.target.wants` links). |
 | marker | `/etc/get-sybers-lxc-template` records `name`, `version` and `base`. |
@@ -80,18 +80,18 @@ from an install into a live guest.
 ## 5. Verifying a release by hand
 
 ```sh
-sha256sum -c debian-13-op-connect_0.1.0_amd64.tar.zst.sha256
-cosign verify-blob --bundle debian-13-op-connect_0.1.0_amd64.tar.zst.sigstore.json \
+sha256sum -c debian-13-op-connect_0.1.1_amd64.tar.zst.sha256
+cosign verify-blob --bundle debian-13-op-connect_0.1.1_amd64.tar.zst.sigstore.json \
   --certificate-identity-regexp '^https://github.com/get-sybers/lxc/' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  debian-13-op-connect_0.1.0_amd64.tar.zst
-gh attestation verify debian-13-op-connect_0.1.0_amd64.tar.zst -R get-sybers/lxc
+  debian-13-op-connect_0.1.1_amd64.tar.zst
+gh attestation verify debian-13-op-connect_0.1.1_amd64.tar.zst -R get-sybers/lxc
 ```
 
 ## 6. Raising a base template
 
-The base is pinned by file name and Proxmox's published `sha512`. To move to a newer stock template, print the new pin and paste it into
-every manifest that uses it:
+The base is pinned by file name and Proxmox's published `sha512`. To move to a newer stock template, print the new pin on a Proxmox node (the script reads
+the index `pveam` verified there) and paste it into every manifest that uses it:
 
 ```sh
 python3 scripts/base_template_checksum.py debian-13-standard_13.7-1_amd64.tar.zst
