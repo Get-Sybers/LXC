@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: lxc_distrobuilder
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    A distrobuilder (the LXC and Incus image builder) build box in a hardened
+    Debian LXC: the pinned release built from the Go module in the template
+    bake, debootstrap and the compressors beside it, and a build entry point
+    that turns an image definition into a rootfs tarball. The container
+    itself comes from lxc_guest.
+  company: Get-Sybers
+  license: AGPL-3.0-only
+  min_ansible_version: "2.19.0"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [distrobuilder, lxc, incus, proxmox, images]
+dependencies: []

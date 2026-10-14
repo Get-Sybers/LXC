@@ -1,0 +1,133 @@
+---
+# Runs INSIDE the running CT over proxmox_pct_remote. The image content is
+# already there (tasks/bake.yml, in the released template); this does the
+# site-specific rest: the directories and the image definitions the operator
+# names. There is no daemon to start — build.yml is the interaction.
+- name: "server | Stat the lxc_guest baseline marker"
+  ansible.builtin.stat:
+    path: "{{ lxc_distrobuilder_baseline_marker }}"
+  register: __lxc_distrobuilder_baseline
+- name: "server | Refuse a guest that has not been through the hardened baseline"
+  ansible.builtin.assert:
+    that: __lxc_distrobuilder_baseline.stat.exists
+    fail_msg: >-
+      {{ lxc_distrobuilder_baseline_marker }} is absent, so this guest has not
+      been through get_sybers.lxc.lxc_guest's baseline (no SSH daemon, no
+      container runtime). The released distrobuilder template carries it; a
+      guest created from anything else is not configured by this role.
+    quiet: true
+- name: "server | Read the template marker"
+  ansible.builtin.slurp:
+    src: "{{ lxc_distrobuilder_template_marker }}"
+  register: __lxc_distrobuilder_tmpl
+  failed_when: false
+- name: "server | Parse the template marker"
+  ansible.builtin.set_fact:
+    __lxc_distrobuilder_tmpl_fields: >-
+      {{ dict((__lxc_distrobuilder_tmpl.content | default('') | b64decode).splitlines()
+              | select('search', '=') | map('split', '=', 1) | list) }}
+- name: "server | Refuse a guest that was not created from the distrobuilder template"
+  ansible.builtin.assert:
+    that:
+      - __lxc_distrobuilder_tmpl_fields['name'] | default('') == 'distrobuilder'
+      - __lxc_distrobuilder_tmpl_fields['version'] | default('') == lxc_distrobuilder_version | string
+    fail_msg: >-
+      {{ lxc_distrobuilder_template_marker }} says
+      name={{ __lxc_distrobuilder_tmpl_fields['name'] | default('<absent>') }}
+      version={{ __lxc_distrobuilder_tmpl_fields['version'] | default('<absent>') }};
+      this role drives distrobuilder {{ lxc_distrobuilder_version }}. The binary
+      is built into the released template (templates/distrobuilder), never
+      installed into a running guest. Create the CT from the matching release,
+      or set lxc_distrobuilder_version to the one it carries.
+    quiet: true
+- name: "server | Stat the baked binary and debootstrap"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: __lxc_distrobuilder_tools
+  loop:
+    - "{{ lxc_distrobuilder_bin }}"
+    - /usr/sbin/debootstrap
+- name: "server | The baked tools are present"
+  ansible.builtin.assert:
+    that: __lxc_distrobuilder_tools.results | map(attribute='stat.exists') | list is all
+    fail_msg: >-
+      {{ __lxc_distrobuilder_tools.results | rejectattr('stat.exists') | map(attribute='item') | join(', ') }}
+      missing. The template marker matched but the image is incomplete — rebuild
+      and re-release it.
+    quiet: true
+- name: "server | Read the baked version"
+  ansible.builtin.command:
+    argv: ["{{ lxc_distrobuilder_bin }}", --version]
+  register: __lxc_distrobuilder_running
+  changed_when: false
+  check_mode: false
+- name: "server | The baked binary is this role's version"
+  ansible.builtin.assert:
+    that: (__lxc_distrobuilder_running.stdout | trim) == lxc_distrobuilder_version | string
+    fail_msg: >-
+      {{ lxc_distrobuilder_bin }} reports '{{ __lxc_distrobuilder_running.stdout | trim }}',
+      not {{ lxc_distrobuilder_version }}, although the template marker matched.
+      Rebuild and re-release the template.
+    success_msg: "distrobuilder {{ lxc_distrobuilder_version }} is in place."
+    quiet: true
+- name: "server | The definitions and images directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ lxc_distrobuilder_definitions_dir }}"
+    - "{{ lxc_distrobuilder_images_dir }}"
+- name: "server | The build cache and sources directories (root only)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - "{{ lxc_distrobuilder_cache_dir }}"
+    - "{{ lxc_distrobuilder_sources_dir }}"
+- name: "server | Every definition names a file and either a node-side source or a pinned URL"
+  ansible.builtin.assert:
+    that:
+      - lxc_distrobuilder_definitions | rejectattr('name', 'defined') | length == 0
+      - lxc_distrobuilder_definitions | map(attribute='name') | map('basename') | list
+        == lxc_distrobuilder_definitions | map(attribute='name') | list
+      - lxc_distrobuilder_definitions | rejectattr('src', 'defined') | rejectattr('url', 'defined') | length == 0
+      - lxc_distrobuilder_definitions | selectattr('src', 'defined') | selectattr('url', 'defined') | length == 0
+      - lxc_distrobuilder_definitions | selectattr('url', 'defined')
+        | rejectattr('checksum', 'defined') | length == 0
+      - lxc_distrobuilder_definitions | selectattr('url', 'defined')
+        | map(attribute='checksum') | reject('match', '^sha(256|512):[0-9a-f]+$') | length == 0
+    fail_msg: >-
+      lxc_distrobuilder_definitions entries are {name, src} (a file on the node)
+      or {name, url, checksum} (fetched in the CT, checksum sha256:<hex> or
+      sha512:<hex>); name is a bare file name. Got:
+      {{ lxc_distrobuilder_definitions }}
+    quiet: true
+- name: "server | Place the definitions copied from the node"
+  ansible.builtin.copy:
+    src: "{{ __lxc_distrobuilder_def.src }}"
+    dest: "{{ lxc_distrobuilder_definitions_dir }}/{{ __lxc_distrobuilder_def.name }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ lxc_distrobuilder_definitions | selectattr('src', 'defined') | list }}"
+  loop_control:
+    loop_var: __lxc_distrobuilder_def
+    label: "{{ __lxc_distrobuilder_def.name }}"
+- name: "server | Fetch the definitions pinned by URL and checksum"
+  ansible.builtin.get_url:
+    url: "{{ __lxc_distrobuilder_def.url }}"
+    dest: "{{ lxc_distrobuilder_definitions_dir }}/{{ __lxc_distrobuilder_def.name }}"
+    checksum: "{{ __lxc_distrobuilder_def.checksum }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ lxc_distrobuilder_definitions | selectattr('url', 'defined') | list }}"
+  loop_control:
+    loop_var: __lxc_distrobuilder_def
+    label: "{{ __lxc_distrobuilder_def.name }}"

@@ -15,6 +15,7 @@ inventory/
 │       ├── lxc.yml                #   the collection variables: lxc_node, lxc_storage, lxc_bridge, templates, markers
 │       ├── proxmox_api.yml        #   admin PVE API credential (read from PROXMOX_* env vars, never stored)
 │       ├── onepassword.yml        #   1Password Connect LXC placement (secrets stay in secrets/)
+│       ├── distrobuilder.yml      #   distrobuilder build-box LXC placement and image definitions
 │       └── semaphore.yml          #   Semaphore UI LXC placement (secrets stay in secrets/)
 ├── hosts.yml                      # untracked — your copy
 ├── group_vars/all/*.yml           # untracked — your copies
@@ -25,7 +26,7 @@ inventory/
 
 ```sh
 make config                        # copies example/ into place without overwriting what is already there
-$EDITOR inventory/hosts.yml inventory/group_vars/all/lxc.yml inventory/group_vars/all/onepassword.yml inventory/group_vars/all/semaphore.yml
+$EDITOR inventory/hosts.yml inventory/group_vars/all/lxc.yml inventory/group_vars/all/onepassword.yml inventory/group_vars/all/semaphore.yml inventory/group_vars/all/distrobuilder.yml
 ```
 
 Replace every `CHANGE-ME`: the node names, the rootfs storage, the CT id, and the released template's checksum. `ansible.cfg` ignores

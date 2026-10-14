@@ -1,0 +1,13 @@
+---
+# Node side, opt-in. lxc_guest refuses without lxc_guest_confirm_destroy=true
+# on the command line and refuses a CT that is not the one described here.
+- name: "remove | Destroy the distrobuilder LXC through lxc_guest"
+  ansible.builtin.include_role:
+    name: get_sybers.lxc.lxc_guest
+    tasks_from: remove
+  vars:
+    lxc_guest_node: "{{ lxc_distrobuilder_node }}"
+    lxc_guest_vmid: "{{ lxc_distrobuilder_vmid }}"
+    lxc_guest_hostname: "{{ lxc_distrobuilder_hostname }}"
+    lxc_guest_template: "{{ lxc_distrobuilder_template }}"
+    lxc_guest_net0: "{{ lxc_distrobuilder_net0 }}"

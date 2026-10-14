@@ -1,0 +1,33 @@
+---
+# Build one image in the distrobuilder LXC that deploy-distrobuilder.yml
+# created. Play 1 reaches the running CT through lxc_guest's connect (pct
+# exec, never SSH); play 2 runs the build inside it and pulls the tarballs
+# onto the node when asked. Run ON the node that hosts the CT.
+#
+#   ansible-playbook playbooks/build-distrobuilder-image.yml \
+#     -e lxc_distrobuilder_build_definition=debian.yaml \
+#     -e '{"lxc_distrobuilder_build_options": ["image.release=trixie", "image.architecture=amd64"]}' \
+#     -e lxc_distrobuilder_build_fetch_dir=/root/distrobuilder-images
+#
+# The definition must be one server placed (lxc_distrobuilder_definitions in
+# inventory/group_vars/all/distrobuilder.yml). No PVE API call is made.
+- name: "Reach the running distrobuilder LXC"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: "Node admission gate"
+      ansible.builtin.include_role:
+        name: get_sybers.lxc.lxc_preflight
+    - name: "Add the distrobuilder CT to the play inventory"
+      ansible.builtin.include_role:
+        name: get_sybers.lxc.lxc_distrobuilder
+        tasks_from: connect
+- name: "Build the image inside the LXC"
+  hosts: distrobuilder
+  gather_facts: false
+  tasks:
+    - name: "One definition in, one image out"
+      ansible.builtin.include_role:
+        name: get_sybers.lxc.lxc_distrobuilder
+        tasks_from: build

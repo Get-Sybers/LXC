@@ -1,0 +1,87 @@
+---
+# Runs INSIDE the build rootfs over the chroot connection (playbooks/
+# bake-template.yml). Everything that is image content and nothing that is site
+# state: no definitions, no images, no build. distrobuilder is a tool, not a
+# daemon — there is no unit to enable. Upstream publishes no binaries, so the
+# pinned release is built here from the Go module, fetched through the Go
+# module proxy and verified against the Go checksum database; the toolchain
+# and the compiler are purged again once the binary is in place.
+- name: "bake | Install what the builds need, and what the build of distrobuilder itself needs"
+  ansible.builtin.apt:
+    name: "{{ lxc_distrobuilder_bake_packages + lxc_distrobuilder_build_packages }}"
+    state: present
+    update_cache: true
+- name: "bake | The staging directory (GOPATH, the build cache, the downloaded toolchain)"
+  ansible.builtin.file:
+    path: "{{ lxc_distrobuilder_stage_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+- name: "bake | Build the pinned distrobuilder release from the Go module (verified against sum.golang.org)"
+  ansible.builtin.command:
+    argv:
+      - go
+      - install
+      - "{{ lxc_distrobuilder_go_module }}/distrobuilder@v{{ lxc_distrobuilder_version }}"
+    creates: "{{ lxc_distrobuilder_bin }}"
+  environment:
+    HOME: /root
+    GOTOOLCHAIN: "{{ lxc_distrobuilder_go_toolchain }}"
+    GOFLAGS: "{{ lxc_distrobuilder_go_flags }}"
+    GOPROXY: "https://proxy.golang.org,direct"
+    GOSUMDB: sum.golang.org
+    GOBIN: "{{ lxc_distrobuilder_bin | dirname }}"
+    GOPATH: "{{ lxc_distrobuilder_stage_dir }}/go"
+    GOMODCACHE: "{{ lxc_distrobuilder_stage_dir }}/go/pkg/mod"
+    GOCACHE: "{{ lxc_distrobuilder_stage_dir }}/cache"
+- name: "bake | The binary is root-owned and executable"
+  ansible.builtin.file:
+    path: "{{ lxc_distrobuilder_bin }}"
+    owner: root
+    group: root
+    mode: "0755"
+- name: "bake | Read the built version"
+  ansible.builtin.command:
+    argv: ["{{ lxc_distrobuilder_bin }}", --version]
+  register: __lxc_distrobuilder_built
+  changed_when: false
+- name: "bake | The built binary is the pinned release"
+  ansible.builtin.assert:
+    that: (__lxc_distrobuilder_built.stdout | trim) == lxc_distrobuilder_version | string
+    fail_msg: >-
+      {{ lxc_distrobuilder_bin }} reports '{{ __lxc_distrobuilder_built.stdout | trim }}',
+      not {{ lxc_distrobuilder_version }}: the module
+      {{ lxc_distrobuilder_go_module }}@v{{ lxc_distrobuilder_version }} is not the
+      release the manifest names.
+    quiet: true
+- name: "bake | Purge the Go toolchain and the compiler from the image"
+  ansible.builtin.apt:
+    name: "{{ lxc_distrobuilder_build_packages }}"
+    state: absent
+    purge: true
+    autoremove: true
+- name: "bake | Remove the staging directory"
+  ansible.builtin.file:
+    path: "{{ lxc_distrobuilder_stage_dir }}"
+    state: absent
+- name: "bake | The definitions and images directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ lxc_distrobuilder_definitions_dir }}"
+    - "{{ lxc_distrobuilder_images_dir }}"
+- name: "bake | The build cache and sources directories (root only)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - "{{ lxc_distrobuilder_cache_dir }}"
+    - "{{ lxc_distrobuilder_sources_dir }}"

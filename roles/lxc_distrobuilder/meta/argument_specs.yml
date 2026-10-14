@@ -1,0 +1,336 @@
+---
+argument_specs:
+  container:
+    short_description: "Ensure the distrobuilder LXC on the node through lxc_guest and add it to the play inventory."
+    description:
+      - >-
+        Runs on the Proxmox node (hosts: localhost, connection: local). Hands
+        this role's placement inputs to get_sybers.lxc.lxc_guest, which
+        preflights, creates, starts, waits for and add_hosts the container into
+        lxc_distrobuilder_group over proxmox_pct_remote.
+    options:
+      lxc_distrobuilder_node:
+        type: str
+        required: false
+        description: "PVE node the CT is created on. Computed default: the collection variable lxc_node."
+      lxc_distrobuilder_vmid:
+        type: int
+        required: false
+        default: 0
+        description: "CT id (VMID) for the distrobuilder container. Required in practice: lxc_guest refuses 0; the inventory sets it."
+      lxc_distrobuilder_hostname:
+        type: str
+        required: false
+        default: "distrobuilder"
+        description: "Hostname of the CT; also its key in the play inventory."
+      lxc_distrobuilder_template_file:
+        type: str
+        required: false
+        description: "File name of the released template. Computed default: debian-13-distrobuilder_<version>_<arch>.tar.zst."
+      lxc_distrobuilder_template:
+        type: str
+        required: false
+        description: "storage:vztmpl/<file> of the released distrobuilder template. Computed default: local:vztmpl/<template_file>."
+      lxc_distrobuilder_template_url:
+        type: str
+        required: false
+        description: >-
+          Where lxc_guest fetches the template when it is not in the node's cache.
+          Computed default: <lxc_template_release_base>/distrobuilder/v<version>/<template_file>, the GitHub Release asset.
+      lxc_distrobuilder_template_checksum:
+        type: str
+        required: false
+        default: ""
+        description: "sha256:<hex> of the released template (from its .sha256), pinned in the inventory. Required for a fetch; an empty value is refused."
+      lxc_distrobuilder_storage:
+        type: str
+        required: false
+        description: "Storage for the CT rootfs. Computed default: the collection variable lxc_storage."
+      lxc_distrobuilder_rootfs_gb:
+        type: int
+        required: false
+        default: 32
+        description: "A build unpacks a whole distribution into the cache and packs it again; size for a few builds' worth."
+      lxc_distrobuilder_cores:
+        type: int
+        required: false
+        default: 2
+      lxc_distrobuilder_memory_mb:
+        type: int
+        required: false
+        default: 2048
+      lxc_distrobuilder_net0:
+        type: str
+        required: false
+        description: "Full Proxmox net0 spec. Computed default: DHCP on the collection variable lxc_bridge."
+      lxc_distrobuilder_nameserver:
+        type: str
+        required: false
+        default: ""
+      lxc_distrobuilder_features:
+        type: list
+        elements: str
+        required: false
+        default: ["nesting=1"]
+        description: "Container features; nesting=1 lets a build mount proc and sysfs into the rootfs it assembles. The CT stays unprivileged."
+      lxc_distrobuilder_onboot:
+        type: bool
+        required: false
+        default: true
+      lxc_distrobuilder_pool:
+        type: str
+        required: false
+        default: ""
+      lxc_distrobuilder_group:
+        type: str
+        required: false
+        default: distrobuilder
+        description: "Play-inventory group the running CT is added to."
+  connect:
+    short_description: "Add an existing, running distrobuilder LXC to the play inventory through lxc_guest (no create)."
+    description:
+      - >-
+        Runs on the Proxmox node. For the build play: reaches the CT the deploy
+        play created without going through the ensure path again. Only node,
+        vmid, hostname and group are read.
+    options:
+      lxc_distrobuilder_node:
+        type: str
+        required: false
+      lxc_distrobuilder_vmid:
+        type: int
+        required: false
+        default: 0
+      lxc_distrobuilder_hostname:
+        type: str
+        required: false
+        default: "distrobuilder"
+      lxc_distrobuilder_group:
+        type: str
+        required: false
+        default: distrobuilder
+  bake:
+    short_description: "Bake the distrobuilder image content into a build rootfs (chroot-safe; no definitions, no build)."
+    description:
+      - >-
+        Runs inside the build rootfs over community.general.chroot, from
+        playbooks/bake-template.yml. Installs debootstrap, the archive keys,
+        gpg and the compressors, builds the pinned distrobuilder release from
+        the Go module (go install <module>@v<version>, fetched through the Go
+        module proxy and verified against the Go checksum database, with the
+        toolchain the module declares), asserts the built version, purges the
+        toolchain and the compiler again, and creates the directories.
+        Everything site-specific is left to server.
+    options:
+      lxc_distrobuilder_version:
+        type: str
+        required: false
+        default: "3.4.0"
+        description: "distrobuilder release to bake; names the template and the Go module version."
+      lxc_distrobuilder_arch:
+        type: str
+        required: false
+        default: "amd64"
+      lxc_distrobuilder_go_module:
+        type: str
+        required: false
+        default: "github.com/lxc/distrobuilder"
+      lxc_distrobuilder_go_toolchain:
+        type: str
+        required: false
+        default: "go1.25.12"
+        description: "GOTOOLCHAIN for the build: the toolchain the module's go.mod declares, downloaded and verified by Debian's older go."
+      lxc_distrobuilder_go_flags:
+        type: str
+        required: false
+        default: "-tags=containers_image_storage_stub,containers_image_docker_daemon_stub,containers_image_openpgp"
+        description: "GOFLAGS for the build: the tags upstream's Makefile sets."
+      lxc_distrobuilder_bake_packages:
+        type: list
+        elements: str
+        required: false
+        default:
+          - ca-certificates
+          - debootstrap
+          - debian-archive-keyring
+          - ubuntu-keyring
+          - gnupg
+          - dirmngr
+          - rsync
+          - squashfs-tools
+          - xz-utils
+          - zstd
+          - gzip
+          - bzip2
+        description: "Debian packages baked in beside distrobuilder: what its builds shell out to."
+      lxc_distrobuilder_build_packages:
+        type: list
+        elements: str
+        required: false
+        default: [golang-go, gcc, libc6-dev]
+        description: "What the build of distrobuilder itself needs; purged from the image once the binary is in place."
+      lxc_distrobuilder_stage_dir:
+        type: str
+        required: false
+        default: "/var/tmp/distrobuilder-bake"
+      lxc_distrobuilder_bin:
+        type: str
+        required: false
+        default: "/usr/local/bin/distrobuilder"
+      lxc_distrobuilder_definitions_dir:
+        type: str
+        required: false
+        default: "/var/lib/distrobuilder/definitions"
+      lxc_distrobuilder_images_dir:
+        type: str
+        required: false
+        default: "/var/lib/distrobuilder/images"
+      lxc_distrobuilder_cache_dir:
+        type: str
+        required: false
+        default: "/var/cache/lxc/distrobuilder"
+        description: "distrobuilder's --cache-dir; under /var/cache/lxc, the tree the nested-container AppArmor profile allows proc and sysfs mounts under."
+      lxc_distrobuilder_sources_dir:
+        type: str
+        required: false
+        default: "/var/cache/lxc/distrobuilder/sources"
+        description: "distrobuilder's --sources-dir: the downloaded distribution tarballs."
+  server:
+    short_description: "Verify the build box inside a CT created from the released template and place the image definitions."
+    description:
+      - >-
+        Runs inside the CT (over proxmox_pct_remote). Refuses a guest without
+        the lxc_guest baseline marker or without the distrobuilder template
+        marker at this role's version, asserts the baked binary and
+        debootstrap, ensures the directories and places the image definitions
+        named in lxc_distrobuilder_definitions. It installs nothing and
+        starts nothing: distrobuilder is a tool, and build is the interaction.
+    options:
+      lxc_distrobuilder_version:
+        type: str
+        required: false
+        default: "3.4.0"
+        description: "The release the template must carry; server refuses another."
+      lxc_distrobuilder_bin:
+        type: str
+        required: false
+        default: "/usr/local/bin/distrobuilder"
+      lxc_distrobuilder_definitions_dir:
+        type: str
+        required: false
+        default: "/var/lib/distrobuilder/definitions"
+      lxc_distrobuilder_images_dir:
+        type: str
+        required: false
+        default: "/var/lib/distrobuilder/images"
+      lxc_distrobuilder_cache_dir:
+        type: str
+        required: false
+        default: "/var/cache/lxc/distrobuilder"
+      lxc_distrobuilder_sources_dir:
+        type: str
+        required: false
+        default: "/var/cache/lxc/distrobuilder/sources"
+      lxc_distrobuilder_baseline_marker:
+        type: str
+        required: false
+        description: "Marker lxc_guest's baseline writes. Computed default: the collection variable lxc_baseline_marker_path."
+      lxc_distrobuilder_template_marker:
+        type: str
+        required: false
+        description: "Marker the bake writes (name, version, base). Computed default: the collection variable lxc_template_marker_path."
+      lxc_distrobuilder_definitions:
+        type: list
+        elements: dict
+        required: false
+        default: []
+        description: >-
+          The image definitions to place in lxc_distrobuilder_definitions_dir: each {name, src} (a file on the node, copied in)
+          or {name, url, checksum} (fetched inside the CT; checksum sha256:<hex> or sha512:<hex>, refused without one).
+        options:
+          name:
+            type: str
+            required: true
+            description: "Bare file name in the definitions directory (debian.yaml)."
+          src:
+            type: str
+            required: false
+            description: "Path on the node to copy from."
+          url:
+            type: str
+            required: false
+            description: "URL to fetch from inside the CT (a pinned lxc/lxc-ci raw file, for example)."
+          checksum:
+            type: str
+            required: false
+            description: "sha256:<hex> or sha512:<hex> of the file at url; required with url."
+  build:
+    short_description: "Build one image from one definition inside the CT, and optionally pull it onto the node."
+    description:
+      - >-
+        Runs inside the CT (over proxmox_pct_remote). Runs the server contract
+        first (markers, tools, directories, definitions), then
+        `distrobuilder build-lxc <definition> <images_dir>/<build_name>` with
+        the cache and sources directories, the compression, the overlay
+        choice, the timeout and the -o overrides. A finished image (the
+        rootfs tarball exists) is not rebuilt unless lxc_distrobuilder_build_force.
+        Writes SHA256SUMS beside the tarballs and pulls the three files onto
+        the node when lxc_distrobuilder_build_fetch_dir is set.
+    options:
+      lxc_distrobuilder_build_definition:
+        type: str
+        required: false
+        default: ""
+        description: "Bare file name of the definition in the definitions directory; required, nothing is built without it."
+      lxc_distrobuilder_build_name:
+        type: str
+        required: false
+        description: "Output directory name under lxc_distrobuilder_images_dir. Computed default: the definition's stem."
+      lxc_distrobuilder_build_options:
+        type: list
+        elements: str
+        required: false
+        default: []
+        description: "distrobuilder -o overrides, key=value each (image.release=trixie, image.architecture=amd64, ...)."
+      lxc_distrobuilder_build_compression:
+        type: str
+        required: false
+        default: xz
+        choices: [xz, zstd, gzip, bzip2, lzma, lzip, lzop]
+        description: "The rootfs tarball's compression (meta.tar.xz is always xz)."
+      lxc_distrobuilder_build_timeout:
+        type: int
+        required: false
+        default: 0
+        description: "Seconds before distrobuilder gives up; 0 is no limit."
+      lxc_distrobuilder_build_disable_overlay:
+        type: bool
+        required: false
+        default: true
+        description: "Copy the source rootfs with rsync rather than mount an overlay (not available to an unprivileged CT; the copy is the fallback anyway)."
+      lxc_distrobuilder_build_force:
+        type: bool
+        required: false
+        default: false
+        description: "Discard the finished image and build it again."
+      lxc_distrobuilder_build_fetch_dir:
+        type: str
+        required: false
+        default: ""
+        description: "Directory on the node to pull rootfs, meta and SHA256SUMS into (<dir>/<build_name>/); empty leaves them in the CT."
+  remove:
+    short_description: "Tear the distrobuilder LXC down through lxc_guest (opt-in: lxc_guest_confirm_destroy=true)."
+    description:
+      - "Placement inputs as for container; only node, vmid and hostname decide which CT is destroyed."
+    options:
+      lxc_distrobuilder_node:
+        type: str
+        required: false
+      lxc_distrobuilder_vmid:
+        type: int
+        required: false
+        default: 0
+      lxc_distrobuilder_hostname:
+        type: str
+        required: false
+        default: "distrobuilder"
