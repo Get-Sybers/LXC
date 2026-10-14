@@ -26,7 +26,7 @@ argument_specs:
       lxc_distrobuilder_template_version:
         type: str
         required: false
-        default: "0.1.0"
+        default: "0.1.1"
         description: >-
           This repository's release of the distrobuilder template (the manifest's lxc_template_version, X.Y.Z):
           names the artifact and the tag; server refuses a guest baked at another.
@@ -216,7 +216,7 @@ argument_specs:
       lxc_distrobuilder_template_version:
         type: str
         required: false
-        default: "0.1.0"
+        default: "0.1.1"
         description: >-
           This repository's release of the distrobuilder template (the manifest's lxc_template_version, X.Y.Z):
           names the artifact and the tag; server refuses a guest baked at another.

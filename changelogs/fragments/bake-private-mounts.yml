@@ -1,0 +1,9 @@
+---
+fixed:
+  - >-
+    ``playbooks/bake-template.yml`` mounts the chroot's kernel filesystems
+    with private propagation. The bind of the build host's ``/dev`` joined
+    the host's shared peer group, so the ``devpts`` mounted under it was
+    stacked on the host's own ``/dev/pts`` (and under every concurrent
+    bake's) until the bake unmounted it, which unmounted it everywhere else
+    as well.

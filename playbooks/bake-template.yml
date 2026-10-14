@@ -138,6 +138,10 @@
     # would take the host's device nodes with it. So every failure in that
     # window unmounts before it fails (here, and in the bake play below) and
     # leaves the rootfs in place to inspect.
+    # Private propagation on every mount: the build host's /dev is a shared
+    # mount, so a devpts mounted under a plain bind of it is stacked on the
+    # host's own /dev/pts (and under every other bake's) until the bake
+    # unmounts it, which unmounts it everywhere else too.
     - name: "Mount the kernel filesystems, unmounting again if that fails"
       block:
         - name: "Mount the kernel filesystems the package tools expect"
@@ -148,10 +152,10 @@
             opts: "{{ item['opts'] }}"
             state: ephemeral
           loop:
-            - {path: proc, src: proc, fstype: proc, opts: defaults}
-            - {path: sys, src: sysfs, fstype: sysfs, opts: defaults}
-            - {path: dev, src: /dev, fstype: none, opts: bind}
-            - {path: dev/pts, src: devpts, fstype: devpts, opts: defaults}
+            - {path: proc, src: proc, fstype: proc, opts: private}
+            - {path: sys, src: sysfs, fstype: sysfs, opts: private}
+            - {path: dev, src: /dev, fstype: none, opts: "bind,private"}
+            - {path: dev/pts, src: devpts, fstype: devpts, opts: private}
           loop_control:
             label: "{{ item['path'] }}"
       rescue:
@@ -173,6 +177,10 @@
         ansible_connection: community.general.chroot
         ansible_host: "{{ lxc_template_workdir }}/rootfs"
         ansible_python_interpreter: /usr/bin/python3
+        # The build rootfs has no inventory. The baseline's marker path is a
+        # constant of the bake (the seal asserts it below), the same path the
+        # inventory's lxc_baseline_marker_path names on a node.
+        lxc_baseline_marker_path: /etc/get-sybers-lxc-baseline
         lxc_template_name: "{{ lxc_template_name }}"
         lxc_template_version: "{{ lxc_template_version }}"
         lxc_template_service_version: "{{ lxc_template_service_version }}"

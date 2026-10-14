@@ -43,7 +43,7 @@ only: this role over `pct exec`.
 | --- | --- | --- |
 | `lxc_distrobuilder_node` | `{{ lxc_node }}` | PVE node the CT lives on. |
 | `lxc_distrobuilder_vmid` | `0` (refused) | CT id; the inventory sets it. |
-| `lxc_distrobuilder_template_version` | `0.1.0` | This repository's release of the `distrobuilder` template (the manifest's `lxc_template_version`): names the artifact and the tag; `server` refuses a guest baked at another. |
+| `lxc_distrobuilder_template_version` | `0.1.1` | This repository's release of the `distrobuilder` template (the manifest's `lxc_template_version`): names the artifact and the tag; `server` refuses a guest baked at another. |
 | `lxc_distrobuilder_template` | `local:vztmpl/debian-13-distrobuilder_<template release>_<arch>.tar.zst` | The released template. |
 | `lxc_distrobuilder_template_checksum` | `""` (fetch refused) | The release's `sha256:`, pinned in the inventory. |
 | `lxc_distrobuilder_storage` | `{{ lxc_storage }}` | CT rootfs storage. |

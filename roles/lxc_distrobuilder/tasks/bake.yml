@@ -41,20 +41,37 @@
     owner: root
     group: root
     mode: "0755"
-- name: "bake | Read the built version"
+# distrobuilder cannot run in the build chroot: at start it unshares a mount
+# namespace and marks / private, and a chroot's / is not a mount point. The
+# binary's own build info names the module and the version it was built from.
+- name: "bake | Read the built binary's build info"
   ansible.builtin.command:
-    argv: ["{{ lxc_distrobuilder_bin }}", --version]
+    argv: [go, version, -m, "{{ lxc_distrobuilder_bin }}"]
+  environment:
+    HOME: /root
+    GOTOOLCHAIN: "{{ lxc_distrobuilder_go_toolchain }}"
+    GOPATH: "{{ lxc_distrobuilder_stage_dir }}/go"
+    GOMODCACHE: "{{ lxc_distrobuilder_stage_dir }}/go/pkg/mod"
+    GOCACHE: "{{ lxc_distrobuilder_stage_dir }}/cache"
   register: __lxc_distrobuilder_built
   changed_when: false
 - name: "bake | The built binary is the pinned release"
   ansible.builtin.assert:
-    that: (__lxc_distrobuilder_built.stdout | trim) == lxc_distrobuilder_version | string
+    that:
+      - __lxc_distrobuilder_mod | length == 1
+      - __lxc_distrobuilder_mod[0][1] == lxc_distrobuilder_go_module
+      - __lxc_distrobuilder_mod[0][2] == 'v' ~ (lxc_distrobuilder_version | string)
     fail_msg: >-
-      {{ lxc_distrobuilder_bin }} reports '{{ __lxc_distrobuilder_built.stdout | trim }}',
-      not {{ lxc_distrobuilder_version }}: the module
-      {{ lxc_distrobuilder_go_module }}@v{{ lxc_distrobuilder_version }} is not the
+      {{ lxc_distrobuilder_bin }} was built from
+      '{{ __lxc_distrobuilder_mod | map('join', ' ') | join('; ') }}', not
+      {{ lxc_distrobuilder_go_module }}@v{{ lxc_distrobuilder_version }}, the
       release the manifest names.
     quiet: true
+  vars:
+    # The `mod` line of `go version -m`: mod <module> <version> <h1 hash>.
+    __lxc_distrobuilder_mod: >-
+      {{ __lxc_distrobuilder_built.stdout_lines | map('ansible.builtin.split')
+         | selectattr('0', 'equalto', 'mod') | list }}
 - name: "bake | Purge the Go toolchain and the compiler from the image"
   ansible.builtin.apt:
     name: "{{ lxc_distrobuilder_build_packages }}"
