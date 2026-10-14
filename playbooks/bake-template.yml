@@ -1,0 +1,235 @@
+---
+# Bake one LXC template from its manifest (templates/<name>/template.yml).
+#
+#   sudo ansible-playbook playbooks/bake-template.yml \
+#     -e lxc_template_dir=$PWD/templates/op-connect [-e lxc_template_workdir=$PWD/build]
+#
+# Runs as root on a build host (the GitHub Actions runner, or any Debian box
+# with tar+zstd): downloads the stock Proxmox base rootfs and verifies it
+# against the pinned checksum, unpacks it, runs the manifest's bake steps inside
+# it over community.general.chroot, writes the template marker, seals the
+# result as <output>.tar.zst and writes its .sha256. Never touches a Proxmox
+# node; the sealed artifact is what lxc_guest fetches there.
+- name: "Prepare the build rootfs from the pinned base template"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - "{{ lxc_template_dir }}/template.yml"
+  tasks:
+    - name: "The manifest is complete and the base checksum is pinned"
+      ansible.builtin.assert:
+        that:
+          - lxc_template_dir | default('') | length > 0
+          - lxc_template_name | length > 0
+          - lxc_template_version | string | length > 0
+          - lxc_template_output | length > 0
+          - lxc_template_base_url is match('^https://')
+          - lxc_template_base_checksum is match('^sha(256|512):[0-9a-f]+$')
+          - lxc_template_bake | length > 0
+        fail_msg: >-
+          templates/{{ lxc_template_name | default('?') }}/template.yml must set name,
+          version, output, an https base URL, a sha256:/sha512: base checksum (pin it
+          with scripts/base_template_checksum.py) and at least one bake step.
+        quiet: true
+    - name: "Read the effective uid"
+      ansible.builtin.command:
+        argv: [id, -u]
+      register: __lxc_bake_uid
+      changed_when: false
+      check_mode: false
+    - name: "The bake runs as root (chroot, ownership-preserving tar)"
+      ansible.builtin.assert:
+        that: (__lxc_bake_uid.stdout | trim) == '0'
+        fail_msg: "Run the bake with sudo: chroot and a rootfs with preserved ownership need root."
+        quiet: true
+    - name: "The work directories exist"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop:
+        - "{{ lxc_template_workdir }}"
+        - "{{ lxc_template_workdir }}/base"
+        - "{{ lxc_template_workdir }}/rootfs"
+    - name: "Download the base template and verify it against the pinned checksum"
+      ansible.builtin.get_url:
+        url: "{{ lxc_template_base_url }}"
+        dest: "{{ lxc_template_workdir }}/base/{{ lxc_template_base_url | basename }}"
+        checksum: "{{ lxc_template_base_checksum }}"
+        owner: root
+        group: root
+        mode: "0644"
+    - name: "Unpack the base rootfs (tar: unarchive cannot preserve numeric owners through zstd)"
+      ansible.builtin.command:
+        argv:
+          - tar
+          - --zstd
+          - --numeric-owner
+          - --xattrs
+          - --xattrs-include=*
+          - -xpf
+          - "{{ lxc_template_workdir }}/base/{{ lxc_template_base_url | basename }}"
+          - -C
+          - "{{ lxc_template_workdir }}/rootfs"
+        creates: "{{ lxc_template_workdir }}/rootfs/etc/os-release"
+    - name: "Stat the rootfs python (the chroot connection needs it)"
+      ansible.builtin.stat:
+        path: "{{ lxc_template_workdir }}/rootfs/usr/bin/python3"
+      register: __lxc_bake_python
+    - name: "The base rootfs carries python3"
+      ansible.builtin.assert:
+        that: __lxc_bake_python.stat.exists
+        fail_msg: >-
+          {{ lxc_template_workdir }}/rootfs/usr/bin/python3 is absent — the chroot
+          connection cannot drive this base. Use a Proxmox 'standard' template
+          (python3 is Priority: standard in Debian).
+        quiet: true
+    - name: "Mount the kernel filesystems the package tools expect"
+      ansible.posix.mount:
+        path: "{{ lxc_template_workdir }}/rootfs/{{ item['path'] }}"
+        src: "{{ item['src'] }}"
+        fstype: "{{ item['fstype'] }}"
+        opts: "{{ item['opts'] }}"
+        state: ephemeral
+      loop:
+        - {path: proc, src: proc, fstype: proc, opts: defaults}
+        - {path: sys, src: sysfs, fstype: sysfs, opts: defaults}
+        - {path: dev, src: /dev, fstype: none, opts: bind}
+        - {path: dev/pts, src: devpts, fstype: devpts, opts: defaults}
+      loop_control:
+        label: "{{ item['path'] }}"
+    - name: "Give the chroot the build host's resolver (removed before sealing)"
+      ansible.builtin.copy:
+        src: /etc/resolv.conf
+        dest: "{{ lxc_template_workdir }}/rootfs/etc/resolv.conf"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+    - name: "Stop package scripts from starting services inside the chroot (removed before sealing)"
+      ansible.builtin.copy:
+        content: |
+          #!/bin/sh
+          exit 101
+        dest: "{{ lxc_template_workdir }}/rootfs/usr/sbin/policy-rc.d"
+        owner: root
+        group: root
+        mode: "0755"
+    - name: "Add the rootfs to the play inventory over the chroot connection"
+      ansible.builtin.add_host:
+        name: build_rootfs
+        groups: lxc_build
+        ansible_connection: community.general.chroot
+        ansible_host: "{{ lxc_template_workdir }}/rootfs"
+        ansible_python_interpreter: /usr/bin/python3
+        lxc_template_name: "{{ lxc_template_name }}"
+        lxc_template_version: "{{ lxc_template_version }}"
+        lxc_template_bake: "{{ lxc_template_bake }}"
+      changed_when: false
+- name: "Run the manifest's bake steps inside the rootfs"
+  hosts: lxc_build
+  gather_facts: false
+  vars_files:
+    - "{{ lxc_template_dir }}/template.yml"
+  tasks:
+    - name: "Run each bake step"
+      ansible.builtin.include_role:
+        name: "{{ __lxc_bake_step['role'] }}"
+        tasks_from: "{{ __lxc_bake_step['tasks_from'] }}"
+      loop: "{{ lxc_template_bake }}"
+      loop_control:
+        loop_var: __lxc_bake_step
+        label: "{{ __lxc_bake_step['role'] }}:{{ __lxc_bake_step['tasks_from'] }}"
+    - name: "Write the template marker"
+      ansible.builtin.copy:
+        content: |
+          name={{ lxc_template_name }}
+          version={{ lxc_template_version }}
+          base={{ lxc_template_base_url | basename }}
+          collection=get_sybers.lxc
+        dest: /etc/get-sybers-lxc-template
+        owner: root
+        group: root
+        mode: "0644"
+    - name: "Clear the apt lists and cache"
+      ansible.builtin.command:
+        argv: [apt-get, clean]
+      changed_when: true
+    - name: "Remove the build-only files and leave the machine identity unset"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /usr/sbin/policy-rc.d
+        - /etc/resolv.conf
+        - /var/lib/apt/lists
+        - /etc/machine-id
+        - /var/lib/dbus/machine-id
+    - name: "An empty machine-id, so every container derives its own on first boot"
+      ansible.builtin.copy:
+        content: ""
+        dest: /etc/machine-id
+        owner: root
+        group: root
+        mode: "0444"
+- name: "Seal the template"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - "{{ lxc_template_dir }}/template.yml"
+  tasks:
+    - name: "Unmount the kernel filesystems"
+      ansible.posix.mount:
+        path: "{{ lxc_template_workdir }}/rootfs/{{ item }}"
+        state: unmounted
+      loop: [dev/pts, dev, sys, proc]
+    - name: "Seal the rootfs (tar: ownership, xattrs and ACLs must survive)"
+      ansible.builtin.command:
+        argv:
+          - tar
+          - --zstd
+          - --numeric-owner
+          - --xattrs
+          - --xattrs-include=*
+          - --acls
+          - -cpf
+          - "{{ lxc_template_workdir }}/{{ lxc_template_output }}"
+          - -C
+          - "{{ lxc_template_workdir }}/rootfs"
+          - .
+        creates: "{{ lxc_template_workdir }}/{{ lxc_template_output }}"
+    - name: "List the sealed template"
+      ansible.builtin.command:
+        argv: [tar, --zstd, -tf, "{{ lxc_template_workdir }}/{{ lxc_template_output }}"]
+      register: __lxc_bake_listing
+      changed_when: false
+    - name: "The template carries the markers and no SSH daemon"
+      ansible.builtin.assert:
+        that:
+          - "'./etc/get-sybers-lxc-template' in __lxc_bake_listing.stdout_lines"
+          - "'./etc/get-sybers-lxc-baseline' in __lxc_bake_listing.stdout_lines"
+          - "'./usr/sbin/sshd' not in __lxc_bake_listing.stdout_lines"
+        fail_msg: "The sealed template is missing a marker or still carries /usr/sbin/sshd."
+        quiet: true
+    - name: "Checksum the artifact"
+      ansible.builtin.stat:
+        path: "{{ lxc_template_workdir }}/{{ lxc_template_output }}"
+        checksum_algorithm: sha256
+      register: __lxc_bake_artifact
+    - name: "Write the .sha256 beside it (sha256sum format)"
+      ansible.builtin.copy:
+        content: "{{ __lxc_bake_artifact.stat.checksum }}  {{ lxc_template_output }}\n"
+        dest: "{{ lxc_template_workdir }}/{{ lxc_template_output }}.sha256"
+        owner: root
+        group: root
+        mode: "0644"
+    - name: "Baked"
+      ansible.builtin.debug:
+        msg: >-
+          {{ lxc_template_output }} ({{ (__lxc_bake_artifact.stat.size / 1048576) | round(1) }} MiB)
+          sha256:{{ __lxc_bake_artifact.stat.checksum }} — pin this as
+          lxc_<service>_template_checksum once released.

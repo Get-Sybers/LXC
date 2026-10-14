@@ -5,7 +5,16 @@
 lxc_onepassword_connect_node: "{{ lxc_node }}"
 lxc_onepassword_connect_vmid: 950
 lxc_onepassword_connect_hostname: op-connect
-lxc_onepassword_connect_template: "{{ lxc_template }}"
+# The released op-connect template (templates/op-connect, built and published
+# by .github/workflows/templates.yml). lxc_guest fetches it into the node's
+# template cache by checksum when it is not there; the checksum is pinned in
+# the inventory from the release, and an empty one is refused.
+lxc_onepassword_connect_template_file: >-
+  debian-13-op-connect_{{ lxc_onepassword_connect_version }}_{{ lxc_onepassword_connect_arch }}.tar.zst
+lxc_onepassword_connect_template: "local:vztmpl/{{ lxc_onepassword_connect_template_file }}"
+lxc_onepassword_connect_template_url: >-
+  {{ lxc_template_release_base }}/op-connect/v{{ lxc_onepassword_connect_version }}/{{ lxc_onepassword_connect_template_file }}
+lxc_onepassword_connect_template_checksum: ""
 lxc_onepassword_connect_storage: "{{ lxc_storage }}"
 lxc_onepassword_connect_rootfs_gb: 4
 lxc_onepassword_connect_cores: 1
@@ -22,7 +31,10 @@ lxc_onepassword_connect_pool: ""
 # target it).
 lxc_onepassword_connect_group: onepassword_connect
 
-# --- Connect version + source images (pin; confirm the current tag on Docker Hub) ---
+# --- Connect version + source images -----------------------------------------
+# The version and arch name the released template; templates/op-connect/
+# template.yml sets the same values for the bake, so the image and the deploy
+# agree. Confirm the current tag on Docker Hub before raising it.
 lxc_onepassword_connect_version: "1.8.3"
 lxc_onepassword_connect_arch: amd64
 lxc_onepassword_connect_registry: registry-1.docker.io
@@ -38,8 +50,10 @@ lxc_onepassword_connect_data_dir: "{{ lxc_onepassword_connect_home }}/.op/data"
 lxc_onepassword_connect_bin_dir: /usr/local/bin
 lxc_onepassword_connect_api_port: 8080
 lxc_onepassword_connect_stage_dir: /var/tmp/op-connect-extract
-# The baseline marker lxc_guest writes; server refuses a guest without it.
+# The markers server asserts before configuring anything: the baseline
+# lxc_guest writes and the template marker the bake writes.
 lxc_onepassword_connect_baseline_marker: "{{ lxc_baseline_marker_path }}"
+lxc_onepassword_connect_template_marker: "{{ lxc_template_marker_path }}"
 
 # --- The 1password-credentials.json (SECRET): path on the node ---
 lxc_onepassword_connect_credentials_src: ""

@@ -5,15 +5,18 @@ Mirror the lab's authentication credentials (API keys and passwords) into a self
 cluster tier (PocketBase and the ZFS file vault, `get-sybers/proxmox`) are left exactly as they are.
 
 The Connect server runs **natively in a hardened Debian LXC under `systemd`** — no Docker, no OCI runtime, no SSH. The `connect-api` and
-`connect-sync` images are single Go binaries; the automation extracts those binaries straight from the pinned official images (via the Docker
-registry HTTP API — nothing is installed and nothing runs as a container) and runs each as an `opuser` service, exactly as the image would.
+`connect-sync` images are single Go binaries; the template bake extracts those binaries straight from the pinned official images (via the
+Docker registry HTTP API — nothing is installed and nothing runs as a container) and installs each as an `opuser` service, exactly as the
+image would. The result is the released `op-connect` template ([`templates/op-connect`](../templates/op-connect/README.md)); the node
+creates the CT from it and does nothing but drop in the credentials and start the units.
 
 ## Moving parts
 
 | Piece | What it is |
 | --- | --- |
-| `lxc_guest` role | Creates the CT (unprivileged, ownership-marked), reaches it over `pct exec`, runs the baseline inside it (no `sshd`, no container runtime). |
-| `lxc_onepassword_connect` role + `deploy-onepassword-connect.yml` | Hands the Connect placement to `lxc_guest`, then runs `op-connect-api` / `op-connect-sync` as `systemd` services inside the CT. |
+| `templates/op-connect` + `.github/workflows/templates.yml` | The released template: Debian 13 with the Connect binaries, units, service user and the baseline baked in; published as the `op-connect/v<version>` GitHub Release ([docs/03](03-Template-Build-and-Release.md)). |
+| `lxc_guest` role | Fetches the released template into the node's cache by its pinned checksum, creates the CT from it (unprivileged, ownership-marked), reaches it over `pct exec`, re-asserts the baseline inside it. |
+| `lxc_onepassword_connect` role + `deploy-onepassword-connect.yml` | `bake` is what the template carries; `container` hands the placement to `lxc_guest`; `server` installs the credentials and starts the baked `op-connect-api` / `op-connect-sync` units inside the CT. |
 | `lxc_onepassword_item` role + `reflect-onepassword-credentials.yml` | Upsert one credential per entry into 1Password via the Connect API (`onepassword.connect.generic_item`). |
 | `inventory/secrets/onepassword.yml` (vaulted) | The single source: Connect host/vault-id/token plus the list of items to mirror. |
 
@@ -38,8 +41,10 @@ This gives you three things:
 
 ## Prerequisites (node side)
 
-- The Debian template on the node: `pveam list local | grep debian-13` (fetch with `pveam update && pveam download local <file>`; the
-  file name is `lxc_template` in `inventory/group_vars/all/lxc.yml`).
+- The released template's checksum pinned in `inventory/group_vars/all/onepassword.yml` (`lxc_onepassword_connect_template_checksum`,
+  from the `.sha256` asset of the `op-connect/v<version>` release). The play fetches the template into the node's cache itself; nothing
+  is downloaded without the pin. Verify the release first if you want to: [docs/03 §5](03-Template-Build-and-Release.md#5-verifying-a-release-by-hand).
+- The node can reach `github.com` to fetch the release asset once (or place the file in `/var/lib/vz/template/cache/` yourself).
 - An admin PVE API credential in the environment (`PROXMOX_TOKEN_ID` + `PROXMOX_TOKEN_SECRET`, or `PROXMOX_PASSWORD`).
 - The collection installed where the play runs: `ansible-galaxy collection install -r requirements.yml` (the play runs **on the node**, as
   root).
@@ -59,20 +64,15 @@ ansible-playbook playbooks/deploy-onepassword-connect.yml \
   -e lxc_onepassword_connect_net0='name=eth0,bridge=vmbr0,ip=192.168.4.150/24,gw=192.168.4.1'
 ```
 
-The play creates the LXC, strips its SSH server, extracts the binaries, writes the two `systemd` units, starts them, and verifies
-`http://127.0.0.1:8080/health` inside the CT.
+The play fetches the released template into the cache if it is not there, creates the LXC from it, re-asserts the baseline, installs the
+credentials file, starts the two baked `systemd` units, and verifies `http://127.0.0.1:8080/health` inside the CT.
 
-### Adopting the container the cluster collection created
+### A container the cluster collection created
 
-If CT 950 already exists from `get_sybers.cluster`'s `cluster-onepassword-connect.yml` (before the move to this repository), `lxc_guest`'s
-preflight refuses it: its description carries the old marker, not this collection's. Adopt it once, deliberately, on the node:
-
-```bash
-pct set 950 --description "Ansible-managed: get_sybers.lxc.lxc_guest | 1Password Connect server (op-connect-api + op-connect-sync)"
-```
-
-Then run the play as above: the create is a no-op, the baseline removes the SSH server the standard template shipped with, and `server` is
-`changed=0` on an already-settled host.
+If CT 950 already exists from `get_sybers.cluster`'s `cluster-onepassword-connect.yml` (before the move to this repository), it was built
+from the stock Debian template with the binaries installed in place, so it carries neither this collection's ownership marker nor the
+template marker, and `server` refuses it. Replace it: destroy it on the node (`pct stop 950 && pct destroy 950 --purge`) and run the play,
+which creates it fresh from the released template. The Connect data directory is rebuilt by `connect-sync` from the credentials file.
 
 ## Step 2 — Fill in the vaulted secrets file
 
@@ -113,10 +113,11 @@ ansible-playbook playbooks/deploy-onepassword-connect.yml --tags destroy -e lxc_
 
 ## How it works and what to know
 
-- **Native, not containerised.** The role reads each image's config, pulls its layers from the registry, unpacks them, and installs
-  `/usr/local/bin/connect-api` and `connect-sync`. Each runs under `systemd` as the unprivileged `opuser`, with `SSL_CERT_FILE` pointing at
-  the system CA bundle and the credentials/data under `~/.op` — the same contract the image declares. Extraction is gated by a version
-  marker, so a settled host is idempotent; bump `lxc_onepassword_connect_version` to upgrade.
+- **Native, not containerised.** At bake time the role reads each image's config, pulls its layers from the registry, unpacks them, and
+  installs `/usr/local/bin/connect-api` and `connect-sync` into the template. Each runs under `systemd` as the unprivileged `opuser`, with
+  `SSL_CERT_FILE` pointing at the system CA bundle and the credentials/data under `~/.op` — the same contract the image declares. To
+  upgrade: raise `lxc_onepassword_connect_version` in `templates/op-connect/template.yml`, tag `op-connect/v<new>`, pin the new
+  checksum, and recreate the CT from the new release (`--tags destroy -e lxc_guest_confirm_destroy=true`, then the play).
 - **Secrets hygiene.** The `1password-credentials.json` is installed `0600` owned by `opuser`; the Connect token lives only in the vaulted
   `onepassword.yml`. Every secret-bearing task is `no_log`, and the roles report shape only (sizes, counts), never values.
 - **Unofficial topology.** 1Password officially supports Docker-Compose and Kubernetes. Running the binaries bare is equivalent (same

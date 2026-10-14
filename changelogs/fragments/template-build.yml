@@ -1,0 +1,42 @@
+---
+added:
+  - >-
+    Templates are built in GitHub Actions and released. ``templates/<name>/
+    template.yml`` is the manifest of one LXC template (base rootfs and its
+    Proxmox-published checksum, version, bake steps, output name);
+    ``playbooks/bake-template.yml`` bakes it on a build host — verify and unpack
+    the base, run the bake steps inside it over ``community.general.chroot``,
+    write the template marker, seal a ``.tar.zst`` and its ``.sha256``. The
+    ``Templates`` workflow bakes every template on a pull request and, on a
+    ``<name>/v<version>`` tag, publishes a GitHub Release with the artifact, a
+    keyless cosign signature and a build-provenance attestation.
+    ``scripts/base_template_checksum.py`` prints the pin for a stock base.
+  - >-
+    ``lxc_guest`` ``template`` entry point (first step of the ensure path):
+    fetch the released template into the node's ``local`` cache by the
+    ``sha256:`` the inventory pins when it is not there; a fetch without the pin
+    is refused. New inputs ``lxc_guest_template_url``,
+    ``lxc_guest_template_checksum``, ``lxc_guest_template_cache_dir`` and the
+    collection variables ``lxc_template_url``, ``lxc_template_checksum``,
+    ``lxc_template_cache_dir``, ``lxc_template_marker_path``.
+  - >-
+    ``lxc_onepassword_connect`` ``bake`` entry point — the chroot-safe image
+    content (ca-certificates, service user, binaries extracted from the pinned
+    images, units enabled through their ``multi-user.target.wants`` links) that
+    the ``op-connect`` template carries.
+changed:
+  - >-
+    ``lxc_onepassword_connect`` ``server`` no longer installs anything: it
+    asserts the baseline marker and the ``op-connect`` template marker at the
+    role's version, installs the credentials file, starts the baked units and
+    verifies the API. Its default template is the released
+    ``debian-13-op-connect_<version>_<arch>.tar.zst`` with the release asset as
+    URL; the checksum is pinned per site
+    (``lxc_onepassword_connect_template_checksum``). The premise gains rule 9: a
+    guest is created only from a released template (``docs/01``), documented in
+    ``docs/03-Template-Build-and-Release.md``.
+  - >-
+    The Galaxy release workflow runs only for ``v<version>`` tags; template tags
+    (``<name>/v<version>``) are immutable under the tag ruleset alongside them.
+    ``community.general`` is pinned as a build-only collection (the chroot
+    connection).

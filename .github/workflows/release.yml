@@ -1,6 +1,8 @@
 ---
-# Publish the get_sybers.lxc collection to Galaxy on a GitHub release.
-# Self-contained like ci.yml. Create the `release` environment with the
+# Publish the get_sybers.lxc collection to Galaxy on a GitHub release of a
+# v<version> tag. Template releases are tagged <name>/v<version> by the
+# Templates workflow and are not collection releases, so they are skipped
+# here. Self-contained like ci.yml. Create the `release` environment with the
 # ANSIBLE_GALAXY_API_KEY secret (docs/04 bootstrap).
 name: Release collection
 on:
@@ -9,6 +11,7 @@ on:
 permissions: {}
 jobs:
   galaxy:
+    if: ${{ !contains(github.event.release.tag_name, '/') }}
     runs-on: ubuntu-24.04
     environment: release
     permissions:

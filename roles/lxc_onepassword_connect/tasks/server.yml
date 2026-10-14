@@ -1,4 +1,7 @@
 ---
+# Runs INSIDE the running CT over proxmox_pct_remote. The image content is
+# already there (tasks/bake.yml, in the released template); this does the
+# site-specific rest: the credentials file, the first start, the health check.
 - name: "server | Stat the lxc_guest baseline marker"
   ansible.builtin.stat:
     path: "{{ lxc_onepassword_connect_baseline_marker }}"
@@ -9,41 +12,46 @@
     fail_msg: >-
       {{ lxc_onepassword_connect_baseline_marker }} is absent, so this guest has
       not been through get_sybers.lxc.lxc_guest's baseline (no SSH daemon, no
-      container runtime). Run lxc_guest tasks_from: baseline on it first — the
-      deploy-onepassword-connect play does — then re-run server.
+      container runtime). The released op-connect template carries it; a guest
+      created from anything else is not configured by this role.
     quiet: true
-- name: "server | Ensure ca-certificates is present (binaries read SSL_CERT_FILE)"
-  ansible.builtin.apt:
-    name: ca-certificates
-    state: present
-    update_cache: true
-- name: "server | The unprivileged service user"
-  ansible.builtin.user:
-    name: "{{ lxc_onepassword_connect_user }}"
-    home: "{{ lxc_onepassword_connect_home }}"
-    system: true
-    create_home: true
-    shell: /usr/sbin/nologin
-- name: "server | The .op home directory"
-  ansible.builtin.file:
-    path: "{{ lxc_onepassword_connect_home }}/.op"
-    state: directory
-    owner: "{{ lxc_onepassword_connect_user }}"
-    group: "{{ lxc_onepassword_connect_user }}"
-    mode: "0700"
-- name: "server | The shared .op/data directory"
-  ansible.builtin.file:
-    path: "{{ lxc_onepassword_connect_data_dir }}"
-    state: directory
-    owner: "{{ lxc_onepassword_connect_user }}"
-    group: "{{ lxc_onepassword_connect_user }}"
-    mode: "0700"
-- name: "server | Extract each Connect binary from its pinned image"
-  ansible.builtin.include_tasks: extract_binary.yml
+- name: "server | Read the template marker"
+  ansible.builtin.slurp:
+    src: "{{ lxc_onepassword_connect_template_marker }}"
+  register: __lxc_onepassword_connect_tmpl
+  failed_when: false
+- name: "server | Parse the template marker"
+  ansible.builtin.set_fact:
+    __lxc_onepassword_connect_tmpl_fields: >-
+      {{ dict((__lxc_onepassword_connect_tmpl.content | default('') | b64decode).splitlines()
+              | select('search', '=') | map('split', '=', 1) | list) }}
+- name: "server | Refuse a guest that was not created from the op-connect template"
+  ansible.builtin.assert:
+    that:
+      - __lxc_onepassword_connect_tmpl_fields['name'] | default('') == 'op-connect'
+      - __lxc_onepassword_connect_tmpl_fields['version'] | default('') == lxc_onepassword_connect_version | string
+    fail_msg: >-
+      {{ lxc_onepassword_connect_template_marker }} says
+      name={{ __lxc_onepassword_connect_tmpl_fields['name'] | default('<absent>') }}
+      version={{ __lxc_onepassword_connect_tmpl_fields['version'] | default('<absent>') }};
+      this role configures op-connect {{ lxc_onepassword_connect_version }}. The
+      Connect binaries are baked into the released template (templates/op-connect),
+      never installed into a running guest. Create the CT from the matching
+      release, or set lxc_onepassword_connect_version to the one it carries.
+    quiet: true
+- name: "server | Stat the baked binaries"
+  ansible.builtin.stat:
+    path: "{{ lxc_onepassword_connect_bin_dir }}/{{ item | basename }}"
+  register: __lxc_onepassword_connect_bins
   loop: "{{ lxc_onepassword_connect_repos }}"
-  loop_control:
-    loop_var: __lxc_onepassword_connect_repo
-    label: "{{ __lxc_onepassword_connect_repo }}"
+- name: "server | The baked binaries are present"
+  ansible.builtin.assert:
+    that: __lxc_onepassword_connect_bins.results | rejectattr('stat.exists') | list | length == 0
+    fail_msg: >-
+      Missing under {{ lxc_onepassword_connect_bin_dir }}:
+      {{ __lxc_onepassword_connect_bins.results | rejectattr('stat.exists') | map(attribute='item') | list }}.
+      The template marker matched but the image is incomplete — rebuild and re-release it.
+    quiet: true
 - name: "server | A credentials file must have been provided"
   ansible.builtin.assert:
     that: lxc_onepassword_connect_credentials_src | length > 0
@@ -74,22 +82,6 @@
       1password-credentials.json present
       ({{ __lxc_onepassword_connect_cred.stat.size | default(0) }} bytes).
     quiet: true
-- name: "server | Install the op-connect-api systemd unit"
-  ansible.builtin.template:
-    src: op-connect-api.service.j2
-    dest: /etc/systemd/system/op-connect-api.service
-    owner: root
-    group: root
-    mode: "0644"
-  notify: Restart 1Password Connect
-- name: "server | Install the op-connect-sync systemd unit"
-  ansible.builtin.template:
-    src: op-connect-sync.service.j2
-    dest: /etc/systemd/system/op-connect-sync.service
-    owner: root
-    group: root
-    mode: "0644"
-  notify: Restart 1Password Connect
 - name: "server | Enable and start op-connect-sync"
   ansible.builtin.systemd_service:
     name: op-connect-sync

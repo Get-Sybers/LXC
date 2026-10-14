@@ -32,7 +32,21 @@ argument_specs:
       lxc_guest_template:
         type: str
         required: false
-        description: "storage:vztmpl/<file> OS template. Computed default: the collection variable lxc_template."
+        description: "storage:vztmpl/<file> of a template this collection released. Computed default: the collection variable lxc_template."
+      lxc_guest_template_url:
+        type: str
+        required: false
+        description: >-
+          URL to fetch the template from when it is not in the cache (empty: never fetch).
+          Computed default: the collection variable lxc_template_url.
+      lxc_guest_template_checksum:
+        type: str
+        required: false
+        description: "sha256:<hex> the fetched template must have; required for a fetch. Computed default: the collection variable lxc_template_checksum."
+      lxc_guest_template_cache_dir:
+        type: str
+        required: false
+        description: "Directory the `local` storage keeps templates in. Computed default: the collection variable lxc_template_cache_dir."
       lxc_guest_storage:
         type: str
         required: false
@@ -101,6 +115,9 @@ argument_specs:
         required: false
         default: false
         description: "remove refuses without this set true on the command line."
+  template:
+    short_description: "Fetch the released template into the node's cache by checksum when it is not there."
+    options: *lxc_guest_options
   facts:
     short_description: "Node-side discovery of the node, the template, the bridge and the CT id — writes nothing."
     options: *lxc_guest_options

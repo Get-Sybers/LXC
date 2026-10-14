@@ -28,11 +28,24 @@ Consumers pin an exact version in their own `requirements.yml`. This collection'
 | --- | --- | --- |
 | `lxc_preflight` | node | Admission gate every node-side play includes first: running as root, on a Proxmox VE node, with `pct` present. |
 | `lxc_guest` | node + guest | The one lifecycle: facts, preflight (refuses a privileged request, a foreign CT id, a missing template or bridge), create via `community.proxmox.proxmox`, connect over `proxmox_pct_remote`, post-check from Proxmox; `baseline` inside the guest (purge `sshd`, refuse container runtimes, write the marker); opt-in `remove`. |
-| `lxc_onepassword_connect` | build | Hand the Connect placement to `lxc_guest`, then run `op-connect-api`/`op-connect-sync` as native `systemd` services inside the CT (binaries extracted from the pinned official images; no Docker/OCI). `server` refuses a guest without the baseline marker. |
+| `lxc_onepassword_connect` | build | `bake` puts the `connect-api`/`connect-sync` binaries, units and service user into the template (extracted from the pinned official images; no Docker/OCI); `container` hands the placement and the released template to `lxc_guest`; `server` installs the credentials and starts the units, refusing a guest without the baseline and template markers. |
 | `lxc_onepassword_item` | API client | Upsert one item into the Connect vault via `onepassword.connect.generic_item`, under `no_log` — the credential-mirror primitive. |
 
 Each role ships `meta/argument_specs.yml` (typed, described inputs), `defaults/main.yml`, a `README.md` stating its contract, and Molecule
 coverage under [`extensions/molecule/`](extensions/molecule) (see [Testing](#testing)).
+
+### Templates
+
+Every container is created from a template built here and published as a GitHub Release ([`docs/03`](docs/03-Template-Build-and-Release.md)).
+One directory per template under [`templates/`](templates/README.md):
+
+| Template | Release tag | Carries |
+| --- | --- | --- |
+| [`op-connect`](templates/op-connect/README.md) | `op-connect/v<connect version>` | Debian 13, the `connect-api`/`connect-sync` binaries and units, `opuser`, the baseline (no `sshd`) |
+
+[`playbooks/bake-template.yml`](playbooks/bake-template.yml) bakes a manifest into an artifact; [`.github/workflows/templates.yml`](.github/workflows/templates.yml)
+runs it on every pull request and publishes on a `<name>/v<version>` tag with a checksum, a cosign signature and a provenance attestation.
+On the node, `lxc_guest` fetches the release by the checksum the inventory pins.
 
 ### Playbooks
 
@@ -40,8 +53,10 @@ coverage under [`extensions/molecule/`](extensions/molecule) (see [Testing](#tes
 | --- | --- | --- |
 | [`deploy-onepassword-connect.yml`](playbooks/deploy-onepassword-connect.yml) | the node (`localhost`) | `lxc_preflight` → ensure the CT → `lxc_guest` baseline inside it → install and verify Connect; `--tags destroy -e lxc_guest_confirm_destroy=true` tears it down. |
 | [`reflect-onepassword-credentials.yml`](playbooks/reflect-onepassword-credentials.yml) | anywhere that reaches the Connect API | Read the vaulted [`inventory/secrets/onepassword.yml`](inventory/secrets/onepassword.yml.example) and upsert each credential; idempotent. |
+| [`bake-template.yml`](playbooks/bake-template.yml) | a build host, as root (the Templates workflow) | Bake `templates/<name>/template.yml` into a sealed `.tar.zst` + `.sha256`; never touches a node. |
 
-The plays carry no configuration of their own: every site-specific value — the node, template, storage, bridge, CT ids, addresses — lives in
+The plays carry no configuration of their own: every site-specific value — the node, storage, bridge, CT ids, addresses, the released
+template checksums — lives in
 [`inventory/`](inventory) (`group_vars/all/<topic>.yml`), which `ansible.cfg` points at so no `-i` is needed. The node-side plays run **on**
 the Proxmox node as root (`pct` is node-local); PVE API auth comes from the `PROXMOX_*` environment variables
 ([`inventory/group_vars/all/proxmox_api.yml`](inventory/group_vars/all/proxmox_api.yml)).
@@ -50,6 +65,8 @@ the Proxmox node as root (`pct` is node-local); PVE API auth comes from the `PRO
 
 - [`docs/01-Hardened-LXC-Premise.md`](docs/01-Hardened-LXC-Premise.md) — the rules, what enforces each, and how to add a service.
 - [`docs/02-1Password-Connect.md`](docs/02-1Password-Connect.md) — the operator procedure for the Connect server and the credential mirror.
+- [`docs/03-Template-Build-and-Release.md`](docs/03-Template-Build-and-Release.md) — how a template is baked, released, verified and
+  fetched onto a node.
 
 ## Development
 

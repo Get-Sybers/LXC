@@ -18,6 +18,7 @@ One sentence governs the rest: **a container has no door of its own — the node
 | 6 | **The collection owns what it creates, and only that.** `create` stamps an ownership marker into the container description; `preflight` refuses a CT id that exists without it; `remove` is opt-in (`lxc_guest_confirm_destroy=true`), refuses a CT without the marker, and refuses one whose hostname is not the one described. | `lxc_guest` `create.yml`, `preflight.yml`, `remove.yml` |
 | 7 | **Interaction with a running service is its API.** Writing data into a service (credentials into 1Password Connect) goes through the service's own API from an `lxc_<service>_item`-style client role, under `no_log`, never by editing files in the guest. | `lxc_onepassword_item`; the service's design |
 | 8 | **Secrets are supplied, never stored.** PVE API credentials come from `PROXMOX_*` environment variables; service credentials from a vaulted `inventory/secrets/` file passed with `-e`; every secret-bearing task is `no_log` and reports shape only. | `inventory/group_vars/all/proxmox_api.yml`, `inventory/secrets/` |
+| 9 | **A guest is created only from a released template.** Images are baked in GitHub Actions from a stock Proxmox base, published as GitHub Releases with a checksum, a signature and a provenance attestation, and fetched onto the node by the checksum the inventory pins. Nothing unverified reaches the template cache, and a service role installs nothing into a running guest: `server` refuses a guest whose template marker is not its own. | `templates/`, `playbooks/bake-template.yml`, `.github/workflows/templates.yml`, `lxc_guest` `template.yml`, each `lxc_<service>` `server` |
 
 ## 2. What this buys
 
@@ -28,6 +29,8 @@ One sentence governs the rest: **a container has no door of its own — the node
 - **Loud failure.** Each rule is an assertion with a `fail_msg` that names the fix. Config drift on an existing container is reconciled
   by `create` (`update: true`) and then proved by `postcheck` from Proxmox; what cannot be reconciled in place (a privileged container) fails
   the run.
+- **An image is reviewed as an image.** A change under `templates/` or to a role's `bake` entry point is baked on the pull request; the
+  node runs no install step, needs no reach to Docker Hub, and creates every container from bytes whose checksum is in version control.
 
 ## 3. What it does not claim
 
@@ -40,13 +43,19 @@ One sentence governs the rest: **a container has no door of its own — the node
 
 ## 4. Adding a service
 
-1. **A role `lxc_<service>`** with three entry points: `container` (node side — include `lxc_guest` with the placement), `server` (guest
-   side — assert the baseline marker first, then configure), `remove` (node side — include `lxc_guest` `tasks_from: remove`). Its defaults
-   point at the collection variables in `inventory/group_vars/all/lxc.yml`.
-2. **An API-client role `lxc_<service>_item`** (or similar) if operators need to put data into the running service.
-3. **A play `deploy-<service>.yml`** sequencing: `lxc_preflight` → `container` → `lxc_guest` `baseline` → `server`, plus the opt-in destroy play
+1. **A template `templates/<service>/`** — the manifest (`template.yml`: base, version, bake steps, output) and a README. See
+   [`templates/README.md`](../templates/README.md).
+2. **A role `lxc_<service>`** with four entry points: `bake` (inside the build rootfs — install, users, units, wants links; chroot-safe,
+   no credentials, no start), `container` (node side — include `lxc_guest` with the placement, template URL and checksum), `server`
+   (guest side — assert the baseline marker and the template marker first, then configure and start), `remove` (node side — include
+   `lxc_guest` `tasks_from: remove`). Its defaults point at the collection variables in `inventory/group_vars/all/lxc.yml` and name its
+   released template.
+3. **An API-client role `lxc_<service>_item`** (or similar) if operators need to put data into the running service.
+4. **A play `deploy-<service>.yml`** sequencing: `lxc_preflight` → `container` → `lxc_guest` `baseline` → `server`, plus the opt-in destroy play
    under `--tags destroy`.
-4. **A placement file** `inventory/group_vars/all/<service>.yml` and, if it needs secrets, a `inventory/secrets/<service>.yml.example`.
-5. **Molecule**: a negative scenario proving `server` refuses a guest without the marker; `make conform` runs the boundary check.
+5. **A placement file** `inventory/group_vars/all/<service>.yml` carrying the released template's checksum and, if it needs secrets, a
+   `inventory/secrets/<service>.yml.example`.
+6. **Molecule**: a negative scenario proving `server` refuses a guest without the marker; `make conform` runs the boundary check. Open the
+   PR: the Templates workflow bakes the image. Tag `<service>/v<version>` to release it, then pin the checksum.
 
 The boundary check is the detector for rules 2, 4 and 5. A rule with no detector is a suggestion.

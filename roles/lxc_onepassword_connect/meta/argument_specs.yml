@@ -23,10 +23,25 @@ argument_specs:
         required: false
         default: "op-connect"
         description: "Hostname of the CT; also its key in the play inventory."
+      lxc_onepassword_connect_template_file:
+        type: str
+        required: false
+        description: "File name of the released template. Computed default: debian-13-op-connect_<version>_<arch>.tar.zst."
       lxc_onepassword_connect_template:
         type: str
         required: false
-        description: "storage:vztmpl/<file> OS template. Computed default: the collection variable lxc_template."
+        description: "storage:vztmpl/<file> of the released op-connect template. Computed default: local:vztmpl/<template_file>."
+      lxc_onepassword_connect_template_url:
+        type: str
+        required: false
+        description: >-
+          Where lxc_guest fetches the template when it is not in the node's cache.
+          Computed default: <lxc_template_release_base>/op-connect/v<version>/<template_file>, the GitHub Release asset.
+      lxc_onepassword_connect_template_checksum:
+        type: str
+        required: false
+        default: ""
+        description: "sha256:<hex> of the released template (from its .sha256), pinned in the inventory. Required for a fetch; an empty value is refused."
       lxc_onepassword_connect_storage:
         type: str
         required: false
@@ -70,15 +85,70 @@ argument_specs:
         required: false
         default: onepassword_connect
         description: "Play-inventory group the running CT is added to."
+  bake:
+    short_description: "Bake the Connect image content into a build rootfs (chroot-safe; no credentials, no start)."
+    description:
+      - >-
+        Runs inside the build rootfs over community.general.chroot, from
+        playbooks/bake-template.yml. Installs ca-certificates and the unprivileged
+        service user, extracts connect-api/connect-sync from their pinned images
+        via the registry API, writes the two systemd units and their
+        multi-user.target.wants links. Everything site-specific is left to server.
+    options:
+      lxc_onepassword_connect_user:
+        type: str
+        required: false
+        default: "opuser"
+      lxc_onepassword_connect_home:
+        type: str
+        required: false
+        default: "/home/opuser"
+      lxc_onepassword_connect_data_dir:
+        type: str
+        required: false
+        default: "/home/opuser/.op/data"
+      lxc_onepassword_connect_bin_dir:
+        type: str
+        required: false
+        default: "/usr/local/bin"
+      lxc_onepassword_connect_api_port:
+        type: int
+        required: false
+        default: 8080
+      lxc_onepassword_connect_stage_dir:
+        type: str
+        required: false
+        default: "/var/tmp/op-connect-extract"
+      lxc_onepassword_connect_version:
+        type: str
+        required: false
+        default: "1.8.3"
+      lxc_onepassword_connect_arch:
+        type: str
+        required: false
+        default: "amd64"
+      lxc_onepassword_connect_registry:
+        type: str
+        required: false
+        default: "registry-1.docker.io"
+      lxc_onepassword_connect_auth_url:
+        type: str
+        required: false
+        default: "https://auth.docker.io/token"
+      lxc_onepassword_connect_repos:
+        type: list
+        elements: str
+        required: false
+        default: ["1password/connect-api", "1password/connect-sync"]
   server:
-    short_description: "Install the Connect binaries as native systemd services inside the baselined CT."
+    short_description: "Configure and start Connect inside a CT created from the released template."
     description:
       - >-
         Runs inside the CT (over proxmox_pct_remote). Refuses a guest without the
-        lxc_guest baseline marker, installs ca-certificates and an unprivileged
-        service user, extracts connect-api/connect-sync from their pinned images
-        via the registry API, drops the credentials file and data dir under the
-        user's ~/.op, writes two systemd units, and verifies the API.
+        lxc_guest baseline marker or without the op-connect template marker at
+        this role's version, drops the credentials file under the service user's
+        ~/.op, enables and starts the baked units, and verifies the API. It
+        installs nothing: the binaries and units come from the template.
     options:
       lxc_onepassword_connect_user:
         type: str
@@ -130,6 +200,10 @@ argument_specs:
         type: str
         required: false
         description: "Marker lxc_guest's baseline writes. Computed default: the collection variable lxc_baseline_marker_path."
+      lxc_onepassword_connect_template_marker:
+        type: str
+        required: false
+        description: "Marker the bake writes (name, version, base). Computed default: the collection variable lxc_template_marker_path."
       lxc_onepassword_connect_credentials_src:
         type: str
         required: false
@@ -137,6 +211,8 @@ argument_specs:
         description: "Path on the node to the 1password-credentials.json (SECRET; required for server)."
   remove:
     short_description: "Tear the Connect LXC down through lxc_guest (opt-in: lxc_guest_confirm_destroy=true)."
+    description:
+      - "Placement inputs as for container; only node, vmid and hostname decide which CT is destroyed."
     options:
       lxc_onepassword_connect_node:
         type: str

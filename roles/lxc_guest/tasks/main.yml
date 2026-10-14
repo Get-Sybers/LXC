@@ -1,6 +1,8 @@
 ---
 # The ensure path, on the Proxmox node. The guest-side `baseline` and the opt-in
 # `remove` are separate entry points (tasks_from).
+- name: "Fetch the released template into the cache if it is not there"
+  ansible.builtin.include_tasks: template.yml
 - name: "Fact-find the node and the CT id"
   ansible.builtin.include_tasks: facts.yml
 - name: "Preflight — assert every precondition before any write"

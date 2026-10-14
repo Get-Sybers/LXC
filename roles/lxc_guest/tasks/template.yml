@@ -1,0 +1,43 @@
+---
+# A template reaches a node only as the released artifact, verified by the
+# checksum the inventory pins. No URL: nothing is fetched and preflight decides
+# whether what is in the cache is enough. A URL with no checksum is refused.
+- name: "template | Derive the template's storage and cache path"
+  ansible.builtin.set_fact:
+    __lxc_guest_template_storage: "{{ (lxc_guest_template | string).split(':', 1) | first }}"
+    __lxc_guest_template_file: "{{ lxc_guest_template_cache_dir }}/{{ (lxc_guest_template | string).split('/') | last }}"
+- name: "template | Stat the template in the cache"
+  ansible.builtin.stat:
+    path: "{{ __lxc_guest_template_file }}"
+  register: __lxc_guest_template_cached
+- name: "template | Fetch the released template"
+  when:
+    - not __lxc_guest_template_cached.stat.exists
+    - lxc_guest_template_url | length > 0
+  block:
+    - name: "template | A fetch targets the local directory storage"
+      ansible.builtin.assert:
+        that: __lxc_guest_template_storage == 'local'
+        fail_msg: >-
+          lxc_guest_template is on storage '{{ __lxc_guest_template_storage }}'
+          but a fetch writes only to the `local` storage's cache
+          ({{ lxc_guest_template_cache_dir }}). Name the template as
+          local:vztmpl/<file>, or place it on that storage yourself.
+        quiet: true
+    - name: "template | The release checksum is pinned"
+      ansible.builtin.assert:
+        that: lxc_guest_template_checksum is match('^sha256:[0-9a-f]{64}$')
+        fail_msg: >-
+          lxc_guest_template_checksum is '{{ lxc_guest_template_checksum }}', not a
+          sha256:<hex>. Nothing unverified reaches the template cache: pin the
+          value from the release's .sha256 (inventory, lxc_<service>_template_checksum)
+          and re-run.
+        quiet: true
+    - name: "template | Download the template and verify it against the pinned checksum"
+      ansible.builtin.get_url:
+        url: "{{ lxc_guest_template_url }}"
+        dest: "{{ __lxc_guest_template_file }}"
+        checksum: "{{ lxc_guest_template_checksum }}"
+        owner: root
+        group: root
+        mode: "0644"

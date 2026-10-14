@@ -10,14 +10,20 @@ collections:
   - name: onepassword.connect
     version: "2.4.0"
     source: https://galaxy.ansible.com
-  # Test tooling, not runtime dependencies: molecule's docker driver drives the
-  # Debian test container through community.docker and syncs the scenario
-  # context with ansible.posix.synchronize. Neither is a galaxy.yml dependency,
-  # so check_pins reports them as tolerated test-only pins; upgrade_pins raises
-  # each within its own major.
+  # Test and build tooling, not runtime dependencies of the roles: molecule's
+  # docker driver drives the Debian test container through community.docker and
+  # syncs the scenario context with ansible.posix.synchronize; the template bake
+  # (playbooks/bake-template.yml) mounts the chroot's kernel filesystems with
+  # ansible.posix.mount and reaches the build rootfs over
+  # community.general.chroot. None is a galaxy.yml dependency, so check_pins
+  # reports them as tolerated test-only pins; upgrade_pins raises each within
+  # its own major.
   - name: community.docker
     version: "5.4.0"
     source: https://galaxy.ansible.com
   - name: ansible.posix
     version: "1.6.2"
+    source: https://galaxy.ansible.com
+  - name: community.general
+    version: "10.3.0"
     source: https://galaxy.ansible.com
