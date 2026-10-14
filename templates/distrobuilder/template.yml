@@ -5,7 +5,7 @@ lxc_template_name: distrobuilder
 # The version baked in is the distrobuilder release; the artifact and the
 # release tag (distrobuilder/v<version>) carry the same number. Upstream
 # publishes no binaries: the bake builds the release from the Go module
-# (github.com/lxc/distrobuilder@v<version>, verified against the Go checksum
+# (github.com/lxc/distrobuilder/v3@v<version>, verified against the Go checksum
 # database) with the toolchain its go.mod declares; raise the two together.
 lxc_distrobuilder_version: "3.4.0"
 lxc_distrobuilder_go_toolchain: go1.25.12

@@ -109,7 +109,7 @@ ansible-playbook playbooks/deploy-distrobuilder.yml --tags destroy -e lxc_guest_
 ## How it works and what to know
 
 - **Built from the module, not downloaded.** Upstream publishes no binaries (its own install path is a snap or `go install`), so the bake
-  runs `go install github.com/lxc/distrobuilder/distrobuilder@v<version>` with the tags upstream's Makefile sets. The module zip is fetched
+  runs `go install github.com/lxc/distrobuilder/v3/distrobuilder@v<version>` with the tags upstream's Makefile sets. The module zip is fetched
   through `proxy.golang.org` and checked against `sum.golang.org`, and so is the `go1.25.12` toolchain the module's `go.mod` declares, which
   Debian 13's older `go` downloads to build it. The toolchain, the compiler and the module cache are purged before the image is sealed.
 - **Root inside an unprivileged CT.** distrobuilder must run as root: it chroots into the rootfs it assembles, mounts `proc` and `sysfs`

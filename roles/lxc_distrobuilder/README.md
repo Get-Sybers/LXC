@@ -8,7 +8,7 @@ distrobuilder shells out to.
 
 The image is baked, not installed: upstream publishes no binaries, so `bake` runs inside a build rootfs (from
 [`templates/distrobuilder`](../../templates/distrobuilder/README.md) via `playbooks/bake-template.yml`) and builds the pinned release from
-the Go module — `go install github.com/lxc/distrobuilder/distrobuilder@v<version>`, fetched through the Go module proxy and verified
+the Go module — `go install github.com/lxc/distrobuilder/v3/distrobuilder@v<version>`, fetched through the Go module proxy and verified
 against the Go checksum database, with the toolchain the module's `go.mod` declares — then purges the toolchain and the compiler again.
 The container itself is not this role's business: `container`, `connect` and `remove` hand the placement to
 [`lxc_guest`](../lxc_guest/README.md), which owns the lifecycle and the hardened premise. `server` runs in the booted CT, refuses a guest

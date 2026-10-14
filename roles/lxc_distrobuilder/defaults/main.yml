@@ -40,12 +40,12 @@ lxc_distrobuilder_group: distrobuilder
 # The version and arch name the released template; templates/distrobuilder/
 # template.yml sets the same values for the bake, so the image and the deploy
 # agree. Upstream publishes no binaries, so the bake builds the pinned release
-# of the Go module: `go install github.com/lxc/distrobuilder/distrobuilder@v<version>`,
+# of the Go module: `go install github.com/lxc/distrobuilder/v3/distrobuilder@v<version>`,
 # fetched through the Go module proxy and verified against the Go checksum
 # database (sum.golang.org), with the Go toolchain the module declares.
 lxc_distrobuilder_version: "3.4.0"
 lxc_distrobuilder_arch: amd64
-lxc_distrobuilder_go_module: github.com/lxc/distrobuilder
+lxc_distrobuilder_go_module: github.com/lxc/distrobuilder/v3
 # The toolchain the module's go.mod declares (its `go` line). Debian 13 ships
 # an older Go, which downloads this one via GOTOOLCHAIN — itself verified
 # against the checksum database — before building.

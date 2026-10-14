@@ -134,7 +134,7 @@ argument_specs:
       lxc_distrobuilder_go_module:
         type: str
         required: false
-        default: "github.com/lxc/distrobuilder"
+        default: "github.com/lxc/distrobuilder/v3"
       lxc_distrobuilder_go_toolchain:
         type: str
         required: false
