@@ -20,11 +20,20 @@ Run the mirror with `-e @inventory/secrets/onepassword.yml --ask-vault-pass` (or
 ## `semaphore.yml`
 
 Gives `playbooks/deploy-semaphore.yml` the administrator's initial password and the three keys (cookie signing, cookie encryption,
-access-key encryption). Create it from the template, generate one fresh value per key, and encrypt it:
+access-key encryption). There is no template for it in the repository: write it with these seven variables, one fresh value per
+key, and encrypt it:
 
 ```bash
-cp semaphore.yml.example semaphore.yml
-head -c32 /dev/urandom | base64   # once per key
+cat > semaphore.yml <<EOF
+---
+lxc_semaphore_admin_login: admin
+lxc_semaphore_admin_name: "Semaphore Admin"
+lxc_semaphore_admin_email: "<the administrator's email>"
+lxc_semaphore_admin_password: "<the administrator's initial password>"
+lxc_semaphore_cookie_hash: "$(head -c32 /dev/urandom | base64)"
+lxc_semaphore_cookie_encryption: "$(head -c32 /dev/urandom | base64)"
+lxc_semaphore_access_key_encryption: "$(head -c32 /dev/urandom | base64)"
+EOF
 ansible-vault encrypt semaphore.yml
 ```
 
