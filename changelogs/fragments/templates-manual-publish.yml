@@ -1,0 +1,10 @@
+---
+major_changes:
+  - >-
+    The Templates workflow is manual only. It no longer bakes on pull
+    requests, pushes or tags: a run is started by hand for one template,
+    waits for the ``templates`` environment's required reviewer before any
+    step runs, bakes from any branch and keeps the artifact, and publishes
+    the ``<name>/v<version>`` tag and release (signed, attested) only when
+    asked to, from ``main`` only. The version comes from the manifest, never
+    from an input, and a publish refuses a tag that already exists.

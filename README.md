@@ -48,7 +48,8 @@ One directory per template under [`templates/`](templates/README.md):
 | [`distrobuilder`](templates/distrobuilder/README.md) | `distrobuilder/v<distrobuilder version>` | Debian 13, `distrobuilder` built from the Go module, `debootstrap` + the Debian/Ubuntu keys, `gpg`/`dirmngr`, `rsync`, the compressors, the baseline (no `sshd`) |
 
 [`playbooks/bake-template.yml`](playbooks/bake-template.yml) bakes a manifest into an artifact; [`.github/workflows/templates.yml`](.github/workflows/templates.yml)
-runs it on every pull request and publishes on a `<name>/v<version>` tag with a checksum, a cosign signature and a provenance attestation.
+runs it on demand only, behind the `templates` environment's required reviewer, and publishes the `<name>/v<version>` release with a
+checksum, a cosign signature and a provenance attestation.
 On the node, `lxc_guest` fetches the release by the checksum the inventory pins.
 
 ### Playbooks

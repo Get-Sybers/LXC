@@ -17,9 +17,9 @@ The manifest's keys are documented in [`doc/reference/template-manifest.md`](../
 
 1. **Bake** — `playbooks/bake-template.yml` downloads the base rootfs, verifies it against the pinned checksum, unpacks it, runs the bake
    steps inside it over `community.general.chroot`, writes `/etc/get-sybers-lxc-template` (name, version, base), seals the result as a
-   `.tar.zst`, and writes its `.sha256`. [`.github/workflows/templates.yml`](../.github/workflows/templates.yml) runs this on every change
-   under `templates/` and, on a `<name>/v<version>` tag, publishes the artifact as a GitHub Release with a cosign signature and a build
-   provenance attestation.
+   `.tar.zst`, and writes its `.sha256`. [`.github/workflows/templates.yml`](../.github/workflows/templates.yml) runs this on demand only:
+   a run is started by hand for one template, waits for the `templates` environment's required reviewer, and, when asked to publish,
+   creates the `<name>/v<version>` tag and GitHub Release with a cosign signature and a build provenance attestation.
 2. **Pin** — the inventory records the released artifact's URL and `sha256:` (`lxc_<service>_template_url` /
    `lxc_<service>_template_checksum`).
 3. **Fetch** — on the node, `lxc_guest` downloads the artifact into the template cache with that checksum when it is not already there.
@@ -33,5 +33,6 @@ The manifest's keys are documented in [`doc/reference/template-manifest.md`](../
    `python3 scripts/base_template_checksum.py <base file name>`.
 2. Give the service role a chroot-safe `bake` entry point (install, users, units, `multi-user.target.wants` symlinks; no credentials, no
    `systemctl start`) and keep `server` to run-time work.
-3. Open a PR: the workflow bakes it and uploads the artifact. Tag `<name>/v<version>` to publish.
+3. Open a PR. Once merged, run the Templates workflow for the template with *publish* on; the environment's reviewer approves it and
+   the run creates the `<name>/v<version>` release. (A run with *publish* off bakes from any branch and only keeps the artifact.)
 4. Pin the release in `inventory/group_vars/all/<service>.yml`.

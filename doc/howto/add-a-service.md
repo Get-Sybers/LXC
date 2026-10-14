@@ -17,4 +17,5 @@ to the new service the moment its role exists, because `scripts/check_lxc_bounda
 5. **A placement template** `inventory/example/group_vars/all/<service>.yml` with `CHANGE-ME` placeholders for the CT id and the released
    template's checksum (never a real value) and, if it needs secrets, a `inventory/secrets/<service>.yml.example`.
 6. **Molecule**: a negative scenario proving `server` refuses a guest without the marker; `make conform` runs the boundary check. Open the
-   PR: the Templates workflow bakes the image. Tag `<service>/v<version>` to release it, then pin the checksum.
+   PR. Once merged, run the Templates workflow for the template with *publish* on (the environment's reviewer approves it); the run
+   creates the `<service>/v<version>` release. Then pin the checksum.

@@ -16,5 +16,6 @@ entry point.
 | Consumed by | `inventory/group_vars/all/semaphore.yml` (`lxc_semaphore_template_checksum`), `inventory/secrets/semaphore.yml`, `playbooks/deploy-semaphore.yml` |
 
 To raise the Semaphore version: change `lxc_semaphore_version` and `lxc_semaphore_package_checksum` here (the `.deb`'s line in the
-release's `semaphore_<version>_checksums.txt`), open a PR (the workflow bakes it), tag `semaphore/v<new>`, then pin the new release's
+release's `semaphore_<version>_checksums.txt`), open a PR, then run the Templates workflow for `semaphore` with *publish* on (its reviewer
+approves it; the run creates `semaphore/v<new>`), then pin the new release's
 URL and `sha256:` in the inventory.

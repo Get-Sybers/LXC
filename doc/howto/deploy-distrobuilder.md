@@ -123,5 +123,5 @@ ansible-playbook playbooks/deploy-distrobuilder.yml --tags destroy -e lxc_guest_
   from the templates under `templates/`, baked in GitHub Actions and pinned by checksum (premise rule 9).
 - **Secrets hygiene.** There are none: the box holds definitions and images. Definitions arrive from a file you hold or a URL you pinned.
 - **Upgrade.** Raise `lxc_distrobuilder_version` (and `lxc_distrobuilder_go_toolchain` when the new `go.mod` asks for a newer one) in
-  `templates/distrobuilder/template.yml`, tag `distrobuilder/v<new>`, pin the new template checksum, and recreate the CT from the new
+  `templates/distrobuilder/template.yml`, publish it with the Templates workflow (`distrobuilder/v<new>`), pin the new template checksum, and recreate the CT from the new
   release (`--tags destroy -e lxc_guest_confirm_destroy=true`, then the deploy play). Pull the images you want to keep first.

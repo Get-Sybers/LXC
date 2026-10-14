@@ -13,5 +13,6 @@ in `lxc_onepassword_connect`'s `server` entry point.
 | Bake steps | `lxc_guest` `baseline`, then `lxc_onepassword_connect` `bake` |
 | Consumed by | `inventory/group_vars/all/onepassword.yml` (`lxc_onepassword_connect_template_url` / `_checksum`), `playbooks/deploy-onepassword-connect.yml` |
 
-To raise the Connect version: change `lxc_onepassword_connect_version` here, open a PR (the workflow bakes it), tag `op-connect/v<new>`,
+To raise the Connect version: change `lxc_onepassword_connect_version` here, open a PR, then run the Templates workflow for `op-connect` with *publish* on (its
+reviewer approves it; the run creates `op-connect/v<new>`),
 then pin the new release's URL and `sha256:` in the inventory.

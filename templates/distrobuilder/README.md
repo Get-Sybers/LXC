@@ -15,4 +15,5 @@ arrive on the node, in `lxc_distrobuilder`'s `server` entry point, and every ima
 | Consumed by | `inventory/group_vars/all/distrobuilder.yml` (`lxc_distrobuilder_template_checksum`), `playbooks/deploy-distrobuilder.yml`, `playbooks/build-distrobuilder-image.yml` |
 
 To raise the distrobuilder version: change `lxc_distrobuilder_version` and, when its `go.mod` moved on, `lxc_distrobuilder_go_toolchain`
-here, open a PR (the workflow bakes it), tag `distrobuilder/v<new>`, then pin the new release's URL and `sha256:` in the inventory.
+here, open a PR, then run the Templates workflow for `distrobuilder` with *publish* on (its reviewer approves it; the run creates
+`distrobuilder/v<new>`), then pin the new release's URL and `sha256:` in the inventory.

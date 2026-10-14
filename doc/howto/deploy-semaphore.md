@@ -106,6 +106,6 @@ ansible-playbook playbooks/deploy-semaphore.yml --tags destroy -e lxc_guest_conf
 - **Secrets hygiene.** `config.json` is `0640` root-owned, readable by the service user; the tasks that assemble and write it, and the one
   that creates the administrator, are `no_log`. The initial password lives only in the vaulted `semaphore.yml`.
 - **Upgrade.** Raise `lxc_semaphore_version` and `lxc_semaphore_package_checksum` in `templates/semaphore/template.yml` (the `.deb`'s line
-  in the release's `checksums.txt`), tag `semaphore/v<new>`, pin the new template checksum, and recreate the CT from the new release
+  in the release's `checksums.txt`), publish it with the Templates workflow (`semaphore/v<new>`), pin the new template checksum, and recreate the CT from the new release
   (`--tags destroy -e lxc_guest_confirm_destroy=true`, then the play). Back the database up first, or restore it into the new CT before the
   play: `server` migrates whatever database it finds.

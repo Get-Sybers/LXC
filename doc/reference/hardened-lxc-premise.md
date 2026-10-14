@@ -29,7 +29,8 @@ One sentence governs the rest: **a container has no door of its own — the node
 - **Loud failure.** Each rule is an assertion with a `fail_msg` that names the fix. Config drift on an existing container is reconciled
   by `create` (`update: true`) and then proved by `postcheck` from Proxmox; what cannot be reconciled in place (a privileged container) fails
   the run.
-- **An image is reviewed as an image.** A change under `templates/` or to a role's `bake` entry point is baked on the pull request; the
+- **An image is reviewed as an image.** A change under `templates/` or to a role's `bake` entry point is reviewed in its pull request and ships only
+  through a manual, approved run of the Templates workflow; the
   node runs no install step, needs no reach to Docker Hub, and creates every container from bytes whose checksum is in version control.
 
 ## 3. What it does not claim

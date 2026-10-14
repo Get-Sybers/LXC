@@ -38,14 +38,21 @@ touches a credential. Everything site-specific stays in `server`, which runs in 
 
 [`.github/workflows/templates.yml`](../../.github/workflows/templates.yml):
 
-- **Every pull request and push to `main`** that touches `templates/`, the bake play, a role or the pins bakes every template and keeps the
-  artifacts as workflow artifacts for two weeks, so a change to an image is reviewed as a built image.
-- **A tag `<name>/v<version>`** bakes that template and publishes a GitHub Release carrying the `.tar.zst`, its `.sha256`, a keyless
-  cosign signature bundle (`<file>.sigstore.json`) and a GitHub build-provenance attestation. The release notes give the three
-  verification commands and the inventory key to pin.
+- **Manual only.** The workflow has no push or pull-request trigger: a run is started by hand (*Actions → Templates → Run workflow*),
+  naming one template and whether to publish it. The job runs in the `templates` environment, whose required reviewer approves every
+  run before a single step executes; nothing is baked or shipped without that approval.
+- **A bake** (publish off) builds the template from any branch and keeps the `.tar.zst` and its `.sha256` as a workflow artifact for two
+  weeks, so a change to an image can be inspected as a built image.
+- **A publish** (publish on, `main` only) bakes, then creates the `<name>/v<version>` tag and GitHub Release carrying the `.tar.zst`, its
+  `.sha256`, a keyless cosign signature bundle (`<file>.sigstore.json`) and a GitHub build-provenance attestation. The release notes give
+  the three verification commands and the inventory key to pin. The version is never an input: it is the manifest's
+  `lxc_template_version`, read back from the artifact the bake named, so the tag follows the reviewed manifest and nothing else.
+- **A release is immutable.** A publish refuses a tag that already exists: a changed bake at the same version is not re-shipped, it ships
+  as a raised version in a PR first.
 
 The collection's own releases are `v<version>` tags; the Galaxy publish workflow skips any tag with a `/` in it. Both tag shapes are
-immutable under `.github/rulesets/tags.json`.
+immutable under `.github/rulesets/tags.json`. The `templates` environment is created once in the repository settings (*Settings →
+Environments*): a required reviewer and no secrets.
 
 ## 4. On the node
 
