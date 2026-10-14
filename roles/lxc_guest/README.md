@@ -62,14 +62,14 @@ never match. A container created before this collection existed carries neither 
 
 The collection variables (`lxc_node`, `lxc_template`, `lxc_template_url`, `lxc_template_checksum`, `lxc_template_cache_dir`,
 `lxc_template_release_base`, `lxc_storage`, `lxc_bridge`, `lxc_baseline_marker_path`, `lxc_template_marker_path`) are defined once in
-[`inventory/group_vars/all/lxc.yml`](../../inventory/group_vars/all/lxc.yml). The constants of the premise — the marker text, `unprivileged`,
+[`inventory/group_vars/all/lxc.yml`](../../inventory/example/group_vars/all/lxc.yml). The constants of the premise — the marker text, `unprivileged`,
 the purge list and the forbidden binaries — live in `vars/main.yml` and are not inputs.
 
 ## Dependencies
 
 None declared. PVE API auth for the `community.proxmox.proxmox` tasks is supplied by the playbook through the
 `group/community.proxmox.proxmox` module-defaults group reading the documented `PROXMOX_*` environment variables
-([`inventory/group_vars/all/proxmox_api.yml`](../../inventory/group_vars/all/proxmox_api.yml)).
+([`inventory/group_vars/all/proxmox_api.yml`](../../inventory/example/group_vars/all/proxmox_api.yml)).
 
 ## Usage
 

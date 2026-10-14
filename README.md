@@ -56,10 +56,11 @@ On the node, `lxc_guest` fetches the release by the checksum the inventory pins.
 | [`bake-template.yml`](playbooks/bake-template.yml) | a build host, as root (the Templates workflow) | Bake `templates/<name>/template.yml` into a sealed `.tar.zst` + `.sha256`; never touches a node. |
 
 The plays carry no configuration of their own: every site-specific value — the node, storage, bridge, CT ids, addresses, the released
-template checksums — lives in
-[`inventory/`](inventory) (`group_vars/all/<topic>.yml`), which `ansible.cfg` points at so no `-i` is needed. The node-side plays run **on**
+template checksums — lives in [`inventory/`](inventory), which `ansible.cfg` points at so no `-i` is needed. The repository carries only
+the template of that configuration, [`inventory/example/`](inventory/example); `make config` copies it into place and the copies are
+untracked, so no node name, subnet or CT id is ever committed. The node-side plays run **on**
 the Proxmox node as root (`pct` is node-local); PVE API auth comes from the `PROXMOX_*` environment variables
-([`inventory/group_vars/all/proxmox_api.yml`](inventory/group_vars/all/proxmox_api.yml)).
+([`inventory/group_vars/all/proxmox_api.yml`](inventory/example/group_vars/all/proxmox_api.yml)).
 
 ### Documentation
 
@@ -88,6 +89,7 @@ manifest, the roles).
 ## Development
 
 ```sh
+make config      # copy the configuration template into inventory/ (untracked), then replace every CHANGE-ME
 make deps        # install pinned collections + test tooling
 prek install     # git hooks (lint, secrets, commit-msg)
 make conform     # the full local gate: lint, pins, boundary, sanity, molecule, changelog, build

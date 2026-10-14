@@ -13,7 +13,7 @@ The credential-**mirror primitive**: upsert exactly one item into a self-hosted
 
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
-| `lxc_onepassword_item_host` | Yes | `""` | Connect server base URL, e.g. `http://10.0.0.5:8080`. |
+| `lxc_onepassword_item_host` | Yes | `""` | Connect server base URL, e.g. `http://192.0.2.5:8080`. |
 | `lxc_onepassword_item_token` | Yes | `""` | Connect access token (**secret**, from the vault; the role fails fast if empty). |
 | `lxc_onepassword_item_vault_id` | Yes | `""` | The 1Password vault id/name the token may write to. |
 | `lxc_onepassword_item_validate_certs` | No | `true` | Validate the Connect TLS cert (ignored for `http://`). |
@@ -35,12 +35,12 @@ vaulted `inventory/secrets/onepassword.yml`.
   ansible.builtin.include_role:
     name: get_sybers.lxc.lxc_onepassword_item
   vars:
-    lxc_onepassword_item_host: "http://10.0.0.5:8080"
+    lxc_onepassword_item_host: "http://192.0.2.5:8080"
     lxc_onepassword_item_token: "{{ vault_onepassword_connect_token }}"
     lxc_onepassword_item_vault_id: "abcdefghijklmnop"
-    lxc_onepassword_item_title: "Ludus RA API key"
+    lxc_onepassword_item_title: "Service API key"
     lxc_onepassword_item_fields:
-      - { label: credential, field_type: concealed, value: "RA.…" }
+      - { label: credential, field_type: concealed, value: "…" }
 ```
 
 ## Behaviour

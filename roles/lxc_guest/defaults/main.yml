@@ -26,7 +26,7 @@ lxc_guest_cores: 1
 lxc_guest_memory_mb: 512
 lxc_guest_swap_mb: 0
 # Full Proxmox net0 string. DHCP on the management bridge by default; for a
-# fixed address use e.g. "name=eth0,bridge=vmbr0,ip=192.168.4.150/24,gw=192.168.4.1".
+# fixed address use e.g. "name=eth0,bridge=vmbr0,ip=192.0.2.150/24,gw=192.0.2.1".
 lxc_guest_net0: "name=eth0,bridge={{ lxc_bridge }},ip=dhcp"
 lxc_guest_nameserver: ""
 # Extra container features, e.g. ["nesting=1"] where the guest's systemd needs

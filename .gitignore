@@ -7,6 +7,10 @@
 *.vault-pass
 vault_password*
 .secrets/
+# --- site configuration: only inventory/example/ is tracked (make config) ---
+/inventory/hosts.yml
+/inventory/group_vars/
+/inventory/host_vars/
 # --- editors / OS ---
 .DS_Store
 Thumbs.db
