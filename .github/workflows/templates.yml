@@ -70,7 +70,7 @@ jobs:
           for n in $names; do
             [ -f "templates/$n/template.yml" ] || { echo "::error::no such template: $n"; exit 1; }
           done
-          echo "templates=$(printf '%s\n' $names | jq -R . | jq -cs .)" | tee -a "$GITHUB_OUTPUT"
+          echo "templates=$(jq -cR . <<<"$names" | jq -cs .)" | tee -a "$GITHUB_OUTPUT"
   bake:
     needs: plan
     name: bake (${{ matrix.template }})
