@@ -19,15 +19,15 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout
+      - name: Checkout (full history, so the base and head commits are present without a token)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Changed templates must raise lxc_template_version
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          git fetch -q --depth=1 origin "$BASE_SHA" "$HEAD_SHA"
           python3 scripts/check_template_pins.py --self-test
           python3 scripts/check_template_pins.py --base "$BASE_SHA" --head "$HEAD_SHA"
