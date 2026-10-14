@@ -1,0 +1,77 @@
+---
+# Deploy the distrobuilder build box in a hardened Debian LXC. Play 1 ensures
+# the CT on the node through lxc_guest; play 2 runs lxc_guest's baseline inside
+# it (no SSH daemon, no container runtime); play 3 verifies the baked tools
+# and places the image definitions. Run ON the node that will host the CT
+# (hosts: localhost, connection: local).
+#
+# PVE API auth is read from community.proxmox's documented PROXMOX_* environment
+# variables — export PROXMOX_TOKEN_ID + PROXMOX_TOKEN_SECRET (preferred) or
+# PROXMOX_PASSWORD (with PROXMOX_USER). There are no secrets: a build box holds
+# image definitions, not credentials.
+#
+#   ansible-playbook playbooks/deploy-distrobuilder.yml
+#
+# The placement vars and the definitions live in
+# inventory/group_vars/all/distrobuilder.yml. Images are built by
+# playbooks/build-distrobuilder-image.yml.
+- name: "Create the distrobuilder LXC on the node"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  module_defaults:
+    group/community.proxmox.proxmox: &distrobuilder_pve_api
+      api_host: "{{ pve_api_host }}"
+      api_user: "{{ pve_api_user }}"
+      api_token_id: "{{ pve_api_token_id or omit }}"
+      api_token_secret: "{{ pve_api_token_secret or omit }}"
+      api_password: "{{ pve_api_password or omit }}"
+      validate_certs: "{{ pve_validate_certs }}"
+  tasks:
+    - name: "An admin PVE API credential must be present"
+      ansible.builtin.assert:
+        that: (pve_api_token_secret | length > 0) or (pve_api_password | length > 0)
+        fail_msg: >-
+          No PVE admin credential in the environment. community.proxmox drives the
+          PVE API, so export PROXMOX_TOKEN_ID + PROXMOX_TOKEN_SECRET (preferred) or
+          PROXMOX_PASSWORD (with PROXMOX_USER, default root@pam) before running.
+        quiet: true
+      no_log: true
+    - name: "Node admission gate"
+      ansible.builtin.include_role:
+        name: get_sybers.lxc.lxc_preflight
+    - name: "Ensure the distrobuilder LXC exists and is reachable"
+      ansible.builtin.include_role:
+        name: get_sybers.lxc.lxc_distrobuilder
+        tasks_from: container
+- name: "Harden the guest baseline inside the LXC"
+  hosts: distrobuilder
+  gather_facts: false
+  tasks:
+    - name: "No SSH daemon, no container runtime, baseline marker"
+      ansible.builtin.include_role:
+        name: get_sybers.lxc.lxc_guest
+        tasks_from: baseline
+- name: "Verify the build box and place the image definitions inside the LXC"
+  hosts: distrobuilder
+  gather_facts: false
+  tasks:
+    - name: "Assert the markers and the baked tools, place the definitions"
+      ansible.builtin.include_role:
+        name: get_sybers.lxc.lxc_distrobuilder
+        tasks_from: server
+- name: "Tear down the distrobuilder LXC (opt-in: --tags destroy -e lxc_guest_confirm_destroy=true)"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tags: [never, destroy]
+  module_defaults:
+    group/community.proxmox.proxmox: *distrobuilder_pve_api
+  tasks:
+    - name: "Node admission gate"
+      ansible.builtin.include_role:
+        name: get_sybers.lxc.lxc_preflight
+    - name: "Destroy the distrobuilder CT"
+      ansible.builtin.include_role:
+        name: get_sybers.lxc.lxc_distrobuilder
+        tasks_from: remove

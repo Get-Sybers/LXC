@@ -31,6 +31,7 @@ Consumers pin an exact version in their own `requirements.yml`. This collection'
 | `lxc_onepassword_connect` | build | `bake` puts the `connect-api`/`connect-sync` binaries, units and service user into the template (extracted from the pinned official images; no Docker/OCI); `container` hands the placement and the released template to `lxc_guest`; `server` installs the credentials and starts the units, refusing a guest without the baseline and template markers. |
 | `lxc_onepassword_item` | API client | Upsert one item into the Connect vault via `onepassword.connect.generic_item`, under `no_log` — the credential-mirror primitive. |
 | `lxc_semaphore` | build | `bake` puts the official Semaphore UI package (verified against the release's checksum), the tools its tasks shell out to, the service user and the unit into the template; `container` hands the placement and the released template to `lxc_guest`; `server` writes `config.json` (SQLite), migrates, creates the administrator and starts the unit, refusing a guest without the baseline and template markers. |
+| `lxc_distrobuilder` | build | `bake` builds the pinned distrobuilder release from the Go module (checksum-database verified) into the template beside `debootstrap`, the archive keys and the compressors; `container`/`connect`/`remove` hand the placement to `lxc_guest`; `server` asserts the markers and places the image definitions; `build` runs `distrobuilder build-lxc` on one definition and pulls the tarballs onto the node. |
 
 Each role ships `meta/argument_specs.yml` (typed, described inputs), `defaults/main.yml`, a `README.md` stating its contract, and Molecule
 coverage under [`extensions/molecule/`](extensions/molecule) (see [Testing](#testing)).
@@ -44,6 +45,7 @@ One directory per template under [`templates/`](templates/README.md):
 | --- | --- | --- |
 | [`op-connect`](templates/op-connect/README.md) | `op-connect/v<connect version>` | Debian 13, the `connect-api`/`connect-sync` binaries and units, `opuser`, the baseline (no `sshd`) |
 | [`semaphore`](templates/semaphore/README.md) | `semaphore/v<semaphore version>` | Debian 13, the `semaphore` package and unit, `git`/`openssh-client`/`sshpass`/`rsync`/`ansible-core`, the `semaphore` user, the baseline (no `sshd`) |
+| [`distrobuilder`](templates/distrobuilder/README.md) | `distrobuilder/v<distrobuilder version>` | Debian 13, `distrobuilder` built from the Go module, `debootstrap` + the Debian/Ubuntu keys, `gpg`/`dirmngr`, `rsync`, the compressors, the baseline (no `sshd`) |
 
 [`playbooks/bake-template.yml`](playbooks/bake-template.yml) bakes a manifest into an artifact; [`.github/workflows/templates.yml`](.github/workflows/templates.yml)
 runs it on every pull request and publishes on a `<name>/v<version>` tag with a checksum, a cosign signature and a provenance attestation.
@@ -55,6 +57,8 @@ On the node, `lxc_guest` fetches the release by the checksum the inventory pins.
 | --- | --- | --- |
 | [`deploy-onepassword-connect.yml`](playbooks/deploy-onepassword-connect.yml) | the node (`localhost`) | `lxc_preflight` → ensure the CT → `lxc_guest` baseline inside it → install and verify Connect; `--tags destroy -e lxc_guest_confirm_destroy=true` tears it down. |
 | [`deploy-semaphore.yml`](playbooks/deploy-semaphore.yml) | the node (`localhost`) | `lxc_preflight` → ensure the CT → `lxc_guest` baseline inside it → configure, migrate, create the administrator, start and verify Semaphore; `--tags destroy -e lxc_guest_confirm_destroy=true` tears it down. |
+| [`deploy-distrobuilder.yml`](playbooks/deploy-distrobuilder.yml) | the node (`localhost`) | `lxc_preflight` → ensure the CT → `lxc_guest` baseline inside it → assert the baked tools and place the image definitions; `--tags destroy -e lxc_guest_confirm_destroy=true` tears it down. |
+| [`build-distrobuilder-image.yml`](playbooks/build-distrobuilder-image.yml) | the node (`localhost`) | `lxc_preflight` → reach the running CT → `distrobuilder build-lxc` on one definition inside it, `SHA256SUMS`, pull the tarballs onto the node. |
 | [`reflect-onepassword-credentials.yml`](playbooks/reflect-onepassword-credentials.yml) | anywhere that reaches the Connect API | Read the vaulted [`inventory/secrets/onepassword.yml`](inventory/secrets/onepassword.yml.example) and upsert each credential; idempotent. |
 | [`bake-template.yml`](playbooks/bake-template.yml) | a build host, as root (the Templates workflow) | Bake `templates/<name>/template.yml` into a sealed `.tar.zst` + `.sha256`; never touches a node. |
 
@@ -67,8 +71,8 @@ the Proxmox node as root (`pct` is node-local); PVE API auth comes from the `PRO
 
 ### Documentation
 
-[`doc/index.md`](doc/index.md) is the entry point: [how-to guides](doc/howto/index.md) (deploy 1Password Connect, deploy Semaphore UI, build and
-release a template, add a service) and [reference](doc/reference/index.md) (the hardened-LXC premise and what enforces each rule, the template
+[`doc/index.md`](doc/index.md) is the entry point: [how-to guides](doc/howto/index.md) (deploy 1Password Connect, Semaphore UI or distrobuilder,
+build and release a template, add a service) and [reference](doc/reference/index.md) (the hardened-LXC premise and what enforces each rule, the template
 manifest, the roles).
 
 ## Repository layout
@@ -77,8 +81,8 @@ manifest, the roles).
 .
 ├── doc/                  # documentation: index.md, howto/, reference/
 ├── templates/            # one directory per LXC template: the manifest and its README
-├── roles/                # lxc_preflight, lxc_guest, lxc_onepassword_connect, lxc_onepassword_item, lxc_semaphore
-├── playbooks/            # deploy-*, reflect-*, bake-template
+├── roles/                # lxc_preflight, lxc_guest, lxc_onepassword_connect, lxc_onepassword_item, lxc_semaphore, lxc_distrobuilder
+├── playbooks/            # deploy-*, build-*, reflect-*, bake-template
 ├── inventory/            # the single config home (hosts, group_vars, secrets examples)
 ├── extensions/molecule/  # the test scenarios and their Debian substrate
 ├── scripts/              # check_lxc_boundary, check_pins, upgrade_pins, molecule_lanes, base_template_checksum
@@ -108,7 +112,7 @@ only its own playbooks. The container is disposable test scaffolding — it is n
 - **`default`** (positive): `lxc_guest`'s `baseline` against a substrate that `prepare` gave an SSH server — converge removes it, verify
   proves it, idempotence proves a second run is `changed=0`.
 - **A negative scenario for every role** (`*_negative`): run without the role's live dependency, each role must stop at its own labelled
-  assertion — never crash or silently proceed. `onepassword_connect_negative` and `semaphore_negative` are the premise's rule 5 in action:
+  assertion — never crash or silently proceed. `onepassword_connect_negative`, `semaphore_negative` and `distrobuilder_negative` are the premise's rule 5 in action:
   `server` refuses a guest without the baseline marker.
 - **Roles that mutate a live Proxmox node** (`lxc_guest` create/connect/postcheck/remove) keep their positive path on a real node (the plays
   themselves); the container tier proves their refusal behaviour, and `ansible-lint --profile production` covers the rest.

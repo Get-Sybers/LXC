@@ -1,0 +1,14 @@
+---
+# A library of task files driven across plays: `bake` (inside the build rootfs,
+# from playbooks/bake-template.yml), `container` (node side, via lxc_guest),
+# `server` and `build` (inside the guest), `connect` and `remove` (node side,
+# via lxc_guest). A bare include is a mistake.
+- name: "Refuse a bare include — use a tasks_from entry point"
+  ansible.builtin.fail:
+    msg: >-
+      lxc_distrobuilder has no default entry point. Drive it with
+      playbooks/deploy-distrobuilder.yml (container, baseline, server) and
+      playbooks/build-distrobuilder-image.yml (connect, build), or include it
+      with tasks_from: container (on the node), then lxc_guest tasks_from:
+      baseline and this role's tasks_from: server (in the CT). The image itself
+      is baked with tasks_from: bake by playbooks/bake-template.yml.

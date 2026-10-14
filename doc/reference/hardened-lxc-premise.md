@@ -40,6 +40,9 @@ One sentence governs the rest: **a container has no door of its own — the node
   (`get-sybers/proxmox`). This collection needs only a node, a template, a bridge and an admin PVE API credential from that tier.
 - **`nesting=1` is not a breach.** Debian 13's systemd 257 needs nested namespaces to boot; the feature is per-guest input
   (`lxc_guest_features`) and the container stays unprivileged. A *container runtime* inside the guest is the thing rule 3 refuses.
+- **An image builder is not a container runtime.** The `distrobuilder` box builds rootfs tarballs: it chroots into a rootfs it is
+  assembling, it never starts a container, and the baseline's `lxc-start` refusal still holds in it. What it produces is the operator's
+  artifact; a guest of this collection is still created only from a released template (rule 9).
 
 ## 4. Adding a service
 

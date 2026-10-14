@@ -1,0 +1,26 @@
+---
+# Node side. The container's whole lifecycle is lxc_guest's; this file only
+# names the distrobuilder placement. The vars are scoped to this include
+# (standards §5: a runtime temporary, not configuration — the configuration is
+# the lxc_distrobuilder_* inputs in the inventory).
+- name: "container | Ensure the distrobuilder LXC through lxc_guest"
+  ansible.builtin.include_role:
+    name: get_sybers.lxc.lxc_guest
+  vars:
+    lxc_guest_node: "{{ lxc_distrobuilder_node }}"
+    lxc_guest_vmid: "{{ lxc_distrobuilder_vmid }}"
+    lxc_guest_hostname: "{{ lxc_distrobuilder_hostname }}"
+    lxc_guest_purpose: "distrobuilder image build box"
+    lxc_guest_template: "{{ lxc_distrobuilder_template }}"
+    lxc_guest_template_url: "{{ lxc_distrobuilder_template_url }}"
+    lxc_guest_template_checksum: "{{ lxc_distrobuilder_template_checksum }}"
+    lxc_guest_storage: "{{ lxc_distrobuilder_storage }}"
+    lxc_guest_rootfs_gb: "{{ lxc_distrobuilder_rootfs_gb }}"
+    lxc_guest_cores: "{{ lxc_distrobuilder_cores }}"
+    lxc_guest_memory_mb: "{{ lxc_distrobuilder_memory_mb }}"
+    lxc_guest_net0: "{{ lxc_distrobuilder_net0 }}"
+    lxc_guest_nameserver: "{{ lxc_distrobuilder_nameserver }}"
+    lxc_guest_features: "{{ lxc_distrobuilder_features }}"
+    lxc_guest_onboot: "{{ lxc_distrobuilder_onboot }}"
+    lxc_guest_pool: "{{ lxc_distrobuilder_pool }}"
+    lxc_guest_group: "{{ lxc_distrobuilder_group }}"
