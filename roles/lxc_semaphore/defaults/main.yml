@@ -16,7 +16,7 @@ lxc_semaphore_hostname: semaphore
 # release tag and the template marker, and server refuses a guest baked at
 # another. Raised with every change to the image; the service version below
 # is what the image carries.
-lxc_semaphore_template_version: "0.1.0"
+lxc_semaphore_template_version: "0.1.1"
 lxc_semaphore_template_file: >-
   debian-13-semaphore_{{ lxc_semaphore_template_version }}_{{ lxc_semaphore_arch }}.tar.zst
 lxc_semaphore_template: "local:vztmpl/{{ lxc_semaphore_template_file }}"

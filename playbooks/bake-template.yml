@@ -30,13 +30,13 @@
           - lxc_template_version | string is match('^[0-9]+\\.[0-9]+\\.[0-9]+$')
           - lxc_template_service_version | default('') | string | length > 0
           - lxc_template_output | length > 0
-          - lxc_template_base_url is match('^https://')
+          - lxc_template_base_url is match('^https?://')
           - lxc_template_base_checksum is match('^sha(256|512):[0-9a-f]+$')
           - lxc_template_bake | length > 0
         fail_msg: >-
           templates/{{ lxc_template_name | default('?') }}/template.yml must set name,
           a X.Y.Z version (this repository's release of the template), the service
-          version it carries, output, an https base URL, a sha256:/sha512: base
+          version it carries, output, an http(s) base URL, a sha256:/sha512: base
           checksum (pin it with scripts/base_template_checksum.py) and at least one
           bake step; the play itself needs -e lxc_template_dir and -e lxc_template_workdir.
         quiet: true
@@ -83,6 +83,9 @@
         - "{{ lxc_template_workdir }}"
         - "{{ lxc_template_workdir }}/base"
         - "{{ lxc_template_workdir }}/rootfs"
+    # download.proxmox.com is served over plain HTTP only (HTTPS is the
+    # subscription host, enterprise.proxmox.com): the pinned checksum is what
+    # verifies the base, as it is for pveam, and get_url refuses a mismatch.
     - name: "Download the base template and verify it against the pinned checksum"
       ansible.builtin.get_url:
         url: "{{ lxc_template_base_url }}"

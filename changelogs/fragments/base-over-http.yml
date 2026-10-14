@@ -1,0 +1,12 @@
+---
+fixed:
+  - >-
+    The base template is fetched over plain HTTP, as Proxmox serves it:
+    ``download.proxmox.com`` has no TLS certificate (HTTPS is the subscription
+    host), so the ``https://`` URLs the manifests carried could never download
+    anywhere, and the bake play's assertion required them. The pinned
+    ``sha512`` is the verification, as it is for ``pveam``, and ``get_url``
+    refuses a mismatch. ``scripts/base_template_checksum.py`` reads the
+    signature-verified index ``pveam`` keeps on a node instead of fetching one
+    itself. The templates are ``op-connect`` 0.1.1, ``semaphore`` 0.1.1 and
+    ``distrobuilder`` 0.1.2.

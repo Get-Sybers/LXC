@@ -30,7 +30,7 @@ The manifest's keys are documented in [`doc/reference/template-manifest.md`](../
 ## Adding a template
 
 1. `mkdir templates/<name>`, write `template.yml` (copy `op-connect/template.yml`), pin the base checksum with
-   `python3 scripts/base_template_checksum.py <base file name>`.
+   `python3 scripts/base_template_checksum.py <base file name>` on a Proxmox node (it reads the index `pveam` verified).
 2. Give the service role a chroot-safe `bake` entry point (install, users, units, `multi-user.target.wants` symlinks; no credentials, no
    `systemctl start`) and keep `server` to run-time work.
 3. Open a PR; the Version Gate requires `lxc_template_version` to move forward whenever the image changes (a version that was never

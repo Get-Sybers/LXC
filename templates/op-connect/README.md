@@ -7,7 +7,7 @@ in `lxc_onepassword_connect`'s `server` entry point.
 
 | | |
 | --- | --- |
-| Release tag | `op-connect/v<template release>` (`op-connect/v0.1.0`; the service version is in the marker's `service=`) |
+| Release tag | `op-connect/v<template release>` (`op-connect/v0.1.1`; the service version is in the marker's `service=`) |
 | Artifact | `debian-13-op-connect_<version>_<arch>.tar.zst` + `.sha256`, cosign bundle, provenance attestation |
 | Base | `debian-13-standard_13.6-1_amd64.tar.zst` from `download.proxmox.com` |
 | Bake steps | `lxc_guest` `baseline`, then `lxc_onepassword_connect` `bake` |

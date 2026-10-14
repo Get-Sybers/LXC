@@ -16,8 +16,8 @@ the release tag prefix (`<name>/v<version>`) are the same string. The version in
 | `lxc_template_service_version` | the version of the service the image carries (`{{ lxc_<service>_version }}`); written to the marker as `service=` and asserted by the role's `server` |
 | `lxc_template_arch` | `amd64` or `arm64` |
 | `lxc_template_output` | the artifact file name, `<base>-<name>_<version>_<arch>.tar.zst` |
-| `lxc_template_base_url` | the stock Proxmox system template the bake starts from |
-| `lxc_template_base_checksum` | that template's published `sha512:` from Proxmox's own index — pin it with `scripts/base_template_checksum.py` |
+| `lxc_template_base_url` | the stock Proxmox system template the bake starts from, over plain HTTP as Proxmox serves it; the checksum verifies the bytes |
+| `lxc_template_base_checksum` | that template's published `sha512:` from Proxmox's own index — pin it with `scripts/base_template_checksum.py` on a Proxmox node, which reads the index `pveam` verified |
 | `lxc_template_bake` | the ordered role entry points run inside the rootfs, over the `chroot` connection |
 
 Any variable a bake step reads (for example `lxc_onepassword_connect_version`) is set in the same file, so the manifest is the single place a

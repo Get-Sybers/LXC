@@ -34,7 +34,7 @@ role) and this role over `pct exec`.
 | --- | --- | --- |
 | `lxc_onepassword_connect_node` | `{{ lxc_node }}` | PVE node the CT lives on. |
 | `lxc_onepassword_connect_vmid` | `0` (refused) | CT id; the inventory sets it. |
-| `lxc_onepassword_connect_template_version` | `0.1.0` | This repository's release of the `op-connect` template (the manifest's `lxc_template_version`): names the artifact and the tag; `server` refuses a guest baked at another. |
+| `lxc_onepassword_connect_template_version` | `0.1.1` | This repository's release of the `op-connect` template (the manifest's `lxc_template_version`): names the artifact and the tag; `server` refuses a guest baked at another. |
 | `lxc_onepassword_connect_template` | `local:vztmpl/debian-13-op-connect_<template release>_<arch>.tar.zst` | The released template. |
 | `lxc_onepassword_connect_template_checksum` | `""` (fetch refused) | The release's `sha256:`, pinned in the inventory. |
 | `lxc_onepassword_connect_storage` | `{{ lxc_storage }}` | CT rootfs storage (the shared Ceph pool for HA). |
