@@ -2,15 +2,20 @@
 # The distrobuilder build-box template. Loaded by playbooks/bake-template.yml;
 # every input the bake reads is declared here and nowhere else.
 lxc_template_name: distrobuilder
-# The version baked in is the distrobuilder release; the artifact and the
-# release tag (distrobuilder/v<version>) carry the same number. Upstream
-# publishes no binaries: the bake builds the release from the Go module
-# (github.com/lxc/distrobuilder/v3@v<version>, verified against the Go checksum
-# database) with the toolchain its go.mod declares; raise the two together.
+# The distrobuilder release baked in, and this repository's release of the
+# template (X.Y.Z): the artifact, the release tag (distrobuilder/v<version>)
+# and the template marker carry the latter. Raise lxc_template_version in every
+# PR that changes the image — a new distrobuilder release, a changed bake (the
+# Version Gate refuses the PR otherwise); a released version is immutable.
+# Upstream publishes no binaries: the bake builds the release from the Go
+# module (github.com/lxc/distrobuilder/v3@v<version>, verified against the Go
+# checksum database) with the toolchain its go.mod declares; raise the two
+# together.
 lxc_distrobuilder_version: "3.4.0"
 lxc_distrobuilder_go_toolchain: go1.25.12
 lxc_distrobuilder_arch: amd64
-lxc_template_version: "{{ lxc_distrobuilder_version }}"
+lxc_template_version: "1.0.0"
+lxc_template_service_version: "{{ lxc_distrobuilder_version }}"
 lxc_template_arch: "{{ lxc_distrobuilder_arch }}"
 lxc_template_output: "debian-13-{{ lxc_template_name }}_{{ lxc_template_version }}_{{ lxc_template_arch }}.tar.zst"
 # The stock Proxmox system template the bake starts from, and its sha512 as

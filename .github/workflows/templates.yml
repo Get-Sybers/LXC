@@ -4,14 +4,14 @@
 # and the job waits for the `templates` environment's required reviewer before
 # it does anything, so nothing is baked or shipped without that approval.
 #
-# The version is never an input: it is the service version the manifest
-# pins (lxc_template_version), read back from the artifact the bake names.
-# A publish creates the <name>/v<version> tag and release (the .tar.zst and
-# its .sha256 as assets, a keyless cosign signature bundle beside them, a
-# GitHub build-provenance attestation) and refuses a tag that already exists:
-# a released template is immutable, so a changed bake ships as a raised
-# version in a PR first. A publish runs from main only; a bake alone may run
-# from any branch to inspect the artifact. The node-side fetch (lxc_guest)
+# The version is never an input: it is the manifest's lxc_template_version
+# (this repository's release of the template, X.Y.Z, raised in the PR that
+# changes the image — the Version Gate enforces that), read back from the
+# artifact the bake names. A publish creates the <name>/v<version> tag and
+# release (the .tar.zst and its .sha256 as assets, a keyless cosign signature
+# bundle beside them, a GitHub build-provenance attestation) and refuses a tag
+# that already exists: a released template is immutable. A publish runs from
+# main only; a bake alone may run from any branch to inspect the artifact. The node-side fetch (lxc_guest)
 # verifies the .sha256 the inventory pins; `cosign verify-blob` and
 # `gh attestation verify` prove the artifact came from this workflow.
 name: Templates
@@ -86,7 +86,7 @@ jobs:
           sudo chown -R "$(id -u):$(id -g)" "build/$TEMPLATE"
           cat build/"$TEMPLATE"/*.sha256
       # The artifact is <base>-<name>_<version>_<arch>.tar.zst; the version in
-      # it is the manifest's, so the tag follows the manifest and nothing else.
+      # it is the manifest's X.Y.Z, so the tag follows the manifest and nothing else.
       - name: Resolve the artifact and its version
         id: art
         env:
@@ -94,7 +94,7 @@ jobs:
         run: |
           file="$(basename build/"$TEMPLATE"/*.tar.zst)"
           version="${file#*_}"; version="${version%_*}"
-          echo "$version" | grep -Eq '^[0-9]+(\.[0-9]+)+$' \
+          echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' \
             || { echo "::error::cannot read a version out of $file"; exit 1; }
           {
             echo "file=$file"

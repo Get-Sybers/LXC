@@ -43,13 +43,14 @@ only: this role over `pct exec`.
 | --- | --- | --- |
 | `lxc_distrobuilder_node` | `{{ lxc_node }}` | PVE node the CT lives on. |
 | `lxc_distrobuilder_vmid` | `0` (refused) | CT id; the inventory sets it. |
-| `lxc_distrobuilder_template` | `local:vztmpl/debian-13-distrobuilder_<version>_<arch>.tar.zst` | The released template. |
+| `lxc_distrobuilder_template_version` | `1.0.0` | This repository's release of the `distrobuilder` template (the manifest's `lxc_template_version`): names the artifact and the tag; `server` refuses a guest baked at another. |
+| `lxc_distrobuilder_template` | `local:vztmpl/debian-13-distrobuilder_<template release>_<arch>.tar.zst` | The released template. |
 | `lxc_distrobuilder_template_checksum` | `""` (fetch refused) | The release's `sha256:`, pinned in the inventory. |
 | `lxc_distrobuilder_storage` | `{{ lxc_storage }}` | CT rootfs storage. |
 | `lxc_distrobuilder_rootfs_gb` / `_cores` / `_memory_mb` | `32` / `2` / `2048` | A build unpacks a whole distribution into the cache and packs it again. |
 | `lxc_distrobuilder_net0` | DHCP on `{{ lxc_bridge }}` | Full Proxmox net0; set a static `ip=/gw=` for a fixed address. |
 | `lxc_distrobuilder_features` | `["nesting=1"]` | Lets a build mount `proc`/`sysfs` into the rootfs it assembles; the CT stays unprivileged. |
-| `lxc_distrobuilder_version` | `3.4.0` | distrobuilder release: names the template and the Go module version, and `server` refuses a template of another version. Set in `templates/distrobuilder/template.yml` for the bake. |
+| `lxc_distrobuilder_version` | `3.4.0` | distrobuilder release the image carries (names the Go module version); `server` refuses a template whose marker says another. Set in `templates/distrobuilder/template.yml` for the bake. |
 | `lxc_distrobuilder_go_toolchain` | `go1.25.12` | The toolchain the module declares; Debian's older `go` downloads and verifies it. |
 | `lxc_distrobuilder_cache_dir` | `/var/cache/lxc/distrobuilder` | `--cache-dir`: where the rootfs is assembled, under the tree the nested profile allows `proc` mounts in. |
 | `lxc_distrobuilder_definitions` | `[]` | `{name, src}` or `{name, url, checksum}` entries `server` places in `/var/lib/distrobuilder/definitions`. |

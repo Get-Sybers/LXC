@@ -8,12 +8,12 @@ arrive on the node, in `lxc_distrobuilder`'s `server` entry point, and every ima
 
 | | |
 | --- | --- |
-| Release tag | `distrobuilder/v<distrobuilder version>` (`distrobuilder/v3.4.0`) |
+| Release tag | `distrobuilder/v<template release>` (`distrobuilder/v1.0.0`; the service version is in the marker's `service=`) |
 | Artifact | `debian-13-distrobuilder_<version>_<arch>.tar.zst` + `.sha256`, cosign bundle, provenance attestation |
 | Base | `debian-13-standard_13.1-2_amd64.tar.zst` from `download.proxmox.com` |
 | Bake steps | `lxc_guest` `baseline`, then `lxc_distrobuilder` `bake` |
 | Consumed by | `inventory/group_vars/all/distrobuilder.yml` (`lxc_distrobuilder_template_checksum`), `playbooks/deploy-distrobuilder.yml`, `playbooks/build-distrobuilder-image.yml` |
 
-To raise the distrobuilder version: change `lxc_distrobuilder_version` and, when its `go.mod` moved on, `lxc_distrobuilder_go_toolchain`
-here, open a PR, then run the Templates workflow for `distrobuilder` with *publish* on (its reviewer approves it; the run creates
+To raise the distrobuilder version: change `lxc_distrobuilder_version` and, when its `go.mod` moved on, `lxc_distrobuilder_go_toolchain`,
+and raise `lxc_template_version` here (the Version Gate requires it for every change to the image; the release tag carries it), open a PR, then run the Templates workflow for `distrobuilder` with *publish* on (its reviewer approves it; the run creates
 `distrobuilder/v<new>`), then pin the new release's URL and `sha256:` in the inventory.

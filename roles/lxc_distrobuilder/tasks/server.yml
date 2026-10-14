@@ -30,12 +30,15 @@
   ansible.builtin.assert:
     that:
       - __lxc_distrobuilder_tmpl_fields['name'] | default('') == 'distrobuilder'
-      - __lxc_distrobuilder_tmpl_fields['version'] | default('') == lxc_distrobuilder_version | string
+      - __lxc_distrobuilder_tmpl_fields['version'] | default('') == lxc_distrobuilder_template_version | string
+      - __lxc_distrobuilder_tmpl_fields['service'] | default('') == lxc_distrobuilder_version | string
     fail_msg: >-
       {{ lxc_distrobuilder_template_marker }} says
       name={{ __lxc_distrobuilder_tmpl_fields['name'] | default('<absent>') }}
-      version={{ __lxc_distrobuilder_tmpl_fields['version'] | default('<absent>') }};
-      this role drives distrobuilder {{ lxc_distrobuilder_version }}. The binary
+      version={{ __lxc_distrobuilder_tmpl_fields['version'] | default('<absent>') }}
+      service={{ __lxc_distrobuilder_tmpl_fields['service'] | default('<absent>') }};
+      this role drives distrobuilder {{ lxc_distrobuilder_version }} from template
+      release {{ lxc_distrobuilder_template_version }}. The binary
       is built into the released template (templates/distrobuilder), never
       installed into a running guest. Create the CT from the matching release,
       or set lxc_distrobuilder_version to the one it carries.

@@ -23,6 +23,13 @@ argument_specs:
         required: false
         default: "distrobuilder"
         description: "Hostname of the CT; also its key in the play inventory."
+      lxc_distrobuilder_template_version:
+        type: str
+        required: false
+        default: "1.0.0"
+        description: >-
+          This repository's release of the distrobuilder template (the manifest's lxc_template_version, X.Y.Z):
+          names the artifact and the tag; server refuses a guest baked at another.
       lxc_distrobuilder_template_file:
         type: str
         required: false
@@ -206,6 +213,13 @@ argument_specs:
         named in lxc_distrobuilder_definitions. It installs nothing and
         starts nothing: distrobuilder is a tool, and build is the interaction.
     options:
+      lxc_distrobuilder_template_version:
+        type: str
+        required: false
+        default: "1.0.0"
+        description: >-
+          This repository's release of the distrobuilder template (the manifest's lxc_template_version, X.Y.Z):
+          names the artifact and the tag; server refuses a guest baked at another.
       lxc_distrobuilder_version:
         type: str
         required: false

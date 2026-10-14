@@ -4,7 +4,8 @@ A service that lives in a hardened container is a template, a role, a play, a pl
 the container mechanics are `lxc_guest`'s, and the rules in [`hardened-lxc-premise.md`](../reference/hardened-lxc-premise.md) apply
 to the new service the moment its role exists, because `scripts/check_lxc_boundary.py` scans every role.
 
-1. **A template `templates/<service>/`** — the manifest (`template.yml`: base, version, bake steps, output) and a README. See
+1. **A template `templates/<service>/`** — the manifest (`template.yml`: base, the template's own `X.Y.Z` release and the service
+   version, bake steps, output) and a README. See
    [`templates/README.md`](../../templates/README.md).
 2. **A role `lxc_<service>`** with four entry points: `bake` (inside the build rootfs — install, users, units, wants links; chroot-safe,
    no credentials, no start), `container` (node side — include `lxc_guest` with the placement, template URL and checksum), `server`

@@ -8,3 +8,16 @@ changed:
     the ``<name>/v<version>`` tag and release (signed, attested) only when
     asked to, from ``main`` only. The version comes from the manifest, never
     from an input, and a publish refuses a tag that already exists.
+  - >-
+    A template now has its own release version. ``lxc_template_version`` is
+    this repository's ``X.Y.Z`` release of the template (the artifact, the
+    tag and the marker carry it) and ``lxc_template_service_version`` is the
+    service version the image carries (the marker's ``service=``); every
+    service role gains ``lxc_<service>_template_version`` to name the
+    released artifact and asserts both fields of the marker. The Version
+    Gate (``.github/workflows/version-gate.yml``,
+    ``scripts/check_template_pins.py``, the ``lxc-template-pin`` check the
+    ``main`` ruleset requires) refuses a pull request that changes a
+    manifest directory, a service role's bake inputs or the ``lxc_guest``
+    baseline without raising that template's version, on the model of
+    ``get-sybers/godfir-toolz``.

@@ -7,7 +7,7 @@ GitHub Release. A directory under `templates/` is the complete definition of one
 templates/
 ├── README.md                  # this file
 └── <name>/                    # one directory per template, named as the release tag prefix (<name>/v<version>)
-    ├── template.yml           # the manifest: base rootfs + its checksum, the version, the bake steps, the output name
+    ├── template.yml           # the manifest: base rootfs + its checksum, the template release and the service version, the bake steps, the output name
     └── README.md              # what the template carries and how it is used
 ```
 
@@ -33,6 +33,7 @@ The manifest's keys are documented in [`doc/reference/template-manifest.md`](../
    `python3 scripts/base_template_checksum.py <base file name>`.
 2. Give the service role a chroot-safe `bake` entry point (install, users, units, `multi-user.target.wants` symlinks; no credentials, no
    `systemctl start`) and keep `server` to run-time work.
-3. Open a PR. Once merged, run the Templates workflow for the template with *publish* on; the environment's reviewer approves it and
-   the run creates the `<name>/v<version>` release. (A run with *publish* off bakes from any branch and only keeps the artifact.)
+3. Open a PR; the Version Gate requires `lxc_template_version` to move forward whenever the image changes. Once merged, run the
+   Templates workflow for the template with *publish* on; the environment's reviewer approves it and the run creates the
+   `<name>/v<version>` release. (A run with *publish* off bakes from any branch and only keeps the artifact.)
 4. Pin the release in `inventory/group_vars/all/<service>.yml`.

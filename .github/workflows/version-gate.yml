@@ -1,0 +1,33 @@
+---
+# A changed template ships as a new version. On every pull request to main,
+# scripts/check_template_pins.py compares the base and head commits: when a
+# manifest directory, the service role's bake inputs or the lxc_guest baseline
+# changed, that template's lxc_template_version must have moved forward. The
+# job's name is the status check the main branch ruleset requires
+# (lxc-template-pin); the Templates workflow's refusal to overwrite an
+# existing release is the backstop, this is the gate. Mirrors the Version Gate
+# of get-sybers/godfir-toolz.
+name: Version Gate
+on:
+  pull_request:
+    branches: [main]
+permissions: {}
+jobs:
+  lxc-template-pin:
+    name: lxc-template-pin
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Changed templates must raise lxc_template_version
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch -q --depth=1 origin "$BASE_SHA" "$HEAD_SHA"
+          python3 scripts/check_template_pins.py --self-test
+          python3 scripts/check_template_pins.py --base "$BASE_SHA" --head "$HEAD_SHA"

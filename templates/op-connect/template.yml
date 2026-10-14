@@ -2,11 +2,15 @@
 # The 1Password Connect template. Loaded by playbooks/bake-template.yml; every
 # input the bake reads is declared here and nowhere else.
 lxc_template_name: op-connect
-# The version baked in is the Connect release; the artifact and the release tag
-# (op-connect/v<version>) carry the same number.
+# The Connect release baked in, and this repository's release of the template
+# (X.Y.Z): the artifact, the release tag (op-connect/v<version>) and the
+# template marker carry the latter. Raise lxc_template_version in every PR that
+# changes the image — a new Connect release, a changed bake (the Version Gate
+# refuses the PR otherwise); a released version is immutable.
 lxc_onepassword_connect_version: "1.8.3"
 lxc_onepassword_connect_arch: amd64
-lxc_template_version: "{{ lxc_onepassword_connect_version }}"
+lxc_template_version: "1.0.0"
+lxc_template_service_version: "{{ lxc_onepassword_connect_version }}"
 lxc_template_arch: "{{ lxc_onepassword_connect_arch }}"
 lxc_template_output: "debian-13-{{ lxc_template_name }}_{{ lxc_template_version }}_{{ lxc_template_arch }}.tar.zst"
 # The stock Proxmox system template the bake starts from, and its sha512 as

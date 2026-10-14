@@ -11,11 +11,17 @@ lxc_onepassword_connect_hostname: op-connect
 # by .github/workflows/templates.yml). lxc_guest fetches it into the node's
 # template cache by checksum when it is not there; the checksum is pinned in
 # the inventory from the release, and an empty one is refused.
+# This repository's release of the op-connect template (templates/op-connect/
+# template.yml sets the same X.Y.Z for the bake): it names the artifact, the
+# release tag and the template marker, and server refuses a guest baked at
+# another. Raised with every change to the image; the service version below
+# is what the image carries.
+lxc_onepassword_connect_template_version: "1.0.0"
 lxc_onepassword_connect_template_file: >-
-  debian-13-op-connect_{{ lxc_onepassword_connect_version }}_{{ lxc_onepassword_connect_arch }}.tar.zst
+  debian-13-op-connect_{{ lxc_onepassword_connect_template_version }}_{{ lxc_onepassword_connect_arch }}.tar.zst
 lxc_onepassword_connect_template: "local:vztmpl/{{ lxc_onepassword_connect_template_file }}"
 lxc_onepassword_connect_template_url: >-
-  {{ lxc_template_release_base }}/op-connect/v{{ lxc_onepassword_connect_version }}/{{ lxc_onepassword_connect_template_file }}
+  {{ lxc_template_release_base }}/op-connect/v{{ lxc_onepassword_connect_template_version }}/{{ lxc_onepassword_connect_template_file }}
 lxc_onepassword_connect_template_checksum: ""
 lxc_onepassword_connect_storage: "{{ lxc_storage }}"
 lxc_onepassword_connect_rootfs_gb: 4

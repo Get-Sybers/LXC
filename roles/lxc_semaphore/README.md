@@ -35,13 +35,14 @@ health check. After deployment the server is touched two ways only: its web UI a
 | --- | --- | --- |
 | `lxc_semaphore_node` | `{{ lxc_node }}` | PVE node the CT lives on. |
 | `lxc_semaphore_vmid` | `0` (refused) | CT id; the inventory sets it. |
-| `lxc_semaphore_template` | `local:vztmpl/debian-13-semaphore_<version>_<arch>.tar.zst` | The released template. |
+| `lxc_semaphore_template_version` | `1.0.0` | This repository's release of the `semaphore` template (the manifest's `lxc_template_version`): names the artifact and the tag; `server` refuses a guest baked at another. |
+| `lxc_semaphore_template` | `local:vztmpl/debian-13-semaphore_<template release>_<arch>.tar.zst` | The released template. |
 | `lxc_semaphore_template_checksum` | `""` (fetch refused) | The release's `sha256:`, pinned in the inventory. |
 | `lxc_semaphore_storage` | `{{ lxc_storage }}` | CT rootfs storage. |
 | `lxc_semaphore_rootfs_gb` / `_cores` / `_memory_mb` | `8` / `2` / `1024` | Semaphore clones every repository it runs and keeps task logs in its database. |
 | `lxc_semaphore_net0` | DHCP on `{{ lxc_bridge }}` | Full Proxmox net0; set a static `ip=/gw=` for a fixed address. |
 | `lxc_semaphore_features` | `["nesting=1"]` | Debian 13's systemd 257 needs nesting; the CT stays unprivileged. |
-| `lxc_semaphore_version` | `2.19.16` | Semaphore release: names the template and the package, and `server` refuses a template of another version. Set in `templates/semaphore/template.yml` for the bake. |
+| `lxc_semaphore_version` | `2.19.16` | Semaphore release the image carries (names the package); `server` refuses a template whose marker says another. Set in `templates/semaphore/template.yml` for the bake. |
 | `lxc_semaphore_package_checksum` | the `2.19.16` amd64 `.deb`'s `sha256:` | From the release's `semaphore_<version>_checksums.txt`; raised with the version. |
 | `lxc_semaphore_bake_packages` | `ca-certificates, git, openssh-client, sshpass, rsync, ansible-core` | What the image carries beside the package. |
 | `lxc_semaphore_port` | `3000` | The port the UI and API listen on. |

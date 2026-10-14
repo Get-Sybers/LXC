@@ -4,7 +4,7 @@
 
 Changes to this project are proposed as pull requests on GitHub at
 <https://github.com/get-sybers/lxc>. A pull request is reviewed there and, once
-approved by a code owner and green on `all_green`, squash-merged into `main`.
+reviewed, green on the Version Gate (`lxc-template-pin`) and on `all_green`, and merged into `main`.
 
 The branch ruleset requires signed commits, a linear history, one approving
 review from a code owner, every review thread resolved, and the `all_green`

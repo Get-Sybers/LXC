@@ -22,15 +22,18 @@
         that:
           - lxc_template_dir | default('') | length > 0
           - lxc_template_name | length > 0
-          - lxc_template_version | string | length > 0
+          - lxc_template_version | string is match('^[0-9]+\\.[0-9]+\\.[0-9]+$')
+          - lxc_template_service_version | default('') | string | length > 0
           - lxc_template_output | length > 0
           - lxc_template_base_url is match('^https://')
           - lxc_template_base_checksum is match('^sha(256|512):[0-9a-f]+$')
           - lxc_template_bake | length > 0
         fail_msg: >-
           templates/{{ lxc_template_name | default('?') }}/template.yml must set name,
-          version, output, an https base URL, a sha256:/sha512: base checksum (pin it
-          with scripts/base_template_checksum.py) and at least one bake step.
+          a X.Y.Z version (this repository's release of the template), the service
+          version it carries, output, an https base URL, a sha256:/sha512: base
+          checksum (pin it with scripts/base_template_checksum.py) and at least one
+          bake step.
         quiet: true
     - name: "Read the effective uid"
       ansible.builtin.command:
@@ -127,6 +130,7 @@
         ansible_python_interpreter: /usr/bin/python3
         lxc_template_name: "{{ lxc_template_name }}"
         lxc_template_version: "{{ lxc_template_version }}"
+        lxc_template_service_version: "{{ lxc_template_service_version }}"
         lxc_template_bake: "{{ lxc_template_bake }}"
       changed_when: false
 - name: "Run the manifest's bake steps inside the rootfs"
@@ -148,6 +152,7 @@
         content: |
           name={{ lxc_template_name }}
           version={{ lxc_template_version }}
+          service={{ lxc_template_service_version }}
           base={{ lxc_template_base_url | basename }}
           collection=get_sybers.lxc
         dest: /etc/get-sybers-lxc-template

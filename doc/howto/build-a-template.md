@@ -47,8 +47,14 @@ touches a credential. Everything site-specific stays in `server`, which runs in 
   `.sha256`, a keyless cosign signature bundle (`<file>.sigstore.json`) and a GitHub build-provenance attestation. The release notes give
   the three verification commands and the inventory key to pin. The version is never an input: it is the manifest's
   `lxc_template_version`, read back from the artifact the bake named, so the tag follows the reviewed manifest and nothing else.
-- **A release is immutable.** A publish refuses a tag that already exists: a changed bake at the same version is not re-shipped, it ships
-  as a raised version in a PR first.
+- **The version is the template's own.** `lxc_template_version` is this repository's release of the template (`X.Y.Z`), separate from
+  the service version the image carries (`lxc_template_service_version`, written to the marker as `service=`). It is raised in the pull
+  request that changes the image, whether that is a new service release or a changed bake, and the Version Gate
+  ([`.github/workflows/version-gate.yml`](../../.github/workflows/version-gate.yml), `scripts/check_template_pins.py`, the
+  `lxc-template-pin` check the `main` ruleset requires) refuses a pull request that changes a manifest directory, the service role's
+  bake inputs or the `lxc_guest` baseline without moving it forward.
+- **A release is immutable.** A publish refuses a tag that already exists: the gate keeps a changed image from reaching `main` under a
+  published version, and the publish refuses to overwrite one if it ever does.
 
 The collection's own releases are `v<version>` tags; the Galaxy publish workflow skips any tag with a `/` in it. Both tag shapes are
 immutable under `.github/rulesets/tags.json`. The `templates` environment is created once in the repository settings (*Settings →
@@ -63,21 +69,22 @@ The inventory pins the released template per service:
 lxc_onepassword_connect_template_checksum: "sha256:<the value in the release's .sha256>"
 ```
 
-The URL and the file name derive from the role's version (`lxc_onepassword_connect_version`) and the collection variable
-`lxc_template_release_base` (this repository's GitHub Releases; point it at a mirror for a lab with no reach to `github.com`), so raising
-the version and pinning the new checksum is the whole upgrade. `lxc_guest`'s `template` step then fetches the artifact into `/var/lib/vz/template/cache/` when it is not
+The URL and the file name derive from the role's template release (`lxc_onepassword_connect_template_version`, the manifest's
+`lxc_template_version`) and the collection variable `lxc_template_release_base` (this repository's GitHub Releases; point it at a mirror
+for a lab with no reach to `github.com`), so raising the template release and pinning the new checksum is the whole upgrade. `lxc_guest`'s `template` step then fetches the artifact into `/var/lib/vz/template/cache/` when it is not
 there, `preflight` sees it on the storage, and `create` proceeds. The service role's `server` entry point refuses a guest whose template
-marker does not say `name=<service>` at the role's version: the binaries come from the release, never from an install into a live guest.
+marker does not say `name=<service>` at the role's template release and service version: the binaries come from the release, never
+from an install into a live guest.
 
 ## 5. Verifying a release by hand
 
 ```sh
-sha256sum -c debian-13-op-connect_1.8.3_amd64.tar.zst.sha256
-cosign verify-blob --bundle debian-13-op-connect_1.8.3_amd64.tar.zst.sigstore.json \
+sha256sum -c debian-13-op-connect_1.0.0_amd64.tar.zst.sha256
+cosign verify-blob --bundle debian-13-op-connect_1.0.0_amd64.tar.zst.sigstore.json \
   --certificate-identity-regexp '^https://github.com/get-sybers/lxc/' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  debian-13-op-connect_1.8.3_amd64.tar.zst
-gh attestation verify debian-13-op-connect_1.8.3_amd64.tar.zst -R get-sybers/lxc
+  debian-13-op-connect_1.0.0_amd64.tar.zst
+gh attestation verify debian-13-op-connect_1.0.0_amd64.tar.zst -R get-sybers/lxc
 ```
 
 ## 6. Raising a base template
