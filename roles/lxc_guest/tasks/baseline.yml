@@ -24,7 +24,7 @@
       {{ __lxc_guest_forbidden_stat.results | selectattr('stat.exists')
          | map(attribute='__lxc_guest_forbidden') | list | join(', ') }}.
       A hardened guest is reached only through pct exec and runs its service
-      natively under systemd (docs/01-Hardened-LXC-Premise.md). Something put
+      natively under systemd (doc/reference/hardened-lxc-premise.md). Something put
       this here on purpose; refusing to configure the guest until it is gone.
     quiet: true
 - name: "baseline | Write the baseline marker"

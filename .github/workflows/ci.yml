@@ -53,7 +53,8 @@ jobs:
                    tox.ini tox-ansible.ini requirements.txt test-requirements.txt \
                    changelogs/config.yaml scripts/check_pins.py scripts/check_lxc_boundary.py \
                    Makefile LICENSE README.md CHANGELOG.md SECURITY.md \
-                   docs/01-Hardened-LXC-Premise.md; do
+                   doc/index.md doc/reference/hardened-lxc-premise.md CONTRIBUTING.md CODE_OF_CONDUCT.md \
+                   MAINTAINERS AUTHORS; do
             if [ ! -e "$f" ]; then echo "::error::missing must-have file: $f"; missing=1; fi
           done
           grep -q '^## \[Unreleased\]' CHANGELOG.md || { echo "::error::CHANGELOG.md has no [Unreleased] section"; missing=1; }

@@ -15,7 +15,7 @@
 # against a live node by the plays, not faked in a container.
 dependency:
   name: galaxy
-  # Single source of pins (docs/02 §13): the collections come from the root
+  # Single source of pins (the cluster collection's docs/02 §13): the collections come from the root
   # requirements.yml, installed once by `make deps` / CI before the test loop.
   enabled: false
 driver:

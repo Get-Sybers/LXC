@@ -59,8 +59,12 @@ build_ignore:
   - extensions
   - scripts
   - inventory
-  - docs
+  - doc
   - templates
+  - AUTHORS
+  - MAINTAINERS
+  - CONTRIBUTING.md
+  - CODE_OF_CONDUCT.md
   - SECURITY.md
   - changelogs/.plugin-cache.yaml
   - changelogs/fragments

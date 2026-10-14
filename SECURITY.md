@@ -12,7 +12,7 @@ Only the latest minor release line receives security fixes.
 
 - Secret scanning (`gitleaks`) on every commit locally and on every pull request.
 - Dependency updates with a 7-day cooldown (Dependabot) and SHA-pinned actions.
-- The hardened-LXC premise (`docs/01-Hardened-LXC-Premise.md`) is enforced by
+- The hardened-LXC premise (`doc/reference/hardened-lxc-premise.md`) is enforced by
   `scripts/check_lxc_boundary.py` on every pull request: no SSH into a guest,
   no privileged container, no container runtime inside a guest, node-side
   mechanics in one role only.
