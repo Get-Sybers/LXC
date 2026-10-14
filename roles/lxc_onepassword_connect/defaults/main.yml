@@ -3,7 +3,9 @@
 # Handed to lxc_guest by container.yml / remove.yml. The node defaults to the
 # collection variable the inventory defines (standards §4d).
 lxc_onepassword_connect_node: "{{ lxc_node }}"
-lxc_onepassword_connect_vmid: 950
+# The CT id: required, no safe default. lxc_guest refuses 0; the inventory
+# (group_vars/all/onepassword.yml) sets it.
+lxc_onepassword_connect_vmid: 0
 lxc_onepassword_connect_hostname: op-connect
 # The released op-connect template (templates/op-connect, built and published
 # by .github/workflows/templates.yml). lxc_guest fetches it into the node's
@@ -20,7 +22,7 @@ lxc_onepassword_connect_rootfs_gb: 4
 lxc_onepassword_connect_cores: 1
 lxc_onepassword_connect_memory_mb: 512
 # Full Proxmox net0 string. DHCP on the mgmt bridge by default; for a static
-# address use e.g. "name=eth0,bridge=vmbr0,ip=192.168.4.150/24,gw=192.168.4.1".
+# address use e.g. "name=eth0,bridge=vmbr0,ip=192.0.2.150/24,gw=192.0.2.1".
 lxc_onepassword_connect_net0: "name=eth0,bridge={{ lxc_bridge }},ip=dhcp"
 lxc_onepassword_connect_nameserver: ""
 # Debian 13's systemd 257 needs nested namespaces; the CT stays unprivileged.

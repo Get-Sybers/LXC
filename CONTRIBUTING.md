@@ -27,6 +27,13 @@ touches a plugin needs a fragment under `changelogs/fragments/`; a change to
 behaviour or an interface updates the documentation under `doc/` and the
 role's `README.md`.
 
+## Site configuration stays out of the repository
+
+The repository carries only `inventory/example/`, the template of the site configuration; `make config` copies it into `inventory/`,
+where the real files are untracked. A pull request never adds a node name, a subnet, a CT id or a storage name: a new input gets a
+`CHANGE-ME` placeholder in the template and a sentence in the inventory README. Examples in documentation and role comments use the
+RFC 5737 documentation range (`192.0.2.0/24`).
+
 ## The premise is law
 
 Every container this collection builds is unprivileged, carries no SSH daemon

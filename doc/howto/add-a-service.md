@@ -14,7 +14,7 @@ to the new service the moment its role exists, because `scripts/check_lxc_bounda
 3. **An API-client role `lxc_<service>_item`** (or similar) if operators need to put data into the running service.
 4. **A play `deploy-<service>.yml`** sequencing: `lxc_preflight` → `container` → `lxc_guest` `baseline` → `server`, plus the opt-in destroy play
    under `--tags destroy`.
-5. **A placement file** `inventory/group_vars/all/<service>.yml` carrying the released template's checksum and, if it needs secrets, a
-   `inventory/secrets/<service>.yml.example`.
+5. **A placement template** `inventory/example/group_vars/all/<service>.yml` with `CHANGE-ME` placeholders for the CT id and the released
+   template's checksum (never a real value) and, if it needs secrets, a `inventory/secrets/<service>.yml.example`.
 6. **Molecule**: a negative scenario proving `server` refuses a guest without the marker; `make conform` runs the boundary check. Open the
    PR: the Templates workflow bakes the image. Tag `<service>/v<version>` to release it, then pin the checksum.

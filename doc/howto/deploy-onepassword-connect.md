@@ -26,8 +26,8 @@ Create a Connect server and an access token — through the 1Password dashboard
 (**Developer → Infrastructure Secrets Management → 1Password Connect**) or the `op` CLI:
 
 ```bash
-op connect server create "Get-Sybers Cluster" --vaults "Infrastructure"
-op connect token create reflect --server "Get-Sybers Cluster" --vault "Infrastructure"
+op connect server create "<server name>" --vaults "<vault>"
+op connect token create reflect --server "<server name>" --vault "<vault>"
 ```
 
 This gives you three things:
@@ -35,13 +35,17 @@ This gives you three things:
 - **`1password-credentials.json`** — the server's credentials file. Copy it to the PVE node that will host the LXC (e.g.
   `/root/1password-credentials.json`, mode `0400`).
 - **An access token** — a long string the reflect play uses to write items. Goes into the vaulted secrets file.
-- **The vault's ID** — `op vault get "Infrastructure" --format json | jq -r .id`. Goes into the vaulted secrets file.
+- **The vault's ID** — `op vault get "<vault>" --format json | jq -r .id`. Goes into the vaulted secrets file.
 
 > A Connect server cannot see your Personal/Private/Employee vault or the default Shared vault — create a dedicated vault for the mirror.
 
 ## Prerequisites (node side)
 
-- The released template's checksum pinned in `inventory/group_vars/all/onepassword.yml` (`lxc_onepassword_connect_template_checksum`,
+- The site configuration in place: `make config`, then replace every `CHANGE-ME` in `inventory/hosts.yml`,
+  `inventory/group_vars/all/lxc.yml` and `inventory/group_vars/all/onepassword.yml` (node names, rootfs storage, the CT id). The
+  repository carries only the template, `inventory/example/`; your copies are untracked.
+
+- The released template's checksum pinned in your `inventory/group_vars/all/onepassword.yml` (`lxc_onepassword_connect_template_checksum`,
   from the `.sha256` asset of the `op-connect/v<version>` release). The play fetches the template into the node's cache itself; nothing
   is downloaded without the pin. Verify the release first if you want to: [build-a-template.md §5](build-a-template.md#5-verifying-a-release-by-hand).
 - The node can reach `github.com` to fetch the release asset once (or place the file in `/var/lib/vz/template/cache/` yourself).
@@ -51,17 +55,15 @@ This gives you three things:
 
 ## Step 1 — Deploy the Connect server LXC
 
-Set the placement inputs for `lxc_onepassword_connect` (in `inventory/group_vars/all/onepassword.yml`, or with `-e`) — at minimum the
-`lxc_onepassword_connect_credentials_src` path and, for a fixed address, `lxc_onepassword_connect_net0`. The defaults put the CT on the
-`lxc_hosts` node, `vmid` 950, DHCP on `vmbr0`, Connect `1.8.3` (`amd64`).
+The placement — node, CT id, `net0` — is your `inventory/group_vars/all/onepassword.yml`; the only input left for the command line is
+the path of the credentials file. The CT lands on the `lxc_hosts` node running Connect `1.8.3` (`amd64`).
 
 Run it **on the node** that will host the CT:
 
 ```bash
 export PROXMOX_TOKEN_ID='root@pam!ansible' PROXMOX_TOKEN_SECRET='…'
 ansible-playbook playbooks/deploy-onepassword-connect.yml \
-  -e lxc_onepassword_connect_credentials_src=/root/1password-credentials.json \
-  -e lxc_onepassword_connect_net0='name=eth0,bridge=vmbr0,ip=192.168.4.150/24,gw=192.168.4.1'
+  -e lxc_onepassword_connect_credentials_src=/root/1password-credentials.json
 ```
 
 The play fetches the released template into the cache if it is not there, creates the LXC from it, re-asserts the baseline, installs the
@@ -69,9 +71,9 @@ credentials file, starts the two baked `systemd` units, and verifies `http://127
 
 ### A container the cluster collection created
 
-If CT 950 already exists from `get_sybers.cluster`'s `cluster-onepassword-connect.yml` (before the move to this repository), it was built
+If the CT already exists from `get_sybers.cluster`'s `cluster-onepassword-connect.yml` (before the move to this repository), it was built
 from the stock Debian template with the binaries installed in place, so it carries neither this collection's ownership marker nor the
-template marker, and `server` refuses it. Replace it: destroy it on the node (`pct stop 950 && pct destroy 950 --purge`) and run the play,
+template marker, and `server` refuses it. Replace it: destroy it on the node (`pct stop <vmid> && pct destroy <vmid> --purge`) and run the play,
 which creates it fresh from the released template. The Connect data directory is rebuilt by `connect-sync` from the credentials file.
 
 ## Step 2 — Fill in the vaulted secrets file
@@ -98,7 +100,7 @@ pure API client: it runs wherever it can reach the Connect LXC over HTTP and nev
 
 ## Verify
 
-- From the node: `pct exec 950 -- systemctl status op-connect-api op-connect-sync` are active, and `curl -s http://<lxc-ip>:8080/health`
+- From the node: `pct exec <vmid> -- systemctl status op-connect-api op-connect-sync` are active, and `curl -s http://<lxc-ip>:8080/health`
   returns HTTP 200. (There is no SSH into the CT: `pct exec` is the way in.)
 - In 1Password: the items appear in the target vault with the expected fields.
 - Re-running the reflect play is idempotent (`changed=0`).

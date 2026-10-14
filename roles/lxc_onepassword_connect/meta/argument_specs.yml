@@ -16,8 +16,8 @@ argument_specs:
       lxc_onepassword_connect_vmid:
         type: int
         required: false
-        default: 950
-        description: "CT id (VMID) for the Connect container."
+        default: 0
+        description: "CT id (VMID) for the Connect container. Required in practice: lxc_guest refuses 0; the inventory sets it."
       lxc_onepassword_connect_hostname:
         type: str
         required: false
@@ -220,7 +220,7 @@ argument_specs:
       lxc_onepassword_connect_vmid:
         type: int
         required: false
-        default: 950
+        default: 0
       lxc_onepassword_connect_hostname:
         type: str
         required: false
