@@ -10,4 +10,5 @@ Technical information: the rules, the formats, the contracts.
 | [`lxc_preflight`](../../roles/lxc_preflight/README.md) | The node admission gate. |
 | [`lxc_onepassword_connect`](../../roles/lxc_onepassword_connect/README.md) | The Connect build (`bake`) and runtime (`server`) contract. |
 | [`lxc_onepassword_item`](../../roles/lxc_onepassword_item/README.md) | The Connect API client. |
+| [`lxc_semaphore`](../../roles/lxc_semaphore/README.md) | The Semaphore UI build (`bake`) and runtime (`server`) contract. |
 | [Inventory](../../inventory/README.md) | The single config home: groups, collection variables, placement files, secrets. |

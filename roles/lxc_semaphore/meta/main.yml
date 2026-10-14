@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: lxc_semaphore
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    Deploy Semaphore UI (the web UI and API for Ansible, Terraform and
+    OpenTofu) as a native systemd service in a hardened Debian LXC, from the
+    official Debian package verified against the release's checksum, on
+    SQLite. The container itself comes from lxc_guest.
+  company: Get-Sybers
+  license: AGPL-3.0-only
+  min_ansible_version: "2.19.0"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [semaphore, ansible, proxmox, lxc, automation]
+dependencies: []

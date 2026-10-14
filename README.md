@@ -30,6 +30,7 @@ Consumers pin an exact version in their own `requirements.yml`. This collection'
 | `lxc_guest` | node + guest | The one lifecycle: facts, preflight (refuses a privileged request, a foreign CT id, a missing template or bridge), create via `community.proxmox.proxmox`, connect over `proxmox_pct_remote`, post-check from Proxmox; `baseline` inside the guest (purge `sshd`, refuse container runtimes, write the marker); opt-in `remove`. |
 | `lxc_onepassword_connect` | build | `bake` puts the `connect-api`/`connect-sync` binaries, units and service user into the template (extracted from the pinned official images; no Docker/OCI); `container` hands the placement and the released template to `lxc_guest`; `server` installs the credentials and starts the units, refusing a guest without the baseline and template markers. |
 | `lxc_onepassword_item` | API client | Upsert one item into the Connect vault via `onepassword.connect.generic_item`, under `no_log` — the credential-mirror primitive. |
+| `lxc_semaphore` | build | `bake` puts the official Semaphore UI package (verified against the release's checksum), the tools its tasks shell out to, the service user and the unit into the template; `container` hands the placement and the released template to `lxc_guest`; `server` writes `config.json` (SQLite), migrates, creates the administrator and starts the unit, refusing a guest without the baseline and template markers. |
 
 Each role ships `meta/argument_specs.yml` (typed, described inputs), `defaults/main.yml`, a `README.md` stating its contract, and Molecule
 coverage under [`extensions/molecule/`](extensions/molecule) (see [Testing](#testing)).
@@ -42,6 +43,7 @@ One directory per template under [`templates/`](templates/README.md):
 | Template | Release tag | Carries |
 | --- | --- | --- |
 | [`op-connect`](templates/op-connect/README.md) | `op-connect/v<connect version>` | Debian 13, the `connect-api`/`connect-sync` binaries and units, `opuser`, the baseline (no `sshd`) |
+| [`semaphore`](templates/semaphore/README.md) | `semaphore/v<semaphore version>` | Debian 13, the `semaphore` package and unit, `git`/`openssh-client`/`sshpass`/`rsync`/`ansible-core`, the `semaphore` user, the baseline (no `sshd`) |
 
 [`playbooks/bake-template.yml`](playbooks/bake-template.yml) bakes a manifest into an artifact; [`.github/workflows/templates.yml`](.github/workflows/templates.yml)
 runs it on every pull request and publishes on a `<name>/v<version>` tag with a checksum, a cosign signature and a provenance attestation.
@@ -52,6 +54,7 @@ On the node, `lxc_guest` fetches the release by the checksum the inventory pins.
 | Play | Runs on | Does |
 | --- | --- | --- |
 | [`deploy-onepassword-connect.yml`](playbooks/deploy-onepassword-connect.yml) | the node (`localhost`) | `lxc_preflight` → ensure the CT → `lxc_guest` baseline inside it → install and verify Connect; `--tags destroy -e lxc_guest_confirm_destroy=true` tears it down. |
+| [`deploy-semaphore.yml`](playbooks/deploy-semaphore.yml) | the node (`localhost`) | `lxc_preflight` → ensure the CT → `lxc_guest` baseline inside it → configure, migrate, create the administrator, start and verify Semaphore; `--tags destroy -e lxc_guest_confirm_destroy=true` tears it down. |
 | [`reflect-onepassword-credentials.yml`](playbooks/reflect-onepassword-credentials.yml) | anywhere that reaches the Connect API | Read the vaulted [`inventory/secrets/onepassword.yml`](inventory/secrets/onepassword.yml.example) and upsert each credential; idempotent. |
 | [`bake-template.yml`](playbooks/bake-template.yml) | a build host, as root (the Templates workflow) | Bake `templates/<name>/template.yml` into a sealed `.tar.zst` + `.sha256`; never touches a node. |
 
@@ -64,8 +67,8 @@ the Proxmox node as root (`pct` is node-local); PVE API auth comes from the `PRO
 
 ### Documentation
 
-[`doc/index.md`](doc/index.md) is the entry point: [how-to guides](doc/howto/index.md) (deploy 1Password Connect, build and release a
-template, add a service) and [reference](doc/reference/index.md) (the hardened-LXC premise and what enforces each rule, the template
+[`doc/index.md`](doc/index.md) is the entry point: [how-to guides](doc/howto/index.md) (deploy 1Password Connect, deploy Semaphore UI, build and
+release a template, add a service) and [reference](doc/reference/index.md) (the hardened-LXC premise and what enforces each rule, the template
 manifest, the roles).
 
 ## Repository layout
@@ -74,7 +77,7 @@ manifest, the roles).
 .
 ├── doc/                  # documentation: index.md, howto/, reference/
 ├── templates/            # one directory per LXC template: the manifest and its README
-├── roles/                # lxc_preflight, lxc_guest, lxc_onepassword_connect, lxc_onepassword_item
+├── roles/                # lxc_preflight, lxc_guest, lxc_onepassword_connect, lxc_onepassword_item, lxc_semaphore
 ├── playbooks/            # deploy-*, reflect-*, bake-template
 ├── inventory/            # the single config home (hosts, group_vars, secrets examples)
 ├── extensions/molecule/  # the test scenarios and their Debian substrate
@@ -105,8 +108,8 @@ only its own playbooks. The container is disposable test scaffolding — it is n
 - **`default`** (positive): `lxc_guest`'s `baseline` against a substrate that `prepare` gave an SSH server — converge removes it, verify
   proves it, idempotence proves a second run is `changed=0`.
 - **A negative scenario for every role** (`*_negative`): run without the role's live dependency, each role must stop at its own labelled
-  assertion — never crash or silently proceed. `onepassword_connect_negative` is the premise's rule 5 in action: `server` refuses a guest
-  without the baseline marker.
+  assertion — never crash or silently proceed. `onepassword_connect_negative` and `semaphore_negative` are the premise's rule 5 in action:
+  `server` refuses a guest without the baseline marker.
 - **Roles that mutate a live Proxmox node** (`lxc_guest` create/connect/postcheck/remove) keep their positive path on a real node (the plays
   themselves); the container tier proves their refusal behaviour, and `ansible-lint --profile production` covers the rest.
 
