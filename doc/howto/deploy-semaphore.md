@@ -34,13 +34,21 @@ the unit.
 
 ## Step 1 — Fill in the vaulted secrets file
 
+The file is not in the repository, not even as a template: write it yourself with the seven variables below, one fresh key per
+`head -c32 /dev/urandom | base64`, and encrypt it.
+
 ```bash
 cd inventory/secrets
-cp semaphore.yml.example semaphore.yml
-# edit: the administrator's email and password, then one fresh value per key:
-head -c32 /dev/urandom | base64   # lxc_semaphore_cookie_hash
-head -c32 /dev/urandom | base64   # lxc_semaphore_cookie_encryption
-head -c32 /dev/urandom | base64   # lxc_semaphore_access_key_encryption
+cat > semaphore.yml <<EOF
+---
+lxc_semaphore_admin_login: admin
+lxc_semaphore_admin_name: "Semaphore Admin"
+lxc_semaphore_admin_email: "<the administrator's email>"
+lxc_semaphore_admin_password: "<the administrator's initial password>"
+lxc_semaphore_cookie_hash: "$(head -c32 /dev/urandom | base64)"
+lxc_semaphore_cookie_encryption: "$(head -c32 /dev/urandom | base64)"
+lxc_semaphore_access_key_encryption: "$(head -c32 /dev/urandom | base64)"
+EOF
 ansible-vault encrypt semaphore.yml
 ```
 

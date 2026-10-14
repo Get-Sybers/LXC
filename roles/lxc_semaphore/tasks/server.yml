@@ -64,8 +64,8 @@
       lxc_semaphore_admin_password, lxc_semaphore_cookie_hash,
       lxc_semaphore_cookie_encryption and lxc_semaphore_access_key_encryption
       must all be set (and the admin login and email non-empty): pass the
-      vaulted inventory/secrets/semaphore.yml with -e
-      (inventory/secrets/semaphore.yml.example shows how to generate the keys).
+      vaulted inventory/secrets/semaphore.yml with -e (inventory/secrets/README.md
+      shows the variables and how to generate the keys).
     quiet: true
   no_log: true
 - name: "server | The data and working directories"

@@ -86,7 +86,8 @@ lxc_semaphore_template_marker: "{{ lxc_template_marker_path }}"
 
 # --- The administrator and the keys (SECRET): the vaulted secrets file -------
 # server refuses to run while any of the four below is empty; they come from
-# inventory/secrets/semaphore.yml passed with -e (never the inventory). The
+# the vaulted inventory/secrets/semaphore.yml passed with -e (never the
+# inventory; inventory/secrets/README.md shows the file). The
 # administrator is created once, when absent; its password is managed in the
 # UI afterwards and never rewritten by this role.
 lxc_semaphore_admin_login: admin
