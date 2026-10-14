@@ -43,19 +43,5 @@ One sentence governs the rest: **a container has no door of its own — the node
 
 ## 4. Adding a service
 
-1. **A template `templates/<service>/`** — the manifest (`template.yml`: base, version, bake steps, output) and a README. See
-   [`templates/README.md`](../templates/README.md).
-2. **A role `lxc_<service>`** with four entry points: `bake` (inside the build rootfs — install, users, units, wants links; chroot-safe,
-   no credentials, no start), `container` (node side — include `lxc_guest` with the placement, template URL and checksum), `server`
-   (guest side — assert the baseline marker and the template marker first, then configure and start), `remove` (node side — include
-   `lxc_guest` `tasks_from: remove`). Its defaults point at the collection variables in `inventory/group_vars/all/lxc.yml` and name its
-   released template.
-3. **An API-client role `lxc_<service>_item`** (or similar) if operators need to put data into the running service.
-4. **A play `deploy-<service>.yml`** sequencing: `lxc_preflight` → `container` → `lxc_guest` `baseline` → `server`, plus the opt-in destroy play
-   under `--tags destroy`.
-5. **A placement file** `inventory/group_vars/all/<service>.yml` carrying the released template's checksum and, if it needs secrets, a
-   `inventory/secrets/<service>.yml.example`.
-6. **Molecule**: a negative scenario proving `server` refuses a guest without the marker; `make conform` runs the boundary check. Open the
-   PR: the Templates workflow bakes the image. Tag `<service>/v<version>` to release it, then pin the checksum.
-
-The boundary check is the detector for rules 2, 4 and 5. A rule with no detector is a suggestion.
+The procedure is [`doc/howto/add-a-service.md`](../howto/add-a-service.md). The boundary check is the detector for rules 2, 4 and 5; a
+rule with no detector is a suggestion.

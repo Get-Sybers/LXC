@@ -3,7 +3,7 @@
 The hardened LXC tier of the Get-Sybers lab. One role builds every container the same way — unprivileged, no SSH daemon, no container
 runtime, reached only through `pct exec` from the Proxmox node — and each service that lives in such a container gets a build role and, where
 operators need to put data into it, an API-client role. A container is touched only through the API it serves or through the roles in this
-collection: the premise is [`docs/01-Hardened-LXC-Premise.md`](docs/01-Hardened-LXC-Premise.md), and `scripts/check_lxc_boundary.py` is its
+collection: the premise is [`doc/reference/hardened-lxc-premise.md`](doc/reference/hardened-lxc-premise.md), and `scripts/check_lxc_boundary.py` is its
 detector.
 
 This content moved here from the cluster collection (`get_sybers.cluster`, [get-sybers/proxmox](https://github.com/get-sybers/proxmox)),
@@ -36,7 +36,7 @@ coverage under [`extensions/molecule/`](extensions/molecule) (see [Testing](#tes
 
 ### Templates
 
-Every container is created from a template built here and published as a GitHub Release ([`docs/03`](docs/03-Template-Build-and-Release.md)).
+Every container is created from a template built here and published as a GitHub Release ([`doc/howto/build-a-template.md`](doc/howto/build-a-template.md)).
 One directory per template under [`templates/`](templates/README.md):
 
 | Template | Release tag | Carries |
@@ -63,10 +63,27 @@ the Proxmox node as root (`pct` is node-local); PVE API auth comes from the `PRO
 
 ### Documentation
 
-- [`docs/01-Hardened-LXC-Premise.md`](docs/01-Hardened-LXC-Premise.md) — the rules, what enforces each, and how to add a service.
-- [`docs/02-1Password-Connect.md`](docs/02-1Password-Connect.md) — the operator procedure for the Connect server and the credential mirror.
-- [`docs/03-Template-Build-and-Release.md`](docs/03-Template-Build-and-Release.md) — how a template is baked, released, verified and
-  fetched onto a node.
+[`doc/index.md`](doc/index.md) is the entry point: [how-to guides](doc/howto/index.md) (deploy 1Password Connect, build and release a
+template, add a service) and [reference](doc/reference/index.md) (the hardened-LXC premise and what enforces each rule, the template
+manifest, the roles).
+
+## Repository layout
+
+```text
+.
+├── doc/                  # documentation: index.md, howto/, reference/
+├── templates/            # one directory per LXC template: the manifest and its README
+├── roles/                # lxc_preflight, lxc_guest, lxc_onepassword_connect, lxc_onepassword_item
+├── playbooks/            # deploy-*, reflect-*, bake-template
+├── inventory/            # the single config home (hosts, group_vars, secrets examples)
+├── extensions/molecule/  # the test scenarios and their Debian substrate
+├── scripts/              # check_lxc_boundary, check_pins, upgrade_pins, molecule_lanes, base_template_checksum
+├── changelogs/           # antsibull-changelog fragments and the generated changelog
+├── meta/, galaxy.yml     # the collection manifest
+├── Makefile              # make conform: the local gate CI runs
+├── AUTHORS, MAINTAINERS, CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, LICENSE
+└── .github/              # workflows (CI, Templates, Release, Links, Update pins, Scorecard), rulesets, issue and PR templates
+```
 
 ## Development
 

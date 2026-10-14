@@ -15,4 +15,4 @@ ansible-vault encrypt onepassword.yml
 ```
 
 Run the mirror with `-e @inventory/secrets/onepassword.yml --ask-vault-pass` (or a `--vault-password-file`). See
-`docs/02-1Password-Connect.md` for the full setup.
+`doc/howto/deploy-onepassword-connect.md` for the full setup.

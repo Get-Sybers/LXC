@@ -11,22 +11,7 @@ templates/
     └── README.md              # what the template carries and how it is used
 ```
 
-## The manifest
-
-`template.yml` is a plain vars file loaded by [`playbooks/bake-template.yml`](../playbooks/bake-template.yml). It declares:
-
-| Key | Meaning |
-| --- | --- |
-| `lxc_template_name` | the template's name; also the directory name and the release tag prefix |
-| `lxc_template_version` | the version baked in (usually the service's release); the release tag is `<name>/v<version>` |
-| `lxc_template_arch` | `amd64` or `arm64` |
-| `lxc_template_output` | the artifact file name, `<base>-<name>_<version>_<arch>.tar.zst` |
-| `lxc_template_base_url` | the stock Proxmox system template the bake starts from |
-| `lxc_template_base_checksum` | that template's published `sha512:` from Proxmox's own index — pin it with `scripts/base_template_checksum.py` |
-| `lxc_template_bake` | the ordered role entry points run inside the rootfs, over the `chroot` connection |
-
-Any variable a bake step reads (for example `lxc_onepassword_connect_version`) is set in the same file, so the manifest is the single place a
-template's inputs are declared.
+The manifest's keys are documented in [`doc/reference/template-manifest.md`](../doc/reference/template-manifest.md).
 
 ## How a template becomes a container
 

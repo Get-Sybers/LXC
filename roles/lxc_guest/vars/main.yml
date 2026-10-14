@@ -1,5 +1,5 @@
 ---
-# Constants of the hardened premise (docs/01). Not inputs: a guest that needs
+# Constants of the hardened premise (doc/reference/hardened-lxc-premise.md). Not inputs: a guest that needs
 # any of these to be different does not belong in this collection.
 #
 # The ownership marker. create writes it into the container description;

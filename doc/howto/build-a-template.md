@@ -18,7 +18,7 @@ pinned checksum is refused, not downloaded.
 
 ## 2. The bake
 
-[`playbooks/bake-template.yml`](../playbooks/bake-template.yml) turns one manifest, `templates/<name>/template.yml`, into one artifact.
+[`playbooks/bake-template.yml`](../../playbooks/bake-template.yml) turns one manifest, `templates/<name>/template.yml`, into one artifact.
 It runs as root on a build host (the GitHub Actions runner) and never touches a node.
 
 | Step | What happens |
@@ -36,7 +36,7 @@ touches a credential. Everything site-specific stays in `server`, which runs in 
 
 ## 3. The release
 
-[`.github/workflows/templates.yml`](../.github/workflows/templates.yml):
+[`.github/workflows/templates.yml`](../../.github/workflows/templates.yml):
 
 - **Every pull request and push to `main`** that touches `templates/`, the bake play, a role or the pins bakes every template and keeps the
   artifacts as workflow artifacts for two weeks, so a change to an image is reviewed as a built image.

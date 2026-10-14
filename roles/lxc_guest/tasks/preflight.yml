@@ -28,7 +28,7 @@
     that: lxc_guest_unprivileged | bool
     fail_msg: >-
       lxc_guest_unprivileged has been overridden to false. Every container in
-      this collection is unprivileged (docs/01-Hardened-LXC-Premise.md); a
+      this collection is unprivileged (doc/reference/hardened-lxc-premise.md); a
       service that needs a privileged container does not belong here.
     quiet: true
 - name: "preflight | The pct binary is present (this role runs on a Proxmox VE node)"

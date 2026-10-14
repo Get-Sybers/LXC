@@ -14,7 +14,9 @@
 /requirements.yml               @get-sybers/owners
 /galaxy.yml                     @get-sybers/owners
 # The premise and its detector.
-/docs/01-Hardened-LXC-Premise.md @get-sybers/owners
+/doc/reference/hardened-lxc-premise.md @get-sybers/owners
+/CONTRIBUTING.md                @get-sybers/owners
+/MAINTAINERS                    @get-sybers/owners
 /scripts/check_lxc_boundary.py  @get-sybers/owners
 /roles/lxc_guest/               @get-sybers/owners
 # What goes into every released template.

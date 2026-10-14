@@ -17,8 +17,8 @@ by scanning the scenario's playbooks for ``get_sybers.lxc.<role>`` references
 and following the same references through those roles' task files (so a change
 to ``lxc_guest`` selects every scenario that includes it). A change to anything
 every scenario shares — the molecule base config and Dockerfile, the collection
-metadata, the pins, this script, the workflow — selects every scenario. Docs
-and changelog fragments never need the heavy gates.
+metadata, the pins, this script, the workflow — selects every scenario. Docs,
+changelog fragments and the community files never need the heavy gates.
 
 The collection is the repository root (no monorepo subdirectory), so every
 path below is repository-relative with no prefix.
@@ -55,7 +55,7 @@ SHARED = (
     ".github/workflows/ci.yml",
 )
 # A change that only touches these never needs the heavy gates.
-LIGHT = re.compile(r"(\.md$|^docs/|^changelogs/fragments/)")
+LIGHT = re.compile(r"(\.md$|^doc/|^changelogs/fragments/|^(AUTHORS|MAINTAINERS)$)")
 
 
 def scenarios() -> list[str]:

@@ -1,4 +1,4 @@
-"""check_lxc_boundary.py — the detector for the hardened LXC premise (docs/01).
+"""check_lxc_boundary.py — the detector for the hardened LXC premise (doc/reference/hardened-lxc-premise.md).
 
 A rule with no detector is a suggestion. This scan fails the gate when any
 play or role in this collection breaks one of the mechanically checkable rules:
@@ -139,7 +139,7 @@ def main() -> int:
             print(f"  {u}")
         return 1
     if hits:
-        print(f"\nFAIL: {len(hits)} breach(es) of the hardened LXC premise (docs/01-Hardened-LXC-Premise.md):\n")
+        print(f"\nFAIL: {len(hits)} breach(es) of the hardened LXC premise (doc/reference/hardened-lxc-premise.md):\n")
         for rel, lineno, rule, why in hits:
             print(f"  {rel}:{lineno}   [{rule}] {why}")
         return 1

@@ -7,14 +7,14 @@ cluster tier (PocketBase and the ZFS file vault, `get-sybers/proxmox`) are left 
 The Connect server runs **natively in a hardened Debian LXC under `systemd`** — no Docker, no OCI runtime, no SSH. The `connect-api` and
 `connect-sync` images are single Go binaries; the template bake extracts those binaries straight from the pinned official images (via the
 Docker registry HTTP API — nothing is installed and nothing runs as a container) and installs each as an `opuser` service, exactly as the
-image would. The result is the released `op-connect` template ([`templates/op-connect`](../templates/op-connect/README.md)); the node
+image would. The result is the released `op-connect` template ([`templates/op-connect`](../../templates/op-connect/README.md)); the node
 creates the CT from it and does nothing but drop in the credentials and start the units.
 
 ## Moving parts
 
 | Piece | What it is |
 | --- | --- |
-| `templates/op-connect` + `.github/workflows/templates.yml` | The released template: Debian 13 with the Connect binaries, units, service user and the baseline baked in; published as the `op-connect/v<version>` GitHub Release ([docs/03](03-Template-Build-and-Release.md)). |
+| `templates/op-connect` + `.github/workflows/templates.yml` | The released template: Debian 13 with the Connect binaries, units, service user and the baseline baked in; published as the `op-connect/v<version>` GitHub Release ([build-a-template.md](build-a-template.md)). |
 | `lxc_guest` role | Fetches the released template into the node's cache by its pinned checksum, creates the CT from it (unprivileged, ownership-marked), reaches it over `pct exec`, re-asserts the baseline inside it. |
 | `lxc_onepassword_connect` role + `deploy-onepassword-connect.yml` | `bake` is what the template carries; `container` hands the placement to `lxc_guest`; `server` installs the credentials and starts the baked `op-connect-api` / `op-connect-sync` units inside the CT. |
 | `lxc_onepassword_item` role + `reflect-onepassword-credentials.yml` | Upsert one credential per entry into 1Password via the Connect API (`onepassword.connect.generic_item`). |
@@ -43,7 +43,7 @@ This gives you three things:
 
 - The released template's checksum pinned in `inventory/group_vars/all/onepassword.yml` (`lxc_onepassword_connect_template_checksum`,
   from the `.sha256` asset of the `op-connect/v<version>` release). The play fetches the template into the node's cache itself; nothing
-  is downloaded without the pin. Verify the release first if you want to: [docs/03 §5](03-Template-Build-and-Release.md#5-verifying-a-release-by-hand).
+  is downloaded without the pin. Verify the release first if you want to: [build-a-template.md §5](build-a-template.md#5-verifying-a-release-by-hand).
 - The node can reach `github.com` to fetch the release asset once (or place the file in `/var/lib/vz/template/cache/` yourself).
 - An admin PVE API credential in the environment (`PROXMOX_TOKEN_ID` + `PROXMOX_TOKEN_SECRET`, or `PROXMOX_PASSWORD`).
 - The collection installed where the play runs: `ansible-galaxy collection install -r requirements.yml` (the play runs **on the node**, as
@@ -122,6 +122,6 @@ ansible-playbook playbooks/deploy-onepassword-connect.yml --tags destroy -e lxc_
   `onepassword.yml`. Every secret-bearing task is `no_log`, and the roles report shape only (sizes, counts), never values.
 - **Unofficial topology.** 1Password officially supports Docker-Compose and Kubernetes. Running the binaries bare is equivalent (same
   entrypoint, env, user and paths) but self-supported — if a future image stops being a standalone binary, the premise
-  (`docs/01-Hardened-LXC-Premise.md`, rule 3) means a new build approach, not a container runtime inside the LXC.
+  ([`hardened-lxc-premise.md`](../reference/hardened-lxc-premise.md), rule 3) means a new build approach, not a container runtime inside the LXC.
 - **Architecture / version.** Default is `amd64` at tag `1.8.3`; set `lxc_onepassword_connect_arch: arm64` on a Pi host, and confirm the
   current tag on Docker Hub before pinning.

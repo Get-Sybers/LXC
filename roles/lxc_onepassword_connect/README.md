@@ -51,7 +51,7 @@ the `group/community.proxmox.proxmox` module-defaults group reading the document
 ## Usage
 
 [`playbooks/deploy-onepassword-connect.yml`](../../playbooks/deploy-onepassword-connect.yml) wires the three plays together; the operator
-procedure is [`docs/02-1Password-Connect.md`](../../docs/02-1Password-Connect.md).
+procedure is [`doc/howto/deploy-onepassword-connect.md`](../../doc/howto/deploy-onepassword-connect.md).
 
 ## Behaviour and security
 

@@ -1,0 +1,12 @@
+Before opening a pull request, read CONTRIBUTING.md: every commit is signed,
+every pull request passes `make conform`, and a change to what goes into a
+container is reviewed by the owners.
+
+Maintainer
+----------
+
+Committers              : the @get-sybers/owners team (see .github/CODEOWNERS)
+Send pull requests at   : https://github.com/get-sybers/lxc
+Report vulnerabilities  : Security → Report a vulnerability on the repository (see SECURITY.md)
+Git location            : https://github.com/get-sybers/lxc
+Collection              : get_sybers.lxc on Ansible Galaxy

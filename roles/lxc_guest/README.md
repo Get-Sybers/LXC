@@ -1,7 +1,7 @@
 # lxc_guest
 
 The one lifecycle every container in this collection goes through, and the single place the hardened premise
-([`docs/01-Hardened-LXC-Premise.md`](../../docs/01-Hardened-LXC-Premise.md)) is enforced. A service role never calls `pct`, `pvesh` or
+([`doc/reference/hardened-lxc-premise.md`](../../doc/reference/hardened-lxc-premise.md)) is enforced. A service role never calls `pct`, `pvesh` or
 `community.proxmox.proxmox` itself: it hands its placement to this role (host side), runs its own tasks inside the guest after this role's
 `baseline` (guest side), and the boundary check (`scripts/check_lxc_boundary.py`) refuses anything else.
 
@@ -40,7 +40,7 @@ The one lifecycle every container in this collection goes through, and the singl
 
 Ownership is read through `pvesh --output-format json`, never `pct config`, which URL-encodes the description so a marker containing `:` can
 never match. A container created before this collection existed carries neither marker and is replaced, not adopted
-([docs/02](../../docs/02-1Password-Connect.md#a-container-the-cluster-collection-created)).
+([deploy-onepassword-connect.md](../../doc/howto/deploy-onepassword-connect.md#a-container-the-cluster-collection-created)).
 
 ## Inputs (selected — full list in `meta/argument_specs.yml`)
 
