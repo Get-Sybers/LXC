@@ -1,0 +1,11 @@
+---
+# The Elastic apt repository both the elasticsearch and kibana bakes install
+# from. One release line per repository; the roles pin the exact package
+# version themselves.
+lxc_elastic_repo_major: "9.x"
+lxc_elastic_repo_url: "https://artifacts.elastic.co/packages/{{ lxc_elastic_repo_major }}/apt"
+lxc_elastic_repo_key_url: "https://artifacts.elastic.co/GPG-KEY-elasticsearch"
+# The fingerprint of Elastic's package signing key, as Elastic publishes it.
+# The bake refuses a key that does not carry it.
+lxc_elastic_repo_key_fingerprint: "46095ACC8548582C1A2699A9D27D666CD88E42B4"
+lxc_elastic_repo_keyring: /etc/apt/keyrings/elasticsearch.asc

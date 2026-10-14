@@ -16,3 +16,26 @@ ansible-vault encrypt onepassword.yml
 
 Run the mirror with `-e @inventory/secrets/onepassword.yml --ask-vault-pass` (or a `--vault-password-file`). See
 `doc/howto/deploy-onepassword-connect.md` for the full setup.
+
+## `semaphore.yml`
+
+Gives `playbooks/deploy-semaphore.yml` the administrator's initial password and the three keys (cookie signing, cookie encryption,
+access-key encryption). There is no template for it in the repository: write it with these seven variables, one fresh value per
+key, and encrypt it:
+
+```bash
+cat > semaphore.yml <<EOF
+---
+lxc_semaphore_admin_login: admin
+lxc_semaphore_admin_name: "Semaphore Admin"
+lxc_semaphore_admin_email: "<the administrator's email>"
+lxc_semaphore_admin_password: "<the administrator's initial password>"
+lxc_semaphore_cookie_hash: "$(head -c32 /dev/urandom | base64)"
+lxc_semaphore_cookie_encryption: "$(head -c32 /dev/urandom | base64)"
+lxc_semaphore_access_key_encryption: "$(head -c32 /dev/urandom | base64)"
+EOF
+ansible-vault encrypt semaphore.yml
+```
+
+Run the deploy with `-e @inventory/secrets/semaphore.yml --ask-vault-pass`. Keep the file: `lxc_semaphore_access_key_encryption` is
+what every stored access key is encrypted with. See `doc/howto/deploy-semaphore.md`.

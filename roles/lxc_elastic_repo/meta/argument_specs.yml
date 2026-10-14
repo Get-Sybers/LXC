@@ -1,0 +1,33 @@
+---
+argument_specs:
+  main:
+    short_description: "Configure the Elastic apt repository in a build rootfs, key verified by fingerprint (bake helper)."
+    description:
+      - >-
+        Runs inside a build rootfs over community.general.chroot, included by the
+        elasticsearch and kibana bake entry points. Installs gpg, downloads
+        Elastic's signing key, refuses it unless it carries the pinned
+        fingerprint, writes the deb822 source, and refreshes the apt cache.
+    options:
+      lxc_elastic_repo_major:
+        type: str
+        required: false
+        default: "9.x"
+        description: "The Elastic release line the repository serves."
+      lxc_elastic_repo_url:
+        type: str
+        required: false
+        description: "Repository URL. Computed default: https://artifacts.elastic.co/packages/<major>/apt."
+      lxc_elastic_repo_key_url:
+        type: str
+        required: false
+        default: "https://artifacts.elastic.co/GPG-KEY-elasticsearch"
+      lxc_elastic_repo_key_fingerprint:
+        type: str
+        required: false
+        default: "46095ACC8548582C1A2699A9D27D666CD88E42B4"
+        description: "The signing key's fingerprint as Elastic publishes it; a key without it is refused."
+      lxc_elastic_repo_keyring:
+        type: str
+        required: false
+        default: /etc/apt/keyrings/elasticsearch.asc

@@ -1,0 +1,22 @@
+---
+- name: "verify | Probe the Semaphore API ping endpoint"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ lxc_semaphore_port }}/api/ping"
+    method: GET
+    status_code: [200]
+  register: __lxc_semaphore_verify
+  until: (__lxc_semaphore_verify.status | default(-1)) == 200
+  retries: 15
+  delay: 2
+  changed_when: false
+  check_mode: false
+  failed_when: false
+- name: "verify | Assert semaphore is healthy"
+  ansible.builtin.assert:
+    that:
+      - (__lxc_semaphore_verify.status | default(-1)) == 200
+    fail_msg: >-
+      semaphore did not answer at http://127.0.0.1:{{ lxc_semaphore_port }}/api/ping.
+      Inspect `journalctl -u semaphore` inside the container.
+    success_msg: "semaphore is healthy (HTTP 200 at /api/ping)."
+    quiet: true

@@ -1,0 +1,42 @@
+---
+# The administrator is created once, when the login is absent from the user
+# table; `semaphore user add` refuses a duplicate (exit 2), and a password is
+# changed in the UI afterwards, never rewritten here.
+- name: "admin | List the users (logins only)"
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - "{{ lxc_semaphore_user }}"
+      - --
+      - "{{ lxc_semaphore_bin }}"
+      - user
+      - list
+      - --config
+      - "{{ lxc_semaphore_config_file }}"
+  register: __lxc_semaphore_users
+  changed_when: false
+- name: "admin | Create the administrator when absent (secret: the password)"
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - "{{ lxc_semaphore_user }}"
+      - --
+      - "{{ lxc_semaphore_bin }}"
+      - user
+      - add
+      - --admin
+      - --login
+      - "{{ lxc_semaphore_admin_login }}"
+      - --name
+      - "{{ lxc_semaphore_admin_name }}"
+      - --email
+      - "{{ lxc_semaphore_admin_email }}"
+      - --password
+      - "{{ lxc_semaphore_admin_password }}"
+      - --config
+      - "{{ lxc_semaphore_config_file }}"
+  when: lxc_semaphore_admin_login not in (__lxc_semaphore_users.stdout_lines | map('trim') | list)
+  changed_when: true
+  no_log: true

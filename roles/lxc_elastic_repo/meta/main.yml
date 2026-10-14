@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: lxc_elastic_repo
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    Configure the Elastic apt repository inside a build rootfs, with the
+    signing key verified by fingerprint. A bake helper for the elasticsearch
+    and kibana templates; it installs nothing itself.
+  company: Get-Sybers
+  license: AGPL-3.0-only
+  min_ansible_version: "2.19.0"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [elastic, apt, lxc]
+dependencies: []

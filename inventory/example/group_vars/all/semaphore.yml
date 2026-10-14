@@ -1,0 +1,21 @@
+---
+# Semaphore UI LXC placement (deploy-semaphore.yml). The administrator password
+# and the three keys are NOT here — they live in the vaulted
+# inventory/secrets/semaphore.yml passed with -e (doc/howto/deploy-semaphore.md).
+# Copied into place by `make config`; the copy is untracked.
+lxc_semaphore_node: "{{ lxc_node }}"
+# A free CT id, cluster-wide (`pvesh get /cluster/resources --type vm` lists
+# the taken ones). lxc_guest refuses 0.
+lxc_semaphore_vmid: 0
+# The guest's net0. DHCP on the management bridge by default; for a fixed
+# address: "name=eth0,bridge={{ lxc_bridge }},ip=192.0.2.160/24,gw=192.0.2.1".
+lxc_semaphore_net0: "name=eth0,bridge={{ lxc_bridge }},ip=dhcp"
+# The URL users reach the UI at when it sits behind a reverse proxy
+# (https://semaphore.example.test); empty when the CT's own address, port
+# 3000, is the URL.
+lxc_semaphore_web_host: ""
+# The released template this CT is created from: the semaphore/v<version>
+# GitHub Release (templates/semaphore). lxc_guest fetches it into the node's
+# cache by this checksum when it is not there. Pin the value from the release's
+# .sha256 asset; an empty checksum refuses the fetch.
+lxc_semaphore_template_checksum: ""
