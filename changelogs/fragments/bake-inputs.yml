@@ -1,0 +1,10 @@
+---
+fixed:
+  - >-
+    The bake runs. ``lxc_guest``'s ``baseline`` entry point validated the
+    whole ``main`` option set, so its argument-spec check templated the
+    placement defaults and failed on ``lxc_node``, an inventory-only
+    collection variable the build rootfs never has; it now validates only the
+    two inputs it reads. ``playbooks/bake-template.yml`` hands the build host
+    ``lxc_baseline_marker_path`` (``/etc/get-sybers-lxc-baseline``, the path
+    its seal already asserts).

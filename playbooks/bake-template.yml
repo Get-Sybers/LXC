@@ -173,6 +173,10 @@
         ansible_connection: community.general.chroot
         ansible_host: "{{ lxc_template_workdir }}/rootfs"
         ansible_python_interpreter: /usr/bin/python3
+        # The build rootfs has no inventory. The baseline's marker path is a
+        # constant of the bake (the seal asserts it below), the same path the
+        # inventory's lxc_baseline_marker_path names on a node.
+        lxc_baseline_marker_path: /etc/get-sybers-lxc-baseline
         lxc_template_name: "{{ lxc_template_name }}"
         lxc_template_version: "{{ lxc_template_version }}"
         lxc_template_service_version: "{{ lxc_template_service_version }}"

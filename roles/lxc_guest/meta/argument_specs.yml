@@ -100,11 +100,11 @@ argument_specs:
         type: int
         required: false
         default: 300
-      lxc_guest_baseline_marker:
+      lxc_guest_baseline_marker: &lxc_guest_baseline_marker
         type: str
         required: false
         description: "Path of the baseline marker inside the guest. Computed default: the collection variable lxc_baseline_marker_path."
-      lxc_guest_baseline_extra_purge:
+      lxc_guest_baseline_extra_purge: &lxc_guest_baseline_extra_purge
         type: list
         elements: str
         required: false
@@ -135,7 +135,14 @@ argument_specs:
     options: *lxc_guest_options
   baseline:
     short_description: "Runs INSIDE the guest: purge the SSH server, refuse container runtimes, write the baseline marker."
-    options: *lxc_guest_options
+    description:
+      - >-
+        Reads none of the placement inputs, so it validates only its own: the
+        template bake runs it in a chroot with no inventory, where the
+        collection variables the placement defaults point at do not exist.
+    options:
+      lxc_guest_baseline_marker: *lxc_guest_baseline_marker
+      lxc_guest_baseline_extra_purge: *lxc_guest_baseline_extra_purge
   remove:
     short_description: "Opt-in destroy of a CT this role created — refuses without lxc_guest_confirm_destroy and refuses a CT that is not ours."
     options: *lxc_guest_options
