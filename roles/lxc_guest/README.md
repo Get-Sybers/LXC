@@ -17,7 +17,8 @@ The one lifecycle every container in this collection goes through, and the singl
 
 | `tasks_from` | Where it runs | Writes? | What it does |
 | --- | --- | --- | --- |
-| `main` | node | yes | facts → preflight → create (+ start, connect) → postcheck: the ensure path |
+| `main` | node | yes | template → facts → preflight → create (+ start, connect) → postcheck: the ensure path |
+| `template` | node | yes | fetch the released template into the `local` cache by its pinned `sha256:` when it is not there; refuses a fetch without the pin |
 | `facts` | node | no | node name, `pct`, the template on its storage, the bridge, the CT id's status/config/ownership, the id elsewhere in the cluster |
 | `preflight` | node | no | every precondition below; refuses a privileged request outright |
 | `create` | node | **yes** | `community.proxmox.proxmox` create-or-reconcile (`update: true`), `pct start`, then `connect` |
@@ -38,8 +39,8 @@ The one lifecycle every container in this collection goes through, and the singl
 - a CT id that exists without this collection's ownership marker, or that is held by a guest on another node.
 
 Ownership is read through `pvesh --output-format json`, never `pct config`, which URL-encodes the description so a marker containing `:` can
-never match. A container this collection inherited (the 1Password Connect CT created by `get_sybers.cluster` before the move) is adopted once
-with the `pct set … --description` command the refusal prints.
+never match. A container created before this collection existed carries neither marker and is replaced, not adopted
+([docs/02](../../docs/02-1Password-Connect.md#a-container-the-cluster-collection-created)).
 
 ## Inputs (selected — full list in `meta/argument_specs.yml`)
 
@@ -49,7 +50,9 @@ with the `pct set … --description` command the refusal prints.
 | `lxc_guest_vmid` | `0` (refused) | CT id. |
 | `lxc_guest_hostname` | `""` (refused) | Hostname of the CT; also its name in the play inventory. |
 | `lxc_guest_purpose` | `""` | Free text appended to the description after the marker. |
-| `lxc_guest_template` | `{{ lxc_template }}` | `storage:vztmpl/<file>`. |
+| `lxc_guest_template` | `{{ lxc_template }}` | `storage:vztmpl/<file>` of a released template. |
+| `lxc_guest_template_url` | `{{ lxc_template_url }}` | Where to fetch it when it is not in the cache (empty: never fetch). |
+| `lxc_guest_template_checksum` | `{{ lxc_template_checksum }}` | The release's `sha256:`; a fetch is refused without it. |
 | `lxc_guest_storage` | `{{ lxc_storage }}` | Rootfs storage (the shared Ceph pool for HA). |
 | `lxc_guest_net0` | DHCP on `{{ lxc_bridge }}` | Full Proxmox `net0`; must carry `bridge=`. |
 | `lxc_guest_features` | `[]` | e.g. `["nesting=1"]` — Debian 13's systemd 257 needs it; the CT stays unprivileged. |
@@ -57,7 +60,8 @@ with the `pct set … --description` command the refusal prints.
 | `lxc_guest_baseline_marker` | `{{ lxc_baseline_marker_path }}` | Marker path inside the guest; service roles assert it. |
 | `lxc_guest_confirm_destroy` | `false` | `remove` refuses without it. |
 
-The collection variables (`lxc_node`, `lxc_template`, `lxc_storage`, `lxc_bridge`, `lxc_baseline_marker_path`) are defined once in
+The collection variables (`lxc_node`, `lxc_template`, `lxc_template_url`, `lxc_template_checksum`, `lxc_template_cache_dir`,
+`lxc_template_release_base`, `lxc_storage`, `lxc_bridge`, `lxc_baseline_marker_path`, `lxc_template_marker_path`) are defined once in
 [`inventory/group_vars/all/lxc.yml`](../../inventory/group_vars/all/lxc.yml). The constants of the premise — the marker text, `unprivileged`,
 the purge list and the forbidden binaries — live in `vars/main.yml` and are not inputs.
 

@@ -1,0 +1,73 @@
+---
+# Runs INSIDE the build rootfs over the chroot connection (playbooks/
+# bake-template.yml). Everything that is image content and nothing that is site
+# state: no credentials, no service start. The units are enabled by creating the
+# multi-user.target.wants links directly — exactly what `systemctl enable` does
+# for WantedBy=multi-user.target — because systemd is not running in a chroot.
+- name: "bake | Ensure ca-certificates is present (binaries read SSL_CERT_FILE)"
+  ansible.builtin.apt:
+    name: ca-certificates
+    state: present
+    update_cache: true
+- name: "bake | The unprivileged service user"
+  ansible.builtin.user:
+    name: "{{ lxc_onepassword_connect_user }}"
+    home: "{{ lxc_onepassword_connect_home }}"
+    system: true
+    create_home: true
+    shell: /usr/sbin/nologin
+- name: "bake | The .op home directory"
+  ansible.builtin.file:
+    path: "{{ lxc_onepassword_connect_home }}/.op"
+    state: directory
+    owner: "{{ lxc_onepassword_connect_user }}"
+    group: "{{ lxc_onepassword_connect_user }}"
+    mode: "0700"
+- name: "bake | The shared .op/data directory"
+  ansible.builtin.file:
+    path: "{{ lxc_onepassword_connect_data_dir }}"
+    state: directory
+    owner: "{{ lxc_onepassword_connect_user }}"
+    group: "{{ lxc_onepassword_connect_user }}"
+    mode: "0700"
+- name: "bake | Extract each Connect binary from its pinned image"
+  ansible.builtin.include_tasks: extract_binary.yml
+  loop: "{{ lxc_onepassword_connect_repos }}"
+  loop_control:
+    loop_var: __lxc_onepassword_connect_repo
+    label: "{{ __lxc_onepassword_connect_repo }}"
+- name: "bake | Install the op-connect-api systemd unit"
+  ansible.builtin.template:
+    src: op-connect-api.service.j2
+    dest: /etc/systemd/system/op-connect-api.service
+    owner: root
+    group: root
+    mode: "0644"
+- name: "bake | Install the op-connect-sync systemd unit"
+  ansible.builtin.template:
+    src: op-connect-sync.service.j2
+    dest: /etc/systemd/system/op-connect-sync.service
+    owner: root
+    group: root
+    mode: "0644"
+- name: "bake | The multi-user.target.wants directory"
+  ansible.builtin.file:
+    path: /etc/systemd/system/multi-user.target.wants
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+- name: "bake | Enable both units for multi-user.target"
+  ansible.builtin.file:
+    src: "/etc/systemd/system/{{ item }}.service"
+    dest: "/etc/systemd/system/multi-user.target.wants/{{ item }}.service"
+    state: link
+    owner: root
+    group: root
+  loop:
+    - op-connect-sync
+    - op-connect-api
+- name: "bake | Remove the extraction staging directory"
+  ansible.builtin.file:
+    path: "{{ lxc_onepassword_connect_stage_dir }}"
+    state: absent

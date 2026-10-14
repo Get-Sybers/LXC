@@ -19,5 +19,10 @@ fragments.
   (`scripts/check_lxc_boundary.py`). The 1Password content moved here from
   `get-sybers/proxmox` (`get_sybers.cluster`); see
   `changelogs/fragments/initial-import.yml`.
+- Templates built in GitHub Actions and published as GitHub Releases
+  (`templates/`, `playbooks/bake-template.yml`, the `Templates` workflow,
+  `docs/03-Template-Build-and-Release.md`); `lxc_guest` fetches a release by its
+  pinned checksum; `lxc_onepassword_connect` splits into `bake` and `server`. See
+  `changelogs/fragments/template-build.yml`.
 
 [Unreleased]: https://github.com/get-sybers/lxc/compare/a481839...HEAD

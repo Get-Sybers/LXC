@@ -17,3 +17,6 @@
 /docs/01-Hardened-LXC-Premise.md @get-sybers/owners
 /scripts/check_lxc_boundary.py  @get-sybers/owners
 /roles/lxc_guest/               @get-sybers/owners
+# What goes into every released template.
+/templates/                     @get-sybers/owners
+/playbooks/bake-template.yml    @get-sybers/owners

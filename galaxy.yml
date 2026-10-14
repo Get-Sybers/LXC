@@ -60,6 +60,7 @@ build_ignore:
   - scripts
   - inventory
   - docs
+  - templates
   - SECURITY.md
   - changelogs/.plugin-cache.yaml
   - changelogs/fragments

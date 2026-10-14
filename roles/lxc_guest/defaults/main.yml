@@ -10,8 +10,16 @@ lxc_guest_hostname: ""
 # Free text appended to the container description after the ownership marker
 # (e.g. "1Password Connect server"). Never a secret: pct config shows it.
 lxc_guest_purpose: ""
-# storage:vztmpl/<file>; confirm with `pveam available` / `pveam list local`.
+# storage:vztmpl/<file> — a template this collection released (templates/<name>).
 lxc_guest_template: "{{ lxc_template }}"
+# Where the template is fetched from when it is not in the node's cache, and
+# the sha256 it must have (pinned in the inventory from the release's .sha256).
+# A fetch with an empty checksum is refused; no URL means no fetch.
+lxc_guest_template_url: "{{ lxc_template_url }}"
+lxc_guest_template_checksum: "{{ lxc_template_checksum }}"
+# The directory storage `local` keeps templates in (local:vztmpl/<file> lives
+# here); a fetch targets only this storage.
+lxc_guest_template_cache_dir: "{{ lxc_template_cache_dir }}"
 lxc_guest_storage: "{{ lxc_storage }}"
 lxc_guest_rootfs_gb: 4
 lxc_guest_cores: 1

@@ -5,9 +5,19 @@
 # The node a container is created on unless its role says otherwise. Membership
 # of lxc_hosts in hosts.yml IS the declaration; no other file encodes it.
 lxc_node: "{{ groups['lxc_hosts'] | first }}"
-# The plain Debian template every guest is built from. Confirm it is on the
-# node: `pveam list local`; fetch it: `pveam update && pveam download local <file>`.
+# The template a guest is created from when its role names none. Every service
+# role names its own released template (templates/<name>), so this is the
+# fallback only; it is fetched into the cache by lxc_guest when a URL and a
+# sha256 are set, and never fetched otherwise.
 lxc_template: "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+lxc_template_url: ""
+lxc_template_checksum: ""
+# Where the `local` storage keeps templates (local:vztmpl/<file>).
+lxc_template_cache_dir: /var/lib/vz/template/cache
+# Where released templates are fetched from: this repository's GitHub Releases
+# (<base>/<name>/v<version>/<file>). Point it at a mirror to serve a lab with
+# no reach to github.com.
+lxc_template_release_base: https://github.com/get-sybers/lxc/releases/download
 # Rootfs storage (use the shared Ceph pool for HA).
 lxc_storage: local-zfs
 # The management bridge a guest's net0 sits on by default.
@@ -15,3 +25,6 @@ lxc_bridge: vmbr0
 # The marker lxc_guest's baseline writes inside a guest and every service role
 # asserts before configuring anything.
 lxc_baseline_marker_path: /etc/get-sybers-lxc-baseline
+# The marker the bake writes into every released template (name, version,
+# base); a service role asserts it before configuring anything.
+lxc_template_marker_path: /etc/get-sybers-lxc-template

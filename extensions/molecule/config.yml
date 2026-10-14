@@ -45,6 +45,11 @@ provisioner:
         # both the node and the guest, so the values are the fixture's own.
         lxc_node: "{{ inventory_hostname }}"
         lxc_template: "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+        lxc_template_url: ""
+        lxc_template_checksum: ""
+        lxc_template_cache_dir: /var/lib/vz/template/cache
+        lxc_template_release_base: https://github.com/get-sybers/lxc/releases/download
+        lxc_template_marker_path: /etc/get-sybers-lxc-template
         lxc_storage: local-zfs
         lxc_bridge: vmbr0
         lxc_baseline_marker_path: /etc/get-sybers-lxc-baseline
