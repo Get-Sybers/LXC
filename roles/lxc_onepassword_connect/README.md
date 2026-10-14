@@ -34,12 +34,13 @@ role) and this role over `pct exec`.
 | --- | --- | --- |
 | `lxc_onepassword_connect_node` | `{{ lxc_node }}` | PVE node the CT lives on. |
 | `lxc_onepassword_connect_vmid` | `0` (refused) | CT id; the inventory sets it. |
-| `lxc_onepassword_connect_template` | `local:vztmpl/debian-13-op-connect_<version>_<arch>.tar.zst` | The released template. |
+| `lxc_onepassword_connect_template_version` | `1.0.0` | This repository's release of the `op-connect` template (the manifest's `lxc_template_version`): names the artifact and the tag; `server` refuses a guest baked at another. |
+| `lxc_onepassword_connect_template` | `local:vztmpl/debian-13-op-connect_<template release>_<arch>.tar.zst` | The released template. |
 | `lxc_onepassword_connect_template_checksum` | `""` (fetch refused) | The release's `sha256:`, pinned in the inventory. |
 | `lxc_onepassword_connect_storage` | `{{ lxc_storage }}` | CT rootfs storage (the shared Ceph pool for HA). |
 | `lxc_onepassword_connect_net0` | DHCP on `{{ lxc_bridge }}` | Full Proxmox net0; set a static `ip=/gw=` for a fixed address. |
 | `lxc_onepassword_connect_features` | `["nesting=1"]` | Debian 13's systemd 257 needs nesting; the CT stays unprivileged. |
-| `lxc_onepassword_connect_version` | `1.8.3` | Connect release: names the template, and `server` refuses a template of another version. Set in `templates/op-connect/template.yml` for the bake. |
+| `lxc_onepassword_connect_version` | `1.8.3` | Connect release the image carries; `server` refuses a template whose marker says another. Set in `templates/op-connect/template.yml` for the bake. |
 | `lxc_onepassword_connect_arch` | `amd64` | Image arch to extract (`arm64` on a Pi). |
 | `lxc_onepassword_connect_credentials_src` | `""` | Path on the node to `1password-credentials.json` (**required**, secret). |
 

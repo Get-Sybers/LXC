@@ -29,12 +29,15 @@
   ansible.builtin.assert:
     that:
       - __lxc_onepassword_connect_tmpl_fields['name'] | default('') == 'op-connect'
-      - __lxc_onepassword_connect_tmpl_fields['version'] | default('') == lxc_onepassword_connect_version | string
+      - __lxc_onepassword_connect_tmpl_fields['version'] | default('') == lxc_onepassword_connect_template_version | string
+      - __lxc_onepassword_connect_tmpl_fields['service'] | default('') == lxc_onepassword_connect_version | string
     fail_msg: >-
       {{ lxc_onepassword_connect_template_marker }} says
       name={{ __lxc_onepassword_connect_tmpl_fields['name'] | default('<absent>') }}
-      version={{ __lxc_onepassword_connect_tmpl_fields['version'] | default('<absent>') }};
-      this role configures op-connect {{ lxc_onepassword_connect_version }}. The
+      version={{ __lxc_onepassword_connect_tmpl_fields['version'] | default('<absent>') }}
+      service={{ __lxc_onepassword_connect_tmpl_fields['service'] | default('<absent>') }};
+      this role configures op-connect {{ lxc_onepassword_connect_version }} from
+      template release {{ lxc_onepassword_connect_template_version }}. The
       Connect binaries are baked into the released template (templates/op-connect),
       never installed into a running guest. Create the CT from the matching
       release, or set lxc_onepassword_connect_version to the one it carries.

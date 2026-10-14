@@ -4,13 +4,17 @@
 
 Changes to this project are proposed as pull requests on GitHub at
 <https://github.com/get-sybers/lxc>. A pull request is reviewed there and, once
-approved by a code owner and green on `all_green`, squash-merged into `main`.
+green on the Version Gate (`lxc-template-pin`) and on `all_green`, merged into
+`main`.
 
-The branch ruleset requires signed commits, a linear history, one approving
-review from a code owner, every review thread resolved, and the `all_green`
-status check. Branches are named `<type>/<description>`
+The branch ruleset (`.github/rulesets/main.json`) requires the Version Gate's
+`lxc-template-pin` status check, dismisses stale reviews on push, and asks an
+extra approval for commits not attributed to the pull request's author; it
+sets no approval count of its own. `all_green` (lint, ansible-lint, sanity,
+the Molecule lanes) is the bar a pull request is held to in review even though
+the ruleset does not require it. Branches are named `<type>/<description>`
 (`feat/gitlab-runner-template`); the pull request title is a Conventional
-Commit (`feat(templates): …`, `fix(lxc_guest): …`), because the squash merge
+Commit (`feat(templates): …`, `fix(lxc_guest): …`), because a squash merge
 uses it as the commit message.
 
 ## Before you open one

@@ -1,8 +1,9 @@
 # CODEOWNERS — https://docs.github.com/articles/about-code-owners
 #
-# The branch ruleset (.github/rulesets/main.json) requires a review from a code
-# owner before merge. Owners are teams, not people, so membership changes never
-# touch this file. Later lines win.
+# Review routing for pull requests; the branch ruleset (.github/rulesets/main.json)
+# gates merge on the Version Gate's lxc-template-pin check and on an extra
+# approval for changes not attributed to the PR author. Owners are teams, not
+# people, so membership changes never touch this file. Later lines win.
 # Default owner for everything.
 *                               @get-sybers/maintainers
 # CI/CD and repository policy need the owners' sign-off.

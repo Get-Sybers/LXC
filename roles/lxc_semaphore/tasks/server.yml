@@ -30,12 +30,15 @@
   ansible.builtin.assert:
     that:
       - __lxc_semaphore_tmpl_fields['name'] | default('') == 'semaphore'
-      - __lxc_semaphore_tmpl_fields['version'] | default('') == lxc_semaphore_version | string
+      - __lxc_semaphore_tmpl_fields['version'] | default('') == lxc_semaphore_template_version | string
+      - __lxc_semaphore_tmpl_fields['service'] | default('') == lxc_semaphore_version | string
     fail_msg: >-
       {{ lxc_semaphore_template_marker }} says
       name={{ __lxc_semaphore_tmpl_fields['name'] | default('<absent>') }}
-      version={{ __lxc_semaphore_tmpl_fields['version'] | default('<absent>') }};
-      this role configures semaphore {{ lxc_semaphore_version }}. The package is
+      version={{ __lxc_semaphore_tmpl_fields['version'] | default('<absent>') }}
+      service={{ __lxc_semaphore_tmpl_fields['service'] | default('<absent>') }};
+      this role configures semaphore {{ lxc_semaphore_version }} from template
+      release {{ lxc_semaphore_template_version }}. The package is
       baked into the released template (templates/semaphore), never installed
       into a running guest. Create the CT from the matching release, or set
       lxc_semaphore_version to the one it carries.

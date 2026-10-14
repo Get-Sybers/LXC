@@ -1,0 +1,134 @@
+---
+# --- Placement of the distrobuilder LXC (per site; see README) ---------------
+# Handed to lxc_guest by container.yml / connect.yml / remove.yml. The node
+# defaults to the collection variable the inventory defines (standards §4d).
+lxc_distrobuilder_node: "{{ lxc_node }}"
+# The CT id: required, no safe default. lxc_guest refuses 0; the inventory
+# (group_vars/all/distrobuilder.yml) sets it.
+lxc_distrobuilder_vmid: 0
+lxc_distrobuilder_hostname: distrobuilder
+# The released distrobuilder template (templates/distrobuilder, built and
+# published by .github/workflows/templates.yml). lxc_guest fetches it into the
+# node's template cache by checksum when it is not there; the checksum is
+# pinned in the inventory from the release, and an empty one is refused.
+# This repository's release of the distrobuilder template (templates/distrobuilder/
+# template.yml sets the same X.Y.Z for the bake): it names the artifact, the
+# release tag and the template marker, and server refuses a guest baked at
+# another. Raised with every change to the image; the service version below
+# is what the image carries.
+lxc_distrobuilder_template_version: "1.0.0"
+lxc_distrobuilder_template_file: >-
+  debian-13-distrobuilder_{{ lxc_distrobuilder_template_version }}_{{ lxc_distrobuilder_arch }}.tar.zst
+lxc_distrobuilder_template: "local:vztmpl/{{ lxc_distrobuilder_template_file }}"
+lxc_distrobuilder_template_url: >-
+  {{ lxc_template_release_base }}/distrobuilder/v{{ lxc_distrobuilder_template_version }}/{{ lxc_distrobuilder_template_file }}
+lxc_distrobuilder_template_checksum: ""
+lxc_distrobuilder_storage: "{{ lxc_storage }}"
+# A build unpacks a whole distribution into the cache, then packs it again:
+# a few gigabytes per build, so the rootfs is the largest of the collection.
+lxc_distrobuilder_rootfs_gb: 32
+lxc_distrobuilder_cores: 2
+lxc_distrobuilder_memory_mb: 2048
+# Full Proxmox net0 string. DHCP on the mgmt bridge by default; for a static
+# address use e.g. "name=eth0,bridge=vmbr0,ip=192.0.2.170/24,gw=192.0.2.1".
+lxc_distrobuilder_net0: "name=eth0,bridge={{ lxc_bridge }},ip=dhcp"
+lxc_distrobuilder_nameserver: ""
+# nesting=1 is what lets a build mount proc and sysfs into the rootfs it is
+# assembling (the nested-container AppArmor profile); the CT stays unprivileged.
+lxc_distrobuilder_features: ["nesting=1"]
+lxc_distrobuilder_onboot: true
+lxc_distrobuilder_pool: ""
+# The play-inventory group the running CT is added to (the guest-side plays
+# target it).
+lxc_distrobuilder_group: distrobuilder
+
+# --- distrobuilder version + build -------------------------------------------
+# The version and arch name the released template; templates/distrobuilder/
+# template.yml sets the same values for the bake, so the image and the deploy
+# agree. Upstream publishes no binaries, so the bake builds the pinned release
+# of the Go module: `go install github.com/lxc/distrobuilder/v3/distrobuilder@v<version>`,
+# fetched through the Go module proxy and verified against the Go checksum
+# database (sum.golang.org), with the Go toolchain the module declares.
+lxc_distrobuilder_version: "3.4.0"
+lxc_distrobuilder_arch: amd64
+lxc_distrobuilder_go_module: github.com/lxc/distrobuilder/v3
+# The toolchain the module's go.mod declares (its `go` line). Debian 13 ships
+# an older Go, which downloads this one via GOTOOLCHAIN — itself verified
+# against the checksum database — before building.
+lxc_distrobuilder_go_toolchain: go1.25.12
+# The build tags upstream's Makefile sets (no container-image storage back ends).
+lxc_distrobuilder_go_flags: "-tags=containers_image_storage_stub,containers_image_docker_daemon_stub,containers_image_openpgp"
+# What the baked image carries for the builds: debootstrap and the Debian and
+# Ubuntu archive keys, gpg with dirmngr (image definitions fetch signing keys
+# from a keyserver), rsync (the overlay fallback copies the rootfs), and the
+# compressors distrobuilder shells out to for the tarballs.
+lxc_distrobuilder_bake_packages:
+  - ca-certificates
+  - debootstrap
+  - debian-archive-keyring
+  - ubuntu-keyring
+  - gnupg
+  - dirmngr
+  - rsync
+  - squashfs-tools
+  - xz-utils
+  - zstd
+  - gzip
+  - bzip2
+# What the build of distrobuilder itself needs; purged from the image again
+# once the binary is in place.
+lxc_distrobuilder_build_packages:
+  - golang-go
+  - gcc
+  - libc6-dev
+lxc_distrobuilder_stage_dir: /var/tmp/distrobuilder-bake
+lxc_distrobuilder_bin: /usr/local/bin/distrobuilder
+
+# --- Layout inside the CT ----------------------------------------------------
+# The image definitions (the YAML files distrobuilder builds from) and the
+# finished images, one directory per build.
+lxc_distrobuilder_definitions_dir: /var/lib/distrobuilder/definitions
+lxc_distrobuilder_images_dir: /var/lib/distrobuilder/images
+# The working tree a build assembles the rootfs in. It sits under
+# /var/cache/lxc on purpose: that is the tree the nested-container AppArmor
+# profile allows proc and sysfs to be mounted under, which a build does when
+# it chroots into the rootfs it is assembling.
+lxc_distrobuilder_cache_dir: /var/cache/lxc/distrobuilder
+# Where distrobuilder keeps the distribution tarballs it downloads.
+lxc_distrobuilder_sources_dir: /var/cache/lxc/distrobuilder/sources
+# The markers server asserts before configuring anything: the baseline
+# lxc_guest writes and the template marker the bake writes.
+lxc_distrobuilder_baseline_marker: "{{ lxc_baseline_marker_path }}"
+lxc_distrobuilder_template_marker: "{{ lxc_template_marker_path }}"
+
+# --- server: the image definitions to place in the CT ------------------------
+# A list of {name, src} (a file on the node, copied in) or {name, url,
+# checksum} (fetched inside the CT, refused without a sha256:/sha512: pin).
+# The lxc/lxc-ci repository's images/*.yaml are the usual sources:
+#   - name: debian.yaml
+#     url: https://raw.githubusercontent.com/lxc/lxc-ci/<commit>/images/debian.yaml
+#     checksum: "sha256:<hex>"
+lxc_distrobuilder_definitions: []
+
+# --- build: one image from one definition ------------------------------------
+# The definition's file name in lxc_distrobuilder_definitions_dir; required by
+# the build entry point, nothing is built without it.
+lxc_distrobuilder_build_definition: ""
+# The directory the build's rootfs and meta tarballs land in, under
+# lxc_distrobuilder_images_dir. Defaults to the definition's stem.
+lxc_distrobuilder_build_name: "{{ lxc_distrobuilder_build_definition | splitext | first }}"
+# distrobuilder's -o overrides, e.g. ["image.release=trixie", "image.architecture=amd64"].
+lxc_distrobuilder_build_options: []
+# The rootfs tarball's compression: xz (distrobuilder's default) or zstd.
+lxc_distrobuilder_build_compression: xz
+# Seconds before distrobuilder gives up; 0 is no limit.
+lxc_distrobuilder_build_timeout: 0
+# Copy the source rootfs with rsync instead of mounting an overlay (an overlay
+# mount is not available to an unprivileged container; distrobuilder falls
+# back to the copy anyway, this only makes the choice explicit and quiet).
+lxc_distrobuilder_build_disable_overlay: true
+# A finished image is not rebuilt; set true to discard it and build again.
+lxc_distrobuilder_build_force: false
+# A directory on the node to pull the finished tarballs into; empty leaves
+# them in the CT.
+lxc_distrobuilder_build_fetch_dir: ""

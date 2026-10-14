@@ -1,91 +1,67 @@
 ---
-# Bake every LXC template under templates/ and publish one as a GitHub Release.
+# Bake one LXC template under templates/ and, when asked, publish it as a
+# GitHub Release. Manual only: a run is started by hand (workflow_dispatch)
+# and the job waits for the `templates` environment's required reviewer before
+# it does anything, so nothing is baked or shipped without that approval.
 #
-# Pull requests and pushes to main that touch a template, the bake play, a role
-# or this workflow bake every template and keep the artifacts for inspection.
-# A tag of the form <name>/v<version> (op-connect/v1.8.3) bakes that one
-# template and publishes it: the .tar.zst and its .sha256 as release assets, a
-# keyless cosign signature bundle beside them, and a GitHub build-provenance
-# attestation. The node-side fetch (lxc_guest) verifies the .sha256 the
-# inventory pins; `cosign verify-blob` and `gh attestation verify` prove the
-# artifact came from this workflow.
+# The version is never an input: it is the manifest's lxc_template_version
+# (this repository's release of the template, X.Y.Z, raised in the PR that
+# changes the image — the Version Gate enforces that), read back from the
+# artifact the bake names. A publish creates the <name>/v<version> tag and
+# release (the .tar.zst and its .sha256 as assets, a keyless cosign signature
+# bundle beside them, a GitHub build-provenance attestation) and refuses a tag
+# that already exists: a released template is immutable. A publish runs from
+# main only; a bake alone may run from any branch to inspect the artifact. The node-side fetch (lxc_guest)
+# verifies the .sha256 the inventory pins; `cosign verify-blob` and
+# `gh attestation verify` prove the artifact came from this workflow.
 name: Templates
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - templates/**
-      - playbooks/bake-template.yml
-      - roles/**
-      - requirements.yml
-      - .github/workflows/templates.yml
-  push:
-    branches: [main]
-    paths:
-      - templates/**
-      - playbooks/bake-template.yml
-      - roles/**
-      - requirements.yml
-      - .github/workflows/templates.yml
-    tags:
-      - "*/v*"
   workflow_dispatch:
     inputs:
       template:
-        description: "Template directory name to bake (empty: all)"
+        description: "Template to bake (a directory under templates/)"
+        required: true
+        type: choice
+        options:
+          - op-connect
+          - semaphore
+          - distrobuilder
+      publish:
+        description: "Publish the bake as the <name>/v<version> GitHub Release (signed, attested; from main only)"
         required: false
-        default: ""
+        type: boolean
+        default: false
 permissions: {}
+# One bake per template at a time; never cancel a publish mid-flight.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: templates-${{ inputs.template }}
+  cancel-in-progress: false
 env:
   ANSIBLE_CORE_PIN: "2.21.5"
 jobs:
-  plan:
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    outputs:
-      templates: ${{ steps.pick.outputs.templates }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Decide which templates to bake
-        id: pick
-        env:
-          REF_TYPE: ${{ github.ref_type }}
-          REF_NAME: ${{ github.ref_name }}
-          REQUESTED: ${{ github.event.inputs.template }}
-        run: |
-          if [ "$REF_TYPE" = "tag" ]; then
-            names="${REF_NAME%%/v*}"
-          elif [ -n "$REQUESTED" ]; then
-            names="$REQUESTED"
-          else
-            names="$(find templates -mindepth 2 -maxdepth 2 -name template.yml -printf '%h\n' | sed 's#^templates/##' | sort)"
-          fi
-          for n in $names; do
-            [ -f "templates/$n/template.yml" ] || { echo "::error::no such template: $n"; exit 1; }
-          done
-          echo "templates=$(jq -cR . <<<"$names" | jq -cs .)" | tee -a "$GITHUB_OUTPUT"
   bake:
-    needs: plan
-    name: bake (${{ matrix.template }})
+    name: bake (${{ inputs.template }})
     runs-on: ubuntu-24.04
+    environment: templates
     permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        template: ${{ fromJSON(needs.plan.outputs.templates) }}
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: The template exists and a publish runs from main
+        env:
+          TEMPLATE: ${{ inputs.template }}
+          PUBLISH: ${{ inputs.publish }}
+          REF: ${{ github.ref }}
+        run: |
+          test -f "templates/$TEMPLATE/template.yml" || { echo "::error::no such template: $TEMPLATE"; exit 1; }
+          if [ "$PUBLISH" = "true" ] && [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::a template is published from main only (dispatched from $REF)"; exit 1
+          fi
       - name: Set up Python 3.13
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
@@ -100,71 +76,97 @@ jobs:
           build/venv/bin/ansible-galaxy collection install -r requirements.yml -p build/collections
           mkdir -p build/collections/ansible_collections/get_sybers
           ln -s "$PWD" build/collections/ansible_collections/get_sybers/lxc
-      - name: Bake ${{ matrix.template }}
+      - name: Bake ${{ inputs.template }}
         env:
-          TEMPLATE: ${{ matrix.template }}
+          TEMPLATE: ${{ inputs.template }}
         run: |
           sudo env "ANSIBLE_COLLECTIONS_PATH=$PWD/build/collections" \
             build/venv/bin/ansible-playbook playbooks/bake-template.yml \
             -e "lxc_template_dir=$PWD/templates/$TEMPLATE" -e "lxc_template_workdir=$PWD/build/$TEMPLATE"
           sudo chown -R "$(id -u):$(id -g)" "build/$TEMPLATE"
           cat build/"$TEMPLATE"/*.sha256
+      # The artifact is <base>-<name>_<version>_<arch>.tar.zst; the version in
+      # it is the manifest's X.Y.Z, so the tag follows the manifest and nothing else.
+      - name: Resolve the artifact and its version
+        id: art
+        env:
+          TEMPLATE: ${{ inputs.template }}
+        run: |
+          file="$(basename build/"$TEMPLATE"/*.tar.zst)"
+          version="${file#*_}"; version="${version%_*}"
+          echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' \
+            || { echo "::error::cannot read a version out of $file"; exit 1; }
+          {
+            echo "file=$file"
+            echo "version=$version"
+            echo "tag=$TEMPLATE/v$version"
+          } | tee -a "$GITHUB_OUTPUT"
+          echo "Baked \`$TEMPLATE\` $version as \`$file\`" >> "$GITHUB_STEP_SUMMARY"
       - name: Keep the artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ matrix.template }}
+          name: ${{ inputs.template }}
           path: |
-            build/${{ matrix.template }}/*.tar.zst
-            build/${{ matrix.template }}/*.sha256
+            build/${{ inputs.template }}/*.tar.zst
+            build/${{ inputs.template }}/*.sha256
           if-no-files-found: error
           retention-days: 14
-  release:
-    if: github.ref_type == 'tag'
-    needs: [plan, bake]
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      id-token: write
-      attestations: write
-    steps:
-      - name: Fetch the baked artifact
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          path: dist
-          merge-multiple: true
+      # A released template is immutable. If the bake changed on main without
+      # the manifest's version moving, this is where the publish fails — raise
+      # the version in a PR first, never re-ship an existing one.
+      - name: Refuse to overwrite an existing release
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.art.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
+            echo "::error::$TAG is already released — raise the version in the manifest in a PR before publishing"
+            exit 1
+          fi
       - name: Install cosign
+        if: ${{ inputs.publish }}
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
       - name: Sign the template (keyless, Sigstore)
+        if: ${{ inputs.publish }}
+        env:
+          TEMPLATE: ${{ inputs.template }}
         run: |
-          for f in dist/*.tar.zst; do
+          for f in build/"$TEMPLATE"/*.tar.zst; do
             cosign sign-blob --yes --bundle "$f.sigstore.json" "$f"
           done
       - name: Attest build provenance
+        if: ${{ inputs.publish }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: dist/*.tar.zst
-      - name: Publish the GitHub Release
+          subject-path: build/${{ inputs.template }}/*.tar.zst
+      - name: Publish the GitHub Release (creates the tag)
+        if: ${{ inputs.publish }}
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TEMPLATE: ${{ inputs.template }}
+          TAG: ${{ steps.art.outputs.tag }}
+          VERSION: ${{ steps.art.outputs.version }}
+          FILE: ${{ steps.art.outputs.file }}
           REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
         run: |
-          name="${TAG%%/v*}"; version="${TAG##*/v}"; file="$(basename dist/*.tar.zst)"
           {
-            echo "LXC template \`$name\` $version, built by the Templates workflow from \`templates/$name\`."
+            echo "LXC template \`$TEMPLATE\` $VERSION, built by the Templates workflow from \`templates/$TEMPLATE\` at $SHA."
             echo
             echo "Verify:"
             echo
             echo '```sh'
-            echo "sha256sum -c $file.sha256"
-            echo "cosign verify-blob --bundle $file.sigstore.json \\"
+            echo "sha256sum -c $FILE.sha256"
+            echo "cosign verify-blob --bundle $FILE.sigstore.json \\"
             echo "  --certificate-identity-regexp '^https://github.com/$REPO/' \\"
-            echo "  --certificate-oidc-issuer https://token.actions.githubusercontent.com $file"
-            echo "gh attestation verify $file -R $REPO"
+            echo "  --certificate-oidc-issuer https://token.actions.githubusercontent.com $FILE"
+            echo "gh attestation verify $FILE -R $REPO"
             echo '```'
             echo
-            echo "Pin on the node: \`lxc_${name//-/_}_template_checksum: sha256:<the value in $file.sha256>\`."
+            echo "Pin on the node: \`lxc_${TEMPLATE//-/_}_template_checksum: sha256:<the value in $FILE.sha256>\`."
           } > notes.md
-          gh release view "$TAG" -R "$REPO" >/dev/null 2>&1 \
-            || gh release create "$TAG" -R "$REPO" --title "$name $version" --notes-file notes.md
-          gh release upload "$TAG" -R "$REPO" --clobber dist/*
+          gh release create "$TAG" -R "$REPO" --target "$SHA" --title "$TEMPLATE $VERSION" --notes-file notes.md \
+            build/"$TEMPLATE"/*.tar.zst build/"$TEMPLATE"/*.sha256 build/"$TEMPLATE"/*.sigstore.json
+          echo "Published https://github.com/$REPO/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"

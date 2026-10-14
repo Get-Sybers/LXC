@@ -29,7 +29,8 @@ One sentence governs the rest: **a container has no door of its own — the node
 - **Loud failure.** Each rule is an assertion with a `fail_msg` that names the fix. Config drift on an existing container is reconciled
   by `create` (`update: true`) and then proved by `postcheck` from Proxmox; what cannot be reconciled in place (a privileged container) fails
   the run.
-- **An image is reviewed as an image.** A change under `templates/` or to a role's `bake` entry point is baked on the pull request; the
+- **An image is reviewed as an image.** A change under `templates/` or to a role's `bake` entry point is reviewed in its pull request and ships only
+  through a manual, approved run of the Templates workflow; the
   node runs no install step, needs no reach to Docker Hub, and creates every container from bytes whose checksum is in version control.
 
 ## 3. What it does not claim
@@ -40,6 +41,9 @@ One sentence governs the rest: **a container has no door of its own — the node
   (`get-sybers/proxmox`). This collection needs only a node, a template, a bridge and an admin PVE API credential from that tier.
 - **`nesting=1` is not a breach.** Debian 13's systemd 257 needs nested namespaces to boot; the feature is per-guest input
   (`lxc_guest_features`) and the container stays unprivileged. A *container runtime* inside the guest is the thing rule 3 refuses.
+- **An image builder is not a container runtime.** The `distrobuilder` box builds rootfs tarballs: it chroots into a rootfs it is
+  assembling, it never starts a container, and the baseline's `lxc-start` refusal still holds in it. What it produces is the operator's
+  artifact; a guest of this collection is still created only from a released template (rule 9).
 
 ## 4. Adding a service
 

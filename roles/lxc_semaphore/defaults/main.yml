@@ -11,11 +11,17 @@ lxc_semaphore_hostname: semaphore
 # .github/workflows/templates.yml). lxc_guest fetches it into the node's
 # template cache by checksum when it is not there; the checksum is pinned in
 # the inventory from the release, and an empty one is refused.
+# This repository's release of the semaphore template (templates/semaphore/
+# template.yml sets the same X.Y.Z for the bake): it names the artifact, the
+# release tag and the template marker, and server refuses a guest baked at
+# another. Raised with every change to the image; the service version below
+# is what the image carries.
+lxc_semaphore_template_version: "1.0.0"
 lxc_semaphore_template_file: >-
-  debian-13-semaphore_{{ lxc_semaphore_version }}_{{ lxc_semaphore_arch }}.tar.zst
+  debian-13-semaphore_{{ lxc_semaphore_template_version }}_{{ lxc_semaphore_arch }}.tar.zst
 lxc_semaphore_template: "local:vztmpl/{{ lxc_semaphore_template_file }}"
 lxc_semaphore_template_url: >-
-  {{ lxc_template_release_base }}/semaphore/v{{ lxc_semaphore_version }}/{{ lxc_semaphore_template_file }}
+  {{ lxc_template_release_base }}/semaphore/v{{ lxc_semaphore_template_version }}/{{ lxc_semaphore_template_file }}
 lxc_semaphore_template_checksum: ""
 lxc_semaphore_storage: "{{ lxc_storage }}"
 # Semaphore clones every repository it runs and keeps the task logs in its

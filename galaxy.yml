@@ -23,6 +23,7 @@ tags:
   - infrastructure
   - onepassword
   - semaphore
+  - distrobuilder
 repository: https://github.com/get-sybers/lxc
 documentation: https://github.com/get-sybers/lxc/blob/main/README.md
 homepage: https://github.com/get-sybers/lxc
@@ -35,11 +36,6 @@ dependencies:
   # lxc_onepassword_item mirrors credentials into the self-hosted 1Password
   # Connect server via onepassword.connect.generic_item.
   "onepassword.connect": ">=2.4.0,<3.0.0"
-  # lxc_elasticsearch's node-side step sets vm.max_map_count on the Proxmox
-  # host (a kernel setting an unprivileged guest cannot set) via
-  # ansible.posix.sysctl; the template bake mounts the chroot's kernel
-  # filesystems with ansible.posix.mount.
-  "ansible.posix": ">=1.6.0,<2.0.0"
 build_ignore:
   - .git*
   - .github

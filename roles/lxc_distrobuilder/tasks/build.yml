@@ -1,0 +1,115 @@
+---
+# Runs INSIDE the running CT over proxmox_pct_remote: the one sanctioned
+# interaction with the build box. One definition in, one image (rootfs +
+# meta tarballs, with their checksums) out, optionally pulled onto the node.
+# The server contract runs first, so a guest without the markers is refused
+# before anything is built.
+- name: "build | The server contract: markers, the baked tools, the directories, the definitions"
+  ansible.builtin.include_tasks: server.yml
+- name: "build | A definition must be named"
+  ansible.builtin.assert:
+    that:
+      - lxc_distrobuilder_build_definition | length > 0
+      - lxc_distrobuilder_build_definition | basename == lxc_distrobuilder_build_definition
+      - lxc_distrobuilder_build_name | length > 0
+      - lxc_distrobuilder_build_compression in lxc_distrobuilder_compression_extensions
+    fail_msg: >-
+      Set lxc_distrobuilder_build_definition to the bare file name of a
+      definition in {{ lxc_distrobuilder_definitions_dir }} (placed there by
+      lxc_distrobuilder_definitions), and lxc_distrobuilder_build_compression
+      to one of {{ lxc_distrobuilder_compression_extensions | list | join(', ') }}.
+    quiet: true
+- name: "build | Stat the definition"
+  ansible.builtin.stat:
+    path: "{{ lxc_distrobuilder_definitions_dir }}/{{ lxc_distrobuilder_build_definition }}"
+  register: __lxc_distrobuilder_definition
+- name: "build | The definition is in the CT"
+  ansible.builtin.assert:
+    that: __lxc_distrobuilder_definition.stat.exists
+    fail_msg: >-
+      {{ lxc_distrobuilder_definitions_dir }}/{{ lxc_distrobuilder_build_definition }}
+      is absent. Name it in lxc_distrobuilder_definitions (server places it)
+      before building from it.
+    quiet: true
+- name: "build | Name the output"
+  ansible.builtin.set_fact:
+    __lxc_distrobuilder_out: "{{ lxc_distrobuilder_images_dir }}/{{ lxc_distrobuilder_build_name }}"
+    __lxc_distrobuilder_rootfs: >-
+      {{ lxc_distrobuilder_images_dir }}/{{ lxc_distrobuilder_build_name }}/rootfs.tar.{{
+        lxc_distrobuilder_compression_extensions[lxc_distrobuilder_build_compression] }}
+    __lxc_distrobuilder_meta: "{{ lxc_distrobuilder_images_dir }}/{{ lxc_distrobuilder_build_name }}/meta.tar.xz"
+- name: "build | Discard the previous image when a rebuild was asked for"
+  ansible.builtin.file:
+    path: "{{ __lxc_distrobuilder_out }}"
+    state: absent
+  when: lxc_distrobuilder_build_force | bool
+- name: "build | The output directory"
+  ansible.builtin.file:
+    path: "{{ __lxc_distrobuilder_out }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+- name: "build | Assemble the distrobuilder command line"
+  ansible.builtin.set_fact:
+    __lxc_distrobuilder_argv: >-
+      {{ [lxc_distrobuilder_bin, 'build-lxc',
+          lxc_distrobuilder_definitions_dir ~ '/' ~ lxc_distrobuilder_build_definition,
+          __lxc_distrobuilder_out,
+          '--cache-dir', lxc_distrobuilder_cache_dir,
+          '--sources-dir', lxc_distrobuilder_sources_dir,
+          '--compression', lxc_distrobuilder_build_compression]
+         + (['--disable-overlay'] if lxc_distrobuilder_build_disable_overlay | bool else [])
+         + (['-t', lxc_distrobuilder_build_timeout | string] if lxc_distrobuilder_build_timeout | int > 0 else [])
+         + (lxc_distrobuilder_build_options | map('regex_replace', '^', '--options=') | list) }}
+- name: "build | Build the image (skipped while the rootfs tarball exists; lxc_distrobuilder_build_force rebuilds)"
+  ansible.builtin.command:
+    argv: "{{ __lxc_distrobuilder_argv }}"
+    creates: "{{ __lxc_distrobuilder_rootfs }}"
+- name: "build | Stat the tarballs (with their sha256)"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+    get_checksum: true
+    checksum_algorithm: sha256
+  register: __lxc_distrobuilder_tarballs
+  loop:
+    - "{{ __lxc_distrobuilder_rootfs }}"
+    - "{{ __lxc_distrobuilder_meta }}"
+- name: "build | Both tarballs exist"
+  ansible.builtin.assert:
+    that: __lxc_distrobuilder_tarballs.results | map(attribute='stat.exists') | list is all
+    fail_msg: >-
+      distrobuilder exited without producing
+      {{ __lxc_distrobuilder_tarballs.results | rejectattr('stat.exists') | map(attribute='item') | join(' and ') }}.
+      Re-run with lxc_distrobuilder_build_force=true after reading its output above.
+    quiet: true
+- name: "build | Write SHA256SUMS beside the tarballs"
+  ansible.builtin.copy:
+    content: |
+      {% for r in __lxc_distrobuilder_tarballs.results %}
+      {{ r.stat.checksum }}  {{ r.item | basename }}
+      {% endfor %}
+    dest: "{{ __lxc_distrobuilder_out }}/SHA256SUMS"
+    owner: root
+    group: root
+    mode: "0644"
+- name: "build | Pull the image onto the node"
+  ansible.builtin.fetch:
+    src: "{{ __lxc_distrobuilder_file }}"
+    dest: "{{ lxc_distrobuilder_build_fetch_dir }}/{{ lxc_distrobuilder_build_name }}/{{ __lxc_distrobuilder_file | basename }}"
+    flat: true
+  loop:
+    - "{{ __lxc_distrobuilder_rootfs }}"
+    - "{{ __lxc_distrobuilder_meta }}"
+    - "{{ __lxc_distrobuilder_out }}/SHA256SUMS"
+  loop_control:
+    loop_var: __lxc_distrobuilder_file
+    label: "{{ __lxc_distrobuilder_file | basename }}"
+  when: lxc_distrobuilder_build_fetch_dir | length > 0
+- name: "build | Report the image"
+  ansible.builtin.debug:
+    msg: >-
+      {{ lxc_distrobuilder_build_name }}: {{ __lxc_distrobuilder_rootfs }} and
+      {{ __lxc_distrobuilder_meta }} in the CT, sha256 in SHA256SUMS
+      {{- ', pulled to ' ~ lxc_distrobuilder_build_fetch_dir ~ '/' ~ lxc_distrobuilder_build_name ~ '/ on the node'
+          if lxc_distrobuilder_build_fetch_dir | length > 0 else '' }}.

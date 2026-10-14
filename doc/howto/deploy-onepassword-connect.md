@@ -118,7 +118,8 @@ ansible-playbook playbooks/deploy-onepassword-connect.yml --tags destroy -e lxc_
 - **Native, not containerised.** At bake time the role reads each image's config, pulls its layers from the registry, unpacks them, and
   installs `/usr/local/bin/connect-api` and `connect-sync` into the template. Each runs under `systemd` as the unprivileged `opuser`, with
   `SSL_CERT_FILE` pointing at the system CA bundle and the credentials/data under `~/.op` — the same contract the image declares. To
-  upgrade: raise `lxc_onepassword_connect_version` in `templates/op-connect/template.yml`, tag `op-connect/v<new>`, pin the new
+  upgrade: raise `lxc_onepassword_connect_version` in `templates/op-connect/template.yml`, publish it with the Templates workflow
+  (`op-connect/v<new>`), pin the new
   checksum, and recreate the CT from the new release (`--tags destroy -e lxc_guest_confirm_destroy=true`, then the play).
 - **Secrets hygiene.** The `1password-credentials.json` is installed `0600` owned by `opuser`; the Connect token lives only in the vaulted
   `onepassword.yml`. Every secret-bearing task is `no_log`, and the roles report shape only (sizes, counts), never values.

@@ -7,11 +7,13 @@ in `lxc_onepassword_connect`'s `server` entry point.
 
 | | |
 | --- | --- |
-| Release tag | `op-connect/v<connect version>` (`op-connect/v1.8.3`) |
+| Release tag | `op-connect/v<template release>` (`op-connect/v1.0.0`; the service version is in the marker's `service=`) |
 | Artifact | `debian-13-op-connect_<version>_<arch>.tar.zst` + `.sha256`, cosign bundle, provenance attestation |
 | Base | `debian-13-standard_13.1-2_amd64.tar.zst` from `download.proxmox.com` |
 | Bake steps | `lxc_guest` `baseline`, then `lxc_onepassword_connect` `bake` |
 | Consumed by | `inventory/group_vars/all/onepassword.yml` (`lxc_onepassword_connect_template_url` / `_checksum`), `playbooks/deploy-onepassword-connect.yml` |
 
-To raise the Connect version: change `lxc_onepassword_connect_version` here, open a PR (the workflow bakes it), tag `op-connect/v<new>`,
+To raise the Connect version: change `lxc_onepassword_connect_version` and raise `lxc_template_version` here (the Version Gate
+requires it for every change to the image), open a PR, then run the Templates workflow for `op-connect` with *publish* on (its
+reviewer approves it; the run creates `op-connect/v<new>`),
 then pin the new release's URL and `sha256:` in the inventory.

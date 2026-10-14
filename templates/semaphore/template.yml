@@ -2,15 +2,19 @@
 # The Semaphore UI template. Loaded by playbooks/bake-template.yml; every input
 # the bake reads is declared here and nowhere else.
 lxc_template_name: semaphore
-# The version baked in is the Semaphore release; the artifact and the release
-# tag (semaphore/v<version>) carry the same number. The package checksum is the
-# semaphore_<version>_linux_<arch>.deb line of the release's
+# The Semaphore release baked in, and this repository's release of the template
+# (X.Y.Z): the artifact, the release tag (semaphore/v<version>) and the template
+# marker carry the latter. Raise lxc_template_version in every PR that changes
+# the image — a new Semaphore release, a changed bake (the Version Gate refuses
+# the PR otherwise); a released version is immutable. The package checksum is
+# the semaphore_<version>_linux_<arch>.deb line of the release's
 # semaphore_<version>_checksums.txt (github.com/semaphoreui/semaphore/releases);
 # the bake refuses a package that does not match it.
 lxc_semaphore_version: "2.19.16"
 lxc_semaphore_arch: amd64
 lxc_semaphore_package_checksum: "sha256:56c4ac99b712b3fde11a7d600a0789870a3b945bab0c12f41d91864e0aeb85b8"
-lxc_template_version: "{{ lxc_semaphore_version }}"
+lxc_template_version: "1.0.0"
+lxc_template_service_version: "{{ lxc_semaphore_version }}"
 lxc_template_arch: "{{ lxc_semaphore_arch }}"
 lxc_template_output: "debian-13-{{ lxc_template_name }}_{{ lxc_template_version }}_{{ lxc_template_arch }}.tar.zst"
 # The stock Proxmox system template the bake starts from, and its sha512 as

@@ -17,12 +17,12 @@ client plays). It is published to Ansible Galaxy as `get_sybers.lxc`; its templa
 
 | | |
 | --- | --- |
-| [How-to guides](howto/index.md) | **Step-by-step guides** covering the operations: deploy 1Password Connect or Semaphore UI, build and release a template, add a service |
+| [How-to guides](howto/index.md) | **Step-by-step guides** covering the operations: deploy 1Password Connect, Semaphore UI or distrobuilder, build and release a template, add a service |
 | [Reference](reference/index.md) | **Technical information**: the hardened-LXC premise and what enforces each rule, the template manifest, the roles |
 
 The roles document their own contracts: [`lxc_guest`](../roles/lxc_guest/README.md), [`lxc_preflight`](../roles/lxc_preflight/README.md),
 [`lxc_onepassword_connect`](../roles/lxc_onepassword_connect/README.md), [`lxc_onepassword_item`](../roles/lxc_onepassword_item/README.md),
-[`lxc_semaphore`](../roles/lxc_semaphore/README.md).
+[`lxc_semaphore`](../roles/lxc_semaphore/README.md), [`lxc_distrobuilder`](../roles/lxc_distrobuilder/README.md).
 The templates document what they carry: [`templates/`](../templates/README.md).
 
 ---
