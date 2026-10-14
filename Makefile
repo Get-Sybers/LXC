@@ -9,7 +9,7 @@ help:
 .PHONY: config
 config: ## copy the configuration template into place (never overwrites)
 	cd inventory/example && find . -type f | while read -r f; do \
-	  [ -e "../$$f" ] || { mkdir -p "../$$(dirname "$$f")" && cp "$$f" "../$$f" && echo "config: created inventory/$${f#./}"; }; \
+	[ -e "../$$f" ] || { mkdir -p "../$$(dirname "$$f")" && cp "$$f" "../$$f" && echo "config: created inventory/$${f#./}"; }; \
 	done
 	@echo "config: edit inventory/hosts.yml and inventory/group_vars/all/*.yml — replace every CHANGE-ME"
 .PHONY: deps
