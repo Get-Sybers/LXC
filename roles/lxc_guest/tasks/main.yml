@@ -1,0 +1,11 @@
+---
+# The ensure path, on the Proxmox node. The guest-side `baseline` and the opt-in
+# `remove` are separate entry points (tasks_from).
+- name: "Fact-find the node and the CT id"
+  ansible.builtin.include_tasks: facts.yml
+- name: "Preflight — assert every precondition before any write"
+  ansible.builtin.include_tasks: preflight.yml
+- name: "Create, start and connect the container"
+  ansible.builtin.include_tasks: create.yml
+- name: "Post-check — re-read the config from Proxmox"
+  ansible.builtin.include_tasks: postcheck.yml

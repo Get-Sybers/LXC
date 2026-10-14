@@ -1,0 +1,68 @@
+---
+# Opt-in destroy. Self-contained: runs facts first so the play can call it
+# directly with tasks_from: remove.
+- name: "remove | Fact-find the CT id"
+  ansible.builtin.include_tasks: facts.yml
+- name: "remove | Destruction was explicitly confirmed"
+  ansible.builtin.assert:
+    that: lxc_guest_confirm_destroy | bool
+    fail_msg: >-
+      Refusing to destroy CT {{ lxc_guest_vmid }} without
+      -e lxc_guest_confirm_destroy=true. Deletion is a separate, opted-in
+      action — never a side effect of a converge.
+    quiet: true
+- name: "remove | The pct binary is present (this role runs on a Proxmox VE node)"
+  ansible.builtin.assert:
+    that: __lxc_guest_pct.stat.exists
+    fail_msg: "/usr/sbin/pct was not found — lxc_guest must run on a Proxmox VE node."
+    quiet: true
+- name: "remove | The CT exists and carries our marker"
+  ansible.builtin.assert:
+    that:
+      - __lxc_guest_ct_exists
+      - __lxc_guest_ct_is_ours
+    fail_msg: >-
+      CT {{ lxc_guest_vmid }}
+      {{ 'does not exist' if not __lxc_guest_ct_exists else
+         "exists but its description does not carry '" ~ lxc_guest_description_marker ~ "'" }}.
+      Refusing to destroy it.
+    quiet: true
+- name: "remove | The CT really is the one this role describes"
+  ansible.builtin.assert:
+    that: (__lxc_guest_config_json['hostname'] | default('')) == lxc_guest_hostname
+    fail_msg: >-
+      CT {{ lxc_guest_vmid }} carries our marker but its hostname is
+      '{{ __lxc_guest_config_json['hostname'] | default('<none>') }}', not
+      '{{ lxc_guest_hostname }}'. It is a DIFFERENT guest of this collection;
+      destroying it would purge that guest's disk. Re-run with the inputs that
+      actually describe this container.
+    quiet: true
+- name: "remove | Stop the container"
+  ansible.builtin.command:
+    argv: [pct, stop, "{{ lxc_guest_vmid }}"]
+  register: __lxc_guest_rm_stop
+  changed_when: __lxc_guest_rm_stop.rc == 0
+  failed_when:
+    - __lxc_guest_rm_stop.rc != 0
+    - "'not running' not in (__lxc_guest_rm_stop.stderr | default(''))"
+- name: "remove | Destroy the container and its disks"
+  community.proxmox.proxmox:
+    node: "{{ lxc_guest_node }}"
+    vmid: "{{ lxc_guest_vmid }}"
+    state: absent
+    force: true
+    purge: true
+    timeout: "{{ lxc_guest_create_timeout }}"
+- name: "remove | Confirm from Proxmox that the CT id is gone"
+  ansible.builtin.command:
+    argv: [pct, status, "{{ lxc_guest_vmid }}"]
+  register: __lxc_guest_rm_check
+  changed_when: false
+  failed_when: false
+- name: "remove | The CT id no longer resolves"
+  ansible.builtin.assert:
+    that: __lxc_guest_rm_check.rc != 0
+    fail_msg: >-
+      CT {{ lxc_guest_vmid }} still exists after destroy (`pct status` returned
+      {{ __lxc_guest_rm_check.rc }}: {{ __lxc_guest_rm_check.stdout | default('') }}).
+    quiet: true

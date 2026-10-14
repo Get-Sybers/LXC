@@ -1,0 +1,20 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Give the substrate the SSH server a stock Debian CT template ships with
+      ansible.builtin.apt:
+        name: openssh-server
+        state: present
+        update_cache: true
+    - name: Stat sshd (the fixture is real — the baseline has something to remove)
+      ansible.builtin.stat:
+        path: /usr/sbin/sshd
+      register: __lxc_test_sshd
+    - name: The fixture is in place
+      ansible.builtin.assert:
+        that: __lxc_test_sshd.stat.exists
+        fail_msg: "openssh-server did not install /usr/sbin/sshd; the scenario would prove nothing"
+        quiet: true

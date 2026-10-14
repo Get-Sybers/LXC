@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: lxc_guest
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    The one lifecycle every hardened container goes through: create an
+    unprivileged Debian LXC on a Proxmox node, reach it only through pct exec,
+    verify its placement from Proxmox, strip SSH and refuse container runtimes
+    inside it, and (opt-in) destroy only what it created.
+  company: Get-Sybers
+  license: AGPL-3.0-only
+  min_ansible_version: "2.19.0"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [proxmox, lxc, hardening, infrastructure]
+dependencies: []

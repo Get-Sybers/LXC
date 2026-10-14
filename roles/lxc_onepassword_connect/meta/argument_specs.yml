@@ -1,0 +1,151 @@
+---
+argument_specs:
+  container:
+    short_description: "Ensure the Connect LXC on the node through lxc_guest and add it to the play inventory."
+    description:
+      - >-
+        Runs on the Proxmox node (hosts: localhost, connection: local). Hands
+        this role's placement inputs to get_sybers.lxc.lxc_guest, which
+        preflights, creates, starts, waits for and add_hosts the container into
+        lxc_onepassword_connect_group over proxmox_pct_remote.
+    options:
+      lxc_onepassword_connect_node:
+        type: str
+        required: false
+        description: "PVE node the CT is created on. Computed default: the collection variable lxc_node."
+      lxc_onepassword_connect_vmid:
+        type: int
+        required: false
+        default: 950
+        description: "CT id (VMID) for the Connect container."
+      lxc_onepassword_connect_hostname:
+        type: str
+        required: false
+        default: "op-connect"
+        description: "Hostname of the CT; also its key in the play inventory."
+      lxc_onepassword_connect_template:
+        type: str
+        required: false
+        description: "storage:vztmpl/<file> OS template. Computed default: the collection variable lxc_template."
+      lxc_onepassword_connect_storage:
+        type: str
+        required: false
+        description: "Storage for the CT rootfs. Computed default: the collection variable lxc_storage."
+      lxc_onepassword_connect_rootfs_gb:
+        type: int
+        required: false
+        default: 4
+      lxc_onepassword_connect_cores:
+        type: int
+        required: false
+        default: 1
+      lxc_onepassword_connect_memory_mb:
+        type: int
+        required: false
+        default: 512
+      lxc_onepassword_connect_net0:
+        type: str
+        required: false
+        description: "Full Proxmox net0 spec. Computed default: DHCP on the collection variable lxc_bridge."
+      lxc_onepassword_connect_nameserver:
+        type: str
+        required: false
+        default: ""
+      lxc_onepassword_connect_features:
+        type: list
+        elements: str
+        required: false
+        default: ["nesting=1"]
+        description: "Container features; nesting=1 because Debian 13's systemd 257 needs it. The CT stays unprivileged."
+      lxc_onepassword_connect_onboot:
+        type: bool
+        required: false
+        default: true
+      lxc_onepassword_connect_pool:
+        type: str
+        required: false
+        default: ""
+      lxc_onepassword_connect_group:
+        type: str
+        required: false
+        default: onepassword_connect
+        description: "Play-inventory group the running CT is added to."
+  server:
+    short_description: "Install the Connect binaries as native systemd services inside the baselined CT."
+    description:
+      - >-
+        Runs inside the CT (over proxmox_pct_remote). Refuses a guest without the
+        lxc_guest baseline marker, installs ca-certificates and an unprivileged
+        service user, extracts connect-api/connect-sync from their pinned images
+        via the registry API, drops the credentials file and data dir under the
+        user's ~/.op, writes two systemd units, and verifies the API.
+    options:
+      lxc_onepassword_connect_user:
+        type: str
+        required: false
+        default: "opuser"
+      lxc_onepassword_connect_home:
+        type: str
+        required: false
+        default: "/home/opuser"
+      lxc_onepassword_connect_data_dir:
+        type: str
+        required: false
+        default: "/home/opuser/.op/data"
+      lxc_onepassword_connect_bin_dir:
+        type: str
+        required: false
+        default: "/usr/local/bin"
+      lxc_onepassword_connect_api_port:
+        type: int
+        required: false
+        default: 8080
+      lxc_onepassword_connect_stage_dir:
+        type: str
+        required: false
+        default: "/var/tmp/op-connect-extract"
+      lxc_onepassword_connect_version:
+        type: str
+        required: false
+        default: "1.8.3"
+        description: "Connect image tag to pin (confirm the current tag on Docker Hub)."
+      lxc_onepassword_connect_arch:
+        type: str
+        required: false
+        default: "amd64"
+      lxc_onepassword_connect_registry:
+        type: str
+        required: false
+        default: "registry-1.docker.io"
+      lxc_onepassword_connect_auth_url:
+        type: str
+        required: false
+        default: "https://auth.docker.io/token"
+      lxc_onepassword_connect_repos:
+        type: list
+        elements: str
+        required: false
+        default: ["1password/connect-api", "1password/connect-sync"]
+      lxc_onepassword_connect_baseline_marker:
+        type: str
+        required: false
+        description: "Marker lxc_guest's baseline writes. Computed default: the collection variable lxc_baseline_marker_path."
+      lxc_onepassword_connect_credentials_src:
+        type: str
+        required: false
+        default: ""
+        description: "Path on the node to the 1password-credentials.json (SECRET; required for server)."
+  remove:
+    short_description: "Tear the Connect LXC down through lxc_guest (opt-in: lxc_guest_confirm_destroy=true)."
+    options:
+      lxc_onepassword_connect_node:
+        type: str
+        required: false
+      lxc_onepassword_connect_vmid:
+        type: int
+        required: false
+        default: 950
+      lxc_onepassword_connect_hostname:
+        type: str
+        required: false
+        default: "op-connect"

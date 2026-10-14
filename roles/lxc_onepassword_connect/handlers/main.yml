@@ -1,0 +1,11 @@
+---
+- name: Restart 1Password Connect
+  ansible.builtin.systemd_service:
+    name: "{{ __lxc_onepassword_connect_unit }}"
+    state: restarted
+    daemon_reload: true
+  loop:
+    - op-connect-sync
+    - op-connect-api
+  loop_control:
+    loop_var: __lxc_onepassword_connect_unit

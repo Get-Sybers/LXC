@@ -1,0 +1,10 @@
+---
+# Default scenario — get_sybers.lxc.lxc_guest `baseline`, the guest-side half of
+# the hardened premise, which is the one positive path hermetic in a container.
+#
+# The driver (docker), the Debian substrate (../Dockerfile), the provisioner, the
+# verifier and the full converge -> idempotence -> verify sequence all come from
+# ../config.yml. prepare.yml gives the substrate the SSH server a stock Debian
+# CT template ships with; converge.yml runs the baseline; verify.yml asserts the
+# daemon is gone and the marker says what it should. Nothing to override here.
+{}

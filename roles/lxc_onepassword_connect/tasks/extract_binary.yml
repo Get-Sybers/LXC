@@ -1,0 +1,93 @@
+---
+# Pull a single Go binary straight out of its official OCI image via the Docker
+# registry HTTP API — no container runtime, nothing installed. token -> amd64
+# manifest -> layer blobs -> unpack -> copy /bin/<name>. Gated by a version
+# marker so a settled host is idempotent.
+- name: "extract_binary | Names and paths for this image"
+  ansible.builtin.set_fact:
+    __lxc_onepassword_connect_bin: "{{ __lxc_onepassword_connect_repo | basename }}"
+    __lxc_onepassword_connect_base: "https://{{ lxc_onepassword_connect_registry }}/v2/{{ __lxc_onepassword_connect_repo }}"
+    __lxc_onepassword_connect_root: "{{ lxc_onepassword_connect_stage_dir }}/{{ __lxc_onepassword_connect_repo | basename }}"
+    __lxc_onepassword_connect_marker: "{{ lxc_onepassword_connect_bin_dir }}/.{{ __lxc_onepassword_connect_repo | basename }}.image-version"
+- name: "extract_binary | Read the installed image-version marker"
+  ansible.builtin.slurp:
+    src: "{{ __lxc_onepassword_connect_marker }}"
+  register: __lxc_onepassword_connect_mk
+  changed_when: false
+  failed_when: false
+- name: "extract_binary | Decide whether extraction is needed"
+  ansible.builtin.set_fact:
+    __lxc_onepassword_connect_need: >-
+      {{ (__lxc_onepassword_connect_mk.content | default('') | b64decode | trim)
+      != (lxc_onepassword_connect_version ~ '/' ~ lxc_onepassword_connect_arch) }}
+- name: "extract_binary | Pull and install {{ __lxc_onepassword_connect_bin }}"
+  when: __lxc_onepassword_connect_need | bool
+  block:
+    - name: "extract_binary | Fetch a Docker Hub pull token"
+      ansible.builtin.uri:
+        url: "{{ lxc_onepassword_connect_auth_url }}?service=registry.docker.io&scope=repository:{{ __lxc_onepassword_connect_repo }}:pull"
+        method: GET
+        return_content: true
+      register: __lxc_onepassword_connect_tok
+      changed_when: false
+      no_log: true
+    - name: "extract_binary | Read the image index (manifest list)"
+      ansible.builtin.uri:
+        url: "{{ __lxc_onepassword_connect_base }}/manifests/{{ lxc_onepassword_connect_version }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ __lxc_onepassword_connect_tok.json.token }}"
+          Accept: "application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json"
+        return_content: true
+      register: __lxc_onepassword_connect_index
+      changed_when: false
+      no_log: true
+    - name: "extract_binary | Resolve the manifest digest for arch {{ lxc_onepassword_connect_arch }}"
+      ansible.builtin.set_fact:
+        __lxc_onepassword_connect_mdigest: >-
+          {{ __lxc_onepassword_connect_index.json.manifests
+          | selectattr('platform.architecture', 'equalto', lxc_onepassword_connect_arch)
+          | selectattr('platform.os', 'equalto', 'linux')
+          | map(attribute='digest') | first }}
+    - name: "extract_binary | Read the image manifest"
+      ansible.builtin.uri:
+        url: "{{ __lxc_onepassword_connect_base }}/manifests/{{ __lxc_onepassword_connect_mdigest }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ __lxc_onepassword_connect_tok.json.token }}"
+          Accept: "application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json"
+        return_content: true
+      register: __lxc_onepassword_connect_manifest
+      changed_when: false
+      no_log: true
+    - name: "extract_binary | Fresh staging rootfs"
+      ansible.builtin.file:
+        path: "{{ __lxc_onepassword_connect_root }}/rootfs"
+        state: directory
+        mode: "0700"
+    - name: "extract_binary | Download and unpack each layer into the staging rootfs"
+      ansible.builtin.include_tasks: fetch_layer.yml
+      loop: "{{ __lxc_onepassword_connect_manifest.json.layers | map(attribute='digest') | list }}"
+      loop_control:
+        loop_var: __lxc_onepassword_connect_layer
+        label: "{{ __lxc_onepassword_connect_layer[0:19] }}"
+    - name: "extract_binary | Install the binary to {{ lxc_onepassword_connect_bin_dir }}"
+      ansible.builtin.copy:
+        src: "{{ __lxc_onepassword_connect_root }}/rootfs/bin/{{ __lxc_onepassword_connect_bin }}"
+        dest: "{{ lxc_onepassword_connect_bin_dir }}/{{ __lxc_onepassword_connect_bin }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0755"
+      notify: Restart 1Password Connect
+    - name: "extract_binary | Record the installed image version"
+      ansible.builtin.copy:
+        content: "{{ lxc_onepassword_connect_version }}/{{ lxc_onepassword_connect_arch }}\n"
+        dest: "{{ __lxc_onepassword_connect_marker }}"
+        owner: root
+        group: root
+        mode: "0644"
+    - name: "extract_binary | Remove the staging rootfs"
+      ansible.builtin.file:
+        path: "{{ __lxc_onepassword_connect_root }}"
+        state: absent

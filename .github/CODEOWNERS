@@ -1,0 +1,19 @@
+# CODEOWNERS — https://docs.github.com/articles/about-code-owners
+#
+# The branch ruleset (.github/rulesets/main.json) requires a review from a code
+# owner before merge. Owners are teams, not people, so membership changes never
+# touch this file. Later lines win.
+# Default owner for everything.
+*                               @get-sybers/maintainers
+# CI/CD and repository policy need the owners' sign-off.
+/.github/                       @get-sybers/owners
+/.pre-commit-config.yaml        @get-sybers/owners
+/.pinact.yaml                   @get-sybers/owners
+/Makefile                       @get-sybers/owners
+# Version pins are a reviewed change.
+/requirements.yml               @get-sybers/owners
+/galaxy.yml                     @get-sybers/owners
+# The premise and its detector.
+/docs/01-Hardened-LXC-Premise.md @get-sybers/owners
+/scripts/check_lxc_boundary.py  @get-sybers/owners
+/roles/lxc_guest/               @get-sybers/owners

@@ -1,0 +1,81 @@
+---
+- name: "postcheck | Re-read the CT config from Proxmox (decoded)"
+  ansible.builtin.command:
+    argv:
+      - pvesh
+      - get
+      - "/nodes/{{ lxc_guest_node }}/lxc/{{ lxc_guest_vmid }}/config"
+      - --output-format
+      - json
+  register: __lxc_guest_post_config
+  changed_when: false
+  check_mode: false
+- name: "postcheck | Re-read the CT status"
+  ansible.builtin.command:
+    argv: [pct, status, "{{ lxc_guest_vmid }}"]
+  register: __lxc_guest_post_status
+  changed_when: false
+  check_mode: false
+- name: "postcheck | Parse the config"
+  ansible.builtin.set_fact:
+    __lxc_guest_post: "{{ __lxc_guest_post_config.stdout | from_json }}"
+- name: "postcheck | The container is running and is the one this role describes"
+  ansible.builtin.assert:
+    that:
+      - "'status: running' in __lxc_guest_post_status.stdout"
+      - lxc_guest_description_marker in (__lxc_guest_post['description'] | default(''))
+      - (__lxc_guest_post['hostname'] | default('')) == lxc_guest_hostname
+    fail_msg: >-
+      CT {{ lxc_guest_vmid }} is not running, or is not the container this role
+      describes. status={{ __lxc_guest_post_status.stdout | trim | default('<none>') }}
+      hostname={{ __lxc_guest_post['hostname'] | default('<none>') }}
+      description={{ __lxc_guest_post['description'] | default('<none>') }}
+    quiet: true
+- name: "postcheck | It is unprivileged"
+  ansible.builtin.assert:
+    that: (__lxc_guest_post['unprivileged'] | default(0) | int) == 1
+    fail_msg: >-
+      CT {{ lxc_guest_vmid }} is privileged (unprivileged=
+      {{ __lxc_guest_post['unprivileged'] | default('?') }}). The premise is an
+      unprivileged container, and unprivileged cannot be changed on an existing
+      CT — destroy and recreate it.
+    quiet: true
+- name: "postcheck | It is on the bridge net0 names"
+  ansible.builtin.assert:
+    that: ('bridge=' ~ __lxc_guest_bridge ~ ',') in (__lxc_guest_post['net0'] | default('') ~ ',')
+    fail_msg: >-
+      net0 is not on bridge {{ __lxc_guest_bridge }}. Actual net0:
+      {{ __lxc_guest_post['net0'] | default('<no net0>') }}. create reconciles
+      net0 on every run, so Proxmox did not accept the requested value — check
+      the create task's result and `pct config {{ lxc_guest_vmid }}`.
+    quiet: true
+- name: "postcheck | It carries every requested feature"
+  ansible.builtin.assert:
+    that: >-
+      lxc_guest_features
+      | reject('in', (__lxc_guest_post['features'] | default('')).split(','))
+      | list | length == 0
+    fail_msg: >-
+      CT {{ lxc_guest_vmid }} has features='{{ __lxc_guest_post['features'] | default('') }}',
+      wanted {{ lxc_guest_features | join(',') }}. create reconciles features
+      on every run, so Proxmox did not accept the requested value — check the
+      create task's result and `pct config {{ lxc_guest_vmid }}`.
+    quiet: true
+  when: lxc_guest_features | length > 0
+- name: "postcheck | It will come back after a node reboot"
+  ansible.builtin.assert:
+    that: (__lxc_guest_post['onboot'] | default(0) | int) == (lxc_guest_onboot | bool | ternary(1, 0))
+    fail_msg: >-
+      CT {{ lxc_guest_vmid }} has onboot={{ __lxc_guest_post['onboot'] | default(0) }},
+      wanted {{ lxc_guest_onboot | bool | ternary(1, 0) }}. create reconciles
+      onboot on every run, so Proxmox did not accept the requested value —
+      check the create task's result and `pct config {{ lxc_guest_vmid }}`.
+    quiet: true
+- name: "postcheck | Ready"
+  ansible.builtin.debug:
+    msg: >-
+      LXC GUEST {{ lxc_guest_vmid }} ({{ lxc_guest_hostname }}) running on
+      {{ lxc_guest_node }}, bridge {{ __lxc_guest_bridge }}, unprivileged,
+      features={{ __lxc_guest_post['features'] | default('') or '<none>' }},
+      onboot={{ __lxc_guest_post['onboot'] | default(0) }}. Service
+      configuration is the service role's job, after the baseline.

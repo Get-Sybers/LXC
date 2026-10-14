@@ -1,0 +1,108 @@
+---
+- name: "server | Stat the lxc_guest baseline marker"
+  ansible.builtin.stat:
+    path: "{{ lxc_onepassword_connect_baseline_marker }}"
+  register: __lxc_onepassword_connect_baseline
+- name: "server | Refuse a guest that has not been through the hardened baseline"
+  ansible.builtin.assert:
+    that: __lxc_onepassword_connect_baseline.stat.exists
+    fail_msg: >-
+      {{ lxc_onepassword_connect_baseline_marker }} is absent, so this guest has
+      not been through get_sybers.lxc.lxc_guest's baseline (no SSH daemon, no
+      container runtime). Run lxc_guest tasks_from: baseline on it first — the
+      deploy-onepassword-connect play does — then re-run server.
+    quiet: true
+- name: "server | Ensure ca-certificates is present (binaries read SSL_CERT_FILE)"
+  ansible.builtin.apt:
+    name: ca-certificates
+    state: present
+    update_cache: true
+- name: "server | The unprivileged service user"
+  ansible.builtin.user:
+    name: "{{ lxc_onepassword_connect_user }}"
+    home: "{{ lxc_onepassword_connect_home }}"
+    system: true
+    create_home: true
+    shell: /usr/sbin/nologin
+- name: "server | The .op home directory"
+  ansible.builtin.file:
+    path: "{{ lxc_onepassword_connect_home }}/.op"
+    state: directory
+    owner: "{{ lxc_onepassword_connect_user }}"
+    group: "{{ lxc_onepassword_connect_user }}"
+    mode: "0700"
+- name: "server | The shared .op/data directory"
+  ansible.builtin.file:
+    path: "{{ lxc_onepassword_connect_data_dir }}"
+    state: directory
+    owner: "{{ lxc_onepassword_connect_user }}"
+    group: "{{ lxc_onepassword_connect_user }}"
+    mode: "0700"
+- name: "server | Extract each Connect binary from its pinned image"
+  ansible.builtin.include_tasks: extract_binary.yml
+  loop: "{{ lxc_onepassword_connect_repos }}"
+  loop_control:
+    loop_var: __lxc_onepassword_connect_repo
+    label: "{{ __lxc_onepassword_connect_repo }}"
+- name: "server | A credentials file must have been provided"
+  ansible.builtin.assert:
+    that: lxc_onepassword_connect_credentials_src | length > 0
+    fail_msg: >-
+      lxc_onepassword_connect_credentials_src is empty — set it to the path of
+      the 1password-credentials.json you downloaded when creating the Connect server.
+    quiet: true
+- name: "server | Install the 1password-credentials.json (secret)"
+  ansible.builtin.copy:
+    src: "{{ lxc_onepassword_connect_credentials_src }}"
+    dest: "{{ lxc_onepassword_connect_home }}/.op/1password-credentials.json"
+    owner: "{{ lxc_onepassword_connect_user }}"
+    group: "{{ lxc_onepassword_connect_user }}"
+    mode: "0600"
+  no_log: true
+  notify: Restart 1Password Connect
+- name: "server | Confirm the credentials file landed (shape only)"
+  ansible.builtin.stat:
+    path: "{{ lxc_onepassword_connect_home }}/.op/1password-credentials.json"
+  register: __lxc_onepassword_connect_cred
+- name: "server | Report credentials SHAPE only (never contents)"
+  ansible.builtin.assert:
+    that:
+      - __lxc_onepassword_connect_cred.stat.exists
+      - (__lxc_onepassword_connect_cred.stat.size | default(0)) > 0
+    fail_msg: "1password-credentials.json is missing or empty inside the container."
+    success_msg: >-
+      1password-credentials.json present
+      ({{ __lxc_onepassword_connect_cred.stat.size | default(0) }} bytes).
+    quiet: true
+- name: "server | Install the op-connect-api systemd unit"
+  ansible.builtin.template:
+    src: op-connect-api.service.j2
+    dest: /etc/systemd/system/op-connect-api.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart 1Password Connect
+- name: "server | Install the op-connect-sync systemd unit"
+  ansible.builtin.template:
+    src: op-connect-sync.service.j2
+    dest: /etc/systemd/system/op-connect-sync.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart 1Password Connect
+- name: "server | Enable and start op-connect-sync"
+  ansible.builtin.systemd_service:
+    name: op-connect-sync
+    enabled: true
+    state: started
+    daemon_reload: true
+- name: "server | Enable and start op-connect-api"
+  ansible.builtin.systemd_service:
+    name: op-connect-api
+    enabled: true
+    state: started
+    daemon_reload: true
+- name: "server | Apply any pending restart before verifying"
+  ansible.builtin.meta: flush_handlers
+- name: "server | Verify the API answers"
+  ansible.builtin.include_tasks: verify.yml

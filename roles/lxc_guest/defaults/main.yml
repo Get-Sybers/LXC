@@ -1,0 +1,44 @@
+---
+# --- Placement (per guest; the service role or play supplies these) ---------
+# The Proxmox node the container is created on. Defaults to the collection
+# variable the inventory defines once (standards §4d); the play must be
+# executing ON that node, because pct is node-local.
+lxc_guest_node: "{{ lxc_node }}"
+# The CT id and hostname: required, no safe default. preflight refuses 0 / "".
+lxc_guest_vmid: 0
+lxc_guest_hostname: ""
+# Free text appended to the container description after the ownership marker
+# (e.g. "1Password Connect server"). Never a secret: pct config shows it.
+lxc_guest_purpose: ""
+# storage:vztmpl/<file>; confirm with `pveam available` / `pveam list local`.
+lxc_guest_template: "{{ lxc_template }}"
+lxc_guest_storage: "{{ lxc_storage }}"
+lxc_guest_rootfs_gb: 4
+lxc_guest_cores: 1
+lxc_guest_memory_mb: 512
+lxc_guest_swap_mb: 0
+# Full Proxmox net0 string. DHCP on the management bridge by default; for a
+# fixed address use e.g. "name=eth0,bridge=vmbr0,ip=192.168.4.150/24,gw=192.168.4.1".
+lxc_guest_net0: "name=eth0,bridge={{ lxc_bridge }},ip=dhcp"
+lxc_guest_nameserver: ""
+# Extra container features, e.g. ["nesting=1"] where the guest's systemd needs
+# nested namespaces (Debian 13 / systemd 257 does). The container stays
+# unprivileged whatever is listed here — that is not a feature, it is the rule.
+lxc_guest_features: []
+lxc_guest_onboot: true
+# Resource pool to place the CT in ("" = none).
+lxc_guest_pool: ""
+# The play-inventory group `connect` adds the running container to, so the next
+# play can target it over proxmox_pct_remote.
+lxc_guest_group: lxc_guests
+lxc_guest_create_timeout: 300
+# --- Baseline (runs INSIDE the guest) ----------------------------------------
+# The marker every service role asserts before configuring anything. Defaults
+# to the collection variable so the service roles read the same path.
+lxc_guest_baseline_marker: "{{ lxc_baseline_marker_path }}"
+# Packages a particular guest must additionally never carry (purged by baseline).
+lxc_guest_baseline_extra_purge: []
+# --- Destroy guard -----------------------------------------------------------
+# remove.yml refuses unless this is true on the command line: deletion is a
+# separate, opted-in action, never a side effect of a converge.
+lxc_guest_confirm_destroy: false

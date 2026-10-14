@@ -1,0 +1,56 @@
+---
+- name: "create | Preflight must have run first"
+  ansible.builtin.assert:
+    that: __lxc_guest_bridge_present is defined
+    fail_msg: "Include tasks_from: facts.yml and preflight.yml before create.yml (tasks/main.yml does)."
+    quiet: true
+# state: present with update: true (the module default since community.proxmox
+# 1.0, pinned here so a default flip cannot change the semantics): an absent CT
+# is created from the template; an existing one has its description, cores,
+# memory, swap, features, net0, nameserver, hostname and onboot reconciled, and
+# the disk resolves to the rootfs volume it already has. Drift is corrected,
+# then postcheck proves the result from Proxmox. unprivileged cannot be changed
+# on an existing CT, which is why postcheck asserts it separately.
+- name: "create | Ensure the container exists and matches its description — {{ lxc_guest_vmid }}"
+  community.proxmox.proxmox:
+    node: "{{ lxc_guest_node }}"
+    vmid: "{{ lxc_guest_vmid }}"
+    hostname: "{{ lxc_guest_hostname }}"
+    ostemplate: "{{ lxc_guest_template }}"
+    description: >-
+      {{ lxc_guest_description_marker }}{{ (' | ' ~ lxc_guest_purpose) if lxc_guest_purpose | length > 0 else '' }}.
+      Reached only through pct exec from the node. Do not edit by hand.
+    unprivileged: "{{ lxc_guest_unprivileged | bool }}"
+    onboot: "{{ lxc_guest_onboot | bool }}"
+    cores: "{{ lxc_guest_cores }}"
+    memory: "{{ lxc_guest_memory_mb }}"
+    swap: "{{ lxc_guest_swap_mb }}"
+    features: "{{ lxc_guest_features if lxc_guest_features | length > 0 else omit }}"
+    pool: "{{ lxc_guest_pool if lxc_guest_pool | length > 0 else omit }}"
+    disk: "{{ lxc_guest_storage }}:{{ lxc_guest_rootfs_gb }}"
+    netif:
+      net0: "{{ lxc_guest_net0 }}"
+    nameserver: "{{ lxc_guest_nameserver if lxc_guest_nameserver | length > 0 else omit }}"
+    state: present
+    update: true
+    timeout: "{{ lxc_guest_create_timeout }}"
+  register: __lxc_guest_created
+- name: "create | Wait until the cluster config knows the CT id"
+  ansible.builtin.command:
+    argv: [pct, status, "{{ lxc_guest_vmid }}"]
+  register: __lxc_guest_known
+  until: __lxc_guest_known.rc == 0
+  retries: 10
+  delay: 1
+  changed_when: false
+  check_mode: false
+- name: "create | Start the container"
+  ansible.builtin.command:
+    argv: [pct, start, "{{ lxc_guest_vmid }}"]
+  register: __lxc_guest_start
+  changed_when: "'already running' not in (__lxc_guest_start.stderr | default(''))"
+  failed_when:
+    - __lxc_guest_start.rc != 0
+    - "'already running' not in (__lxc_guest_start.stderr | default(''))"
+- name: "create | Wait for the container and add it to the play inventory"
+  ansible.builtin.include_tasks: connect.yml

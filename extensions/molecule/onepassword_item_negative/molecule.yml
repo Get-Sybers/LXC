@@ -1,0 +1,11 @@
+---
+# lxc_onepassword_item negative — an unreachable Connect server must surface as
+# the reachability assertion (failed_when:false + assert), never a raw uri crash.
+# host points at a closed local port. No prepare; converge drives it.
+scenario:
+  test_sequence:
+    - dependency
+    - syntax
+    - create
+    - converge
+    - destroy

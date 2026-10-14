@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  role_name: lxc_onepassword_item
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    Upsert one item into a self-hosted 1Password Connect vault via
+    onepassword.connect.generic_item, under no_log — the credential-mirror primitive.
+  company: Get-Sybers
+  license: AGPL-3.0-only
+  min_ansible_version: "2.19.0"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [secrets, onepassword, credentials, mirror]
+dependencies: []

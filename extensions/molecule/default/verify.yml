@@ -1,0 +1,37 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Stat sshd
+      ansible.builtin.stat:
+        path: /usr/sbin/sshd
+      register: __lxc_test_sshd
+    - name: The SSH server is gone
+      ansible.builtin.assert:
+        that: not __lxc_test_sshd.stat.exists
+        fail_msg: "/usr/sbin/sshd still exists after the baseline"
+        quiet: true
+    - name: Query dpkg for openssh-server
+      ansible.builtin.command:
+        argv: [dpkg-query, --show, --showformat, "${db:Status-Status}", openssh-server]
+      register: __lxc_test_dpkg
+      changed_when: false
+      failed_when: false
+    - name: The package is purged, not merely removed
+      ansible.builtin.assert:
+        that: (__lxc_test_dpkg.rc != 0) or ((__lxc_test_dpkg.stdout | trim) == 'not-installed')
+        fail_msg: "openssh-server is still known to dpkg as '{{ __lxc_test_dpkg.stdout | trim }}'"
+        quiet: true
+    - name: Read the baseline marker
+      ansible.builtin.slurp:
+        src: /etc/get-sybers-lxc-baseline
+      register: __lxc_test_marker
+    - name: The marker records the baseline version and the role
+      ansible.builtin.assert:
+        that:
+          - "'baseline=1' in (__lxc_test_marker.content | b64decode)"
+          - "'role=get_sybers.lxc.lxc_guest' in (__lxc_test_marker.content | b64decode)"
+        fail_msg: "the baseline marker does not carry baseline=1 / role=get_sybers.lxc.lxc_guest"
+        quiet: true
