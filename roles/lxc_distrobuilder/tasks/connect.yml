@@ -1,0 +1,13 @@
+---
+# Node side. Reach an existing, running distrobuilder CT without going
+# through the ensure path: lxc_guest's connect adds it to the play inventory
+# over proxmox_pct_remote (pct exec, never SSH) so the build play can target it.
+- name: "connect | Add the running distrobuilder LXC to the play inventory through lxc_guest"
+  ansible.builtin.include_role:
+    name: get_sybers.lxc.lxc_guest
+    tasks_from: connect
+  vars:
+    lxc_guest_node: "{{ lxc_distrobuilder_node }}"
+    lxc_guest_vmid: "{{ lxc_distrobuilder_vmid }}"
+    lxc_guest_hostname: "{{ lxc_distrobuilder_hostname }}"
+    lxc_guest_group: "{{ lxc_distrobuilder_group }}"

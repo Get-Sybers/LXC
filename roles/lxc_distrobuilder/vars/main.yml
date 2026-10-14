@@ -1,0 +1,11 @@
+---
+# The file extension distrobuilder gives the rootfs tarball for each
+# --compression value (it shells out to the compressor of that name).
+lxc_distrobuilder_compression_extensions:
+  xz: xz
+  zstd: zst
+  gzip: gz
+  bzip2: bz2
+  lzma: lzma
+  lzip: lz
+  lzop: lzo

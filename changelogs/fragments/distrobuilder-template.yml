@@ -1,0 +1,19 @@
+---
+added:
+  - >-
+    ``lxc_distrobuilder`` role, ``distrobuilder`` template and plays
+    ``deploy-distrobuilder`` and ``build-distrobuilder-image`` — a
+    distrobuilder (the LXC and Incus image builder) build box in a hardened
+    Debian LXC. ``bake`` builds the pinned release from the Go module in the
+    build rootfs (fetched through the Go module proxy and verified against
+    the Go checksum database, with the toolchain the module declares), beside
+    ``debootstrap``, the Debian and Ubuntu archive keys, ``gpg``/``dirmngr``,
+    ``rsync`` and the compressors, then purges the toolchain again;
+    ``container``, ``connect`` and ``remove`` hand the placement to
+    ``lxc_guest``; ``server`` refuses a guest without the baseline or the
+    ``distrobuilder`` template marker, asserts the baked tools and places the
+    image definitions (a file on the node, or a URL pinned by checksum);
+    ``build`` runs ``distrobuilder build-lxc`` on one definition with the
+    cache under ``/var/cache/lxc`` (where a nested unprivileged CT may mount
+    ``proc``), writes ``SHA256SUMS`` and pulls the tarballs onto the node.
+    The ``distrobuilder_negative`` Molecule scenario proves the refusal.
