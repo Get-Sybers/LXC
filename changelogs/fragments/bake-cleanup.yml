@@ -1,0 +1,12 @@
+---
+fixed:
+  - >-
+    ``playbooks/bake-template.yml`` unmounts the kernel filesystems it mounted
+    under the work rootfs (``proc``, ``sys``, the bind of the build host's
+    ``/dev``, ``dev/pts``) when the mount itself or a bake step fails, then
+    fails as before and leaves the rootfs in place to inspect. A failed local
+    bake no longer leaves the host's ``/dev`` bound under a tree someone might
+    remove. A bake step naming an entry point that does not exist is refused
+    before anything is unpacked or mounted (an include that cannot load runs
+    outside the rescue). ``lxc_template_workdir`` is asserted up front: it was
+    documented as optional but has no default.
