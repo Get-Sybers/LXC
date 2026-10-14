@@ -13,16 +13,17 @@ lxc_template_name: semaphore
 lxc_semaphore_version: "2.19.16"
 lxc_semaphore_arch: amd64
 lxc_semaphore_package_checksum: "sha256:56c4ac99b712b3fde11a7d600a0789870a3b945bab0c12f41d91864e0aeb85b8"
-lxc_template_version: "1.0.0"
+lxc_template_version: "0.1.0"
 lxc_template_service_version: "{{ lxc_semaphore_version }}"
 lxc_template_arch: "{{ lxc_semaphore_arch }}"
 lxc_template_output: "debian-13-{{ lxc_template_name }}_{{ lxc_template_version }}_{{ lxc_template_arch }}.tar.zst"
 # The stock Proxmox system template the bake starts from, and its sha512 as
-# published in Proxmox's own index (https://download.proxmox.com/images/aplinfo.dat):
-#   python3 scripts/base_template_checksum.py debian-13-standard_13.1-2_amd64.tar.zst
+# published in Proxmox's own index (https://download.proxmox.com/images/aplinfo-pve-9.dat):
+#   python3 scripts/base_template_checksum.py debian-13-standard_13.6-1_amd64.tar.zst
 # The bake refuses to run while the checksum is empty.
-lxc_template_base_url: "https://download.proxmox.com/images/system/debian-13-standard_13.1-2_amd64.tar.zst"
-lxc_template_base_checksum: ""
+lxc_template_base_url: "https://download.proxmox.com/images/system/debian-13-standard_13.6-1_amd64.tar.zst"
+lxc_template_base_checksum: >-
+  sha512:4c0c27ca6ceab5ef0b84db57825a00f26157ef1854bafe97297813e1cbe8ecb8cc9c453cab6b3b0efe1ba193a50c47ece1e41d950e411b8730b835b71e9e754b
 # The role entry points run inside the rootfs, in order, over the chroot
 # connection. The guest baseline first (no sshd, no container runtime, the
 # baseline marker), then the service's chroot-safe install.

@@ -33,7 +33,8 @@ The manifest's keys are documented in [`doc/reference/template-manifest.md`](../
    `python3 scripts/base_template_checksum.py <base file name>`.
 2. Give the service role a chroot-safe `bake` entry point (install, users, units, `multi-user.target.wants` symlinks; no credentials, no
    `systemctl start`) and keep `server` to run-time work.
-3. Open a PR; the Version Gate requires `lxc_template_version` to move forward whenever the image changes. Once merged, run the
-   Templates workflow for the template with *publish* on; the environment's reviewer approves it and the run creates the
+3. Open a PR; the Version Gate requires `lxc_template_version` to move forward whenever the image changes (a version that was never
+   released may be renumbered; one whose tag exists is refused). Once merged, run the Templates workflow for the template with
+   *publish* on; the environment's reviewer approves it and the run creates the
    `<name>/v<version>` release. (A run with *publish* off bakes from any branch and only keeps the artifact.)
 4. Pin the release in `inventory/group_vars/all/<service>.yml`.

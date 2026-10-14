@@ -8,9 +8,9 @@ arrive on the node, in `lxc_distrobuilder`'s `server` entry point, and every ima
 
 | | |
 | --- | --- |
-| Release tag | `distrobuilder/v<template release>` (`distrobuilder/v1.0.0`; the service version is in the marker's `service=`) |
+| Release tag | `distrobuilder/v<template release>` (`distrobuilder/v0.1.0`; the service version is in the marker's `service=`) |
 | Artifact | `debian-13-distrobuilder_<version>_<arch>.tar.zst` + `.sha256`, cosign bundle, provenance attestation |
-| Base | `debian-13-standard_13.1-2_amd64.tar.zst` from `download.proxmox.com` |
+| Base | `debian-13-standard_13.6-1_amd64.tar.zst` from `download.proxmox.com` |
 | Bake steps | `lxc_guest` `baseline`, then `lxc_distrobuilder` `bake` |
 | Consumed by | `inventory/group_vars/all/distrobuilder.yml` (`lxc_distrobuilder_template_checksum`), `playbooks/deploy-distrobuilder.yml`, `playbooks/build-distrobuilder-image.yml` |
 

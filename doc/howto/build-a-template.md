@@ -52,7 +52,8 @@ touches a credential. Everything site-specific stays in `server`, which runs in 
   request that changes the image, whether that is a new service release or a changed bake, and the Version Gate
   ([`.github/workflows/version-gate.yml`](../../.github/workflows/version-gate.yml), `scripts/check_template_pins.py`, the
   `lxc-template-pin` check the `main` ruleset requires) refuses a pull request that changes a manifest directory, the service role's
-  bake inputs or the `lxc_guest` baseline without moving it forward.
+  bake inputs or the `lxc_guest` baseline without moving it forward. A version that was never released may be renumbered
+  (backwards included) instead, and a version whose `<name>/v<version>` tag already exists is refused either way.
 - **A release is immutable.** A publish refuses a tag that already exists: the gate keeps a changed image from reaching `main` under a
   published version, and the publish refuses to overwrite one if it ever does.
 
@@ -79,12 +80,12 @@ from an install into a live guest.
 ## 5. Verifying a release by hand
 
 ```sh
-sha256sum -c debian-13-op-connect_1.0.0_amd64.tar.zst.sha256
-cosign verify-blob --bundle debian-13-op-connect_1.0.0_amd64.tar.zst.sigstore.json \
+sha256sum -c debian-13-op-connect_0.1.0_amd64.tar.zst.sha256
+cosign verify-blob --bundle debian-13-op-connect_0.1.0_amd64.tar.zst.sigstore.json \
   --certificate-identity-regexp '^https://github.com/get-sybers/lxc/' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  debian-13-op-connect_1.0.0_amd64.tar.zst
-gh attestation verify debian-13-op-connect_1.0.0_amd64.tar.zst -R get-sybers/lxc
+  debian-13-op-connect_0.1.0_amd64.tar.zst
+gh attestation verify debian-13-op-connect_0.1.0_amd64.tar.zst -R get-sybers/lxc
 ```
 
 ## 6. Raising a base template
@@ -93,7 +94,7 @@ The base is pinned by file name and Proxmox's published `sha512`. To move to a n
 every manifest that uses it:
 
 ```sh
-python3 scripts/base_template_checksum.py debian-13-standard_13.2-1_amd64.tar.zst
+python3 scripts/base_template_checksum.py debian-13-standard_13.7-1_amd64.tar.zst
 ```
 
 Bake locally the same way the workflow does, from the repository root as root, with the pinned collections on the collections path:

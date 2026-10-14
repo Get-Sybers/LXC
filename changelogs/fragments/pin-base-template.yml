@@ -1,0 +1,24 @@
+---
+changed:
+  - >-
+    The three template manifests (``op-connect``, ``semaphore``,
+    ``distrobuilder``) pin their base: ``debian-13-standard_13.6-1``, the
+    Debian 13 template Proxmox's index carries today, at the ``sha512`` that
+    index publishes for it (``13.1-2`` is still served but no longer indexed,
+    so no published checksum exists for it). The bake, which refuses an empty
+    checksum, can run; ``lxc_template`` in the example inventory and the
+    Molecule fixture name the same file.
+  - >-
+    The templates are numbered from ``0.1.0``: ``lxc_template_version`` in
+    every manifest and the ``lxc_<service>_template_version`` default of every
+    service role move from ``1.0.0`` to ``0.1.0``, the first release of each
+    (no ``1.0.0`` was ever published). The Version Gate reads the repository's
+    tags for what "released" means: a version that was never released may be
+    renumbered, backwards included, and a version whose ``<name>/v<version>``
+    tag already exists is refused.
+fixed:
+  - >-
+    ``scripts/base_template_checksum.py`` reads ``aplinfo-pve-9.dat``, the
+    index ``pveam`` reads on Proxmox VE 9; ``aplinfo.dat`` stops at Debian 11
+    and never listed a Debian 13 template. It prints the checksum folded, as
+    the manifest carries it.
