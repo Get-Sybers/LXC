@@ -1,0 +1,130 @@
+---
+# Runs INSIDE the running CT over proxmox_pct_remote. The image content is
+# already there (tasks/bake.yml, in the released template); this does the
+# site-specific rest: the configuration, the database migrations, the
+# administrator, the first start, the health check.
+- name: "server | Stat the lxc_guest baseline marker"
+  ansible.builtin.stat:
+    path: "{{ lxc_semaphore_baseline_marker }}"
+  register: __lxc_semaphore_baseline
+- name: "server | Refuse a guest that has not been through the hardened baseline"
+  ansible.builtin.assert:
+    that: __lxc_semaphore_baseline.stat.exists
+    fail_msg: >-
+      {{ lxc_semaphore_baseline_marker }} is absent, so this guest has not been
+      through get_sybers.lxc.lxc_guest's baseline (no SSH daemon, no container
+      runtime). The released semaphore template carries it; a guest created
+      from anything else is not configured by this role.
+    quiet: true
+- name: "server | Read the template marker"
+  ansible.builtin.slurp:
+    src: "{{ lxc_semaphore_template_marker }}"
+  register: __lxc_semaphore_tmpl
+  failed_when: false
+- name: "server | Parse the template marker"
+  ansible.builtin.set_fact:
+    __lxc_semaphore_tmpl_fields: >-
+      {{ dict((__lxc_semaphore_tmpl.content | default('') | b64decode).splitlines()
+              | select('search', '=') | map('split', '=', 1) | list) }}
+- name: "server | Refuse a guest that was not created from the semaphore template"
+  ansible.builtin.assert:
+    that:
+      - __lxc_semaphore_tmpl_fields['name'] | default('') == 'semaphore'
+      - __lxc_semaphore_tmpl_fields['version'] | default('') == lxc_semaphore_version | string
+    fail_msg: >-
+      {{ lxc_semaphore_template_marker }} says
+      name={{ __lxc_semaphore_tmpl_fields['name'] | default('<absent>') }}
+      version={{ __lxc_semaphore_tmpl_fields['version'] | default('<absent>') }};
+      this role configures semaphore {{ lxc_semaphore_version }}. The package is
+      baked into the released template (templates/semaphore), never installed
+      into a running guest. Create the CT from the matching release, or set
+      lxc_semaphore_version to the one it carries.
+    quiet: true
+- name: "server | Stat the baked binary"
+  ansible.builtin.stat:
+    path: "{{ lxc_semaphore_bin }}"
+  register: __lxc_semaphore_binary
+- name: "server | The baked binary is present"
+  ansible.builtin.assert:
+    that: __lxc_semaphore_binary.stat.exists
+    fail_msg: >-
+      {{ lxc_semaphore_bin }} is missing. The template marker matched but the
+      image is incomplete — rebuild and re-release it.
+    quiet: true
+- name: "server | The administrator password and the three keys must have been provided"
+  ansible.builtin.assert:
+    that:
+      - lxc_semaphore_admin_login | length > 0
+      - lxc_semaphore_admin_email | length > 0
+      - lxc_semaphore_admin_password | length > 0
+      - lxc_semaphore_cookie_hash | length > 0
+      - lxc_semaphore_cookie_encryption | length > 0
+      - lxc_semaphore_access_key_encryption | length > 0
+    fail_msg: >-
+      lxc_semaphore_admin_password, lxc_semaphore_cookie_hash,
+      lxc_semaphore_cookie_encryption and lxc_semaphore_access_key_encryption
+      must all be set (and the admin login and email non-empty): pass the
+      vaulted inventory/secrets/semaphore.yml with -e
+      (inventory/secrets/semaphore.yml.example shows how to generate the keys).
+    quiet: true
+  no_log: true
+- name: "server | The data and working directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ lxc_semaphore_user }}"
+    group: "{{ lxc_semaphore_user }}"
+    mode: "0750"
+  loop:
+    - "{{ lxc_semaphore_home }}"
+    - "{{ lxc_semaphore_tmp_path }}"
+- name: "server | Assemble the configuration (secret: it carries the keys)"
+  ansible.builtin.set_fact:
+    __lxc_semaphore_config: >-
+      {{ {
+        'dialect': 'sqlite',
+        'sqlite': {'host': lxc_semaphore_db_file},
+        'port': ':' ~ lxc_semaphore_port,
+        'interface': lxc_semaphore_interface,
+        'tmp_path': lxc_semaphore_tmp_path,
+        'web_host': lxc_semaphore_web_host,
+        'cookie_hash': lxc_semaphore_cookie_hash,
+        'cookie_encryption': lxc_semaphore_cookie_encryption,
+        'access_key_encryption': lxc_semaphore_access_key_encryption,
+        'non_admin_can_create_project': lxc_semaphore_non_admin_can_create_project | bool,
+      } | combine(lxc_semaphore_extra_config, recursive=true) }}
+  no_log: true
+- name: "server | Write config.json (secret: it carries the keys)"
+  ansible.builtin.copy:
+    content: "{{ __lxc_semaphore_config | to_nice_json }}\n"
+    dest: "{{ lxc_semaphore_config_file }}"
+    owner: root
+    group: "{{ lxc_semaphore_user }}"
+    mode: "0640"
+  no_log: true
+  notify: Restart Semaphore
+- name: "server | Apply the database migrations as the service user"
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - "{{ lxc_semaphore_user }}"
+      - --
+      - "{{ lxc_semaphore_bin }}"
+      - migrate
+      - --config
+      - "{{ lxc_semaphore_config_file }}"
+  register: __lxc_semaphore_migrate
+  changed_when: "'Executing migration' in __lxc_semaphore_migrate.stdout"
+- name: "server | Ensure the administrator exists"
+  ansible.builtin.include_tasks: admin.yml
+- name: "server | Enable and start semaphore"
+  ansible.builtin.systemd_service:
+    name: semaphore
+    enabled: true
+    state: started
+    daemon_reload: true
+- name: "server | Apply any pending restart before verifying"
+  ansible.builtin.meta: flush_handlers
+- name: "server | Verify the API answers"
+  ansible.builtin.include_tasks: verify.yml

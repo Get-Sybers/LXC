@@ -1,0 +1,17 @@
+---
+added:
+  - >-
+    ``lxc_semaphore`` role, ``semaphore`` template and play
+    ``deploy-semaphore`` — Semaphore UI (the web UI and API for Ansible,
+    Terraform and OpenTofu) as a native ``systemd`` service in a hardened
+    Debian LXC. ``bake`` installs the official Debian package into the build
+    rootfs, refusing it unless it carries the checksum the release publishes,
+    beside the tools its tasks shell out to (``git``, ``openssh-client``,
+    ``sshpass``, ``rsync``, ``ansible-core``), the ``semaphore`` service user
+    and the unit; ``container`` and ``remove`` hand the placement to
+    ``lxc_guest``; ``server`` refuses a guest without the baseline or the
+    ``semaphore`` template marker, writes ``config.json`` (SQLite, the port,
+    the cookie and access-key encryption keys from the vaulted
+    ``inventory/secrets/semaphore.yml``), applies the migrations, creates the
+    administrator when absent, starts the unit and verifies ``/api/ping``. The
+    ``semaphore_negative`` Molecule scenario proves the refusal.

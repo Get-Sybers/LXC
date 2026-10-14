@@ -1,0 +1,39 @@
+---
+- name: Converge (expect a controlled failure)
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: The server entry point must refuse a guest without the baseline marker
+      block:
+        - name: Run the server entry point on a guest that skipped the baseline
+          ansible.builtin.include_role:
+            name: get_sybers.lxc.lxc_semaphore
+            tasks_from: server
+      rescue:
+        - name: The role stopped at the baseline assertion
+          ansible.builtin.assert:
+            that:
+              - ansible_failed_result is defined
+              - "'has not been through get_sybers.lxc.lxc_guest' in (ansible_failed_result.msg | default(''))"
+            fail_msg: >-
+              failed, but not at the baseline assertion:
+              {{ ansible_failed_result | default({}) }}
+            quiet: true
+        - name: Record the controlled failure
+          ansible.builtin.set_fact:
+            __semaphore_failed_cleanly: true
+    - name: The failure path was taken
+      ansible.builtin.assert:
+        that: __semaphore_failed_cleanly | default(false)
+        fail_msg: "lxc_semaphore server did not refuse a guest without the baseline marker"
+        quiet: true
+    - name: Stat the configuration file (nothing may have been written)
+      ansible.builtin.stat:
+        path: /etc/semaphore/config.json
+      register: __semaphore_config_stat
+    - name: The refusal came before any change
+      ansible.builtin.assert:
+        that: not __semaphore_config_stat.stat.exists
+        fail_msg: "/etc/semaphore/config.json exists — server changed the guest before refusing it"
+        quiet: true

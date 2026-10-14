@@ -1,0 +1,102 @@
+---
+# --- Placement of the Semaphore LXC (per site; see README) -----------------
+# Handed to lxc_guest by container.yml / remove.yml. The node defaults to the
+# collection variable the inventory defines (standards §4d).
+lxc_semaphore_node: "{{ lxc_node }}"
+# The CT id: required, no safe default. lxc_guest refuses 0; the inventory
+# (group_vars/all/semaphore.yml) sets it.
+lxc_semaphore_vmid: 0
+lxc_semaphore_hostname: semaphore
+# The released semaphore template (templates/semaphore, built and published by
+# .github/workflows/templates.yml). lxc_guest fetches it into the node's
+# template cache by checksum when it is not there; the checksum is pinned in
+# the inventory from the release, and an empty one is refused.
+lxc_semaphore_template_file: >-
+  debian-13-semaphore_{{ lxc_semaphore_version }}_{{ lxc_semaphore_arch }}.tar.zst
+lxc_semaphore_template: "local:vztmpl/{{ lxc_semaphore_template_file }}"
+lxc_semaphore_template_url: >-
+  {{ lxc_template_release_base }}/semaphore/v{{ lxc_semaphore_version }}/{{ lxc_semaphore_template_file }}
+lxc_semaphore_template_checksum: ""
+lxc_semaphore_storage: "{{ lxc_storage }}"
+# Semaphore clones every repository it runs and keeps the task logs in its
+# database, so the rootfs is larger than the Connect one.
+lxc_semaphore_rootfs_gb: 8
+lxc_semaphore_cores: 2
+lxc_semaphore_memory_mb: 1024
+# Full Proxmox net0 string. DHCP on the mgmt bridge by default; for a static
+# address use e.g. "name=eth0,bridge=vmbr0,ip=192.0.2.160/24,gw=192.0.2.1".
+lxc_semaphore_net0: "name=eth0,bridge={{ lxc_bridge }},ip=dhcp"
+lxc_semaphore_nameserver: ""
+# Debian 13's systemd 257 needs nested namespaces; the CT stays unprivileged.
+lxc_semaphore_features: ["nesting=1"]
+lxc_semaphore_onboot: true
+lxc_semaphore_pool: ""
+# The play-inventory group the running CT is added to (the guest-side plays
+# target it).
+lxc_semaphore_group: semaphore
+
+# --- Semaphore version + package ---------------------------------------------
+# The version and arch name the released template; templates/semaphore/
+# template.yml sets the same values for the bake, so the image and the deploy
+# agree. The package checksum is the .deb's line in the release's
+# semaphore_<version>_checksums.txt; raise the three together.
+lxc_semaphore_version: "2.19.16"
+lxc_semaphore_arch: amd64
+lxc_semaphore_release_base: "https://github.com/semaphoreui/semaphore/releases/download"
+lxc_semaphore_package_file: "semaphore_{{ lxc_semaphore_version }}_linux_{{ lxc_semaphore_arch }}.deb"
+lxc_semaphore_package_url: "{{ lxc_semaphore_release_base }}/v{{ lxc_semaphore_version }}/{{ lxc_semaphore_package_file }}"
+lxc_semaphore_package_checksum: "sha256:56c4ac99b712b3fde11a7d600a0789870a3b945bab0c12f41d91864e0aeb85b8"
+# What the baked image carries besides the package: the tools Semaphore's tasks
+# shell out to. The package itself depends on git only; ansible-core gives the
+# guest ansible-playbook and ansible-galaxy, the ssh client, sshpass and rsync
+# are what a play needs to reach its hosts.
+lxc_semaphore_bake_packages:
+  - ca-certificates
+  - git
+  - openssh-client
+  - sshpass
+  - rsync
+  - ansible-core
+lxc_semaphore_stage_dir: /var/tmp/semaphore-bake
+
+# --- Service layout inside the CT --------------------------------------------
+lxc_semaphore_user: semaphore
+lxc_semaphore_home: /var/lib/semaphore
+lxc_semaphore_config_dir: /etc/semaphore
+lxc_semaphore_config_file: "{{ lxc_semaphore_config_dir }}/config.json"
+# The SQLite database (Semaphore 2.19 dropped BoltDB) and the working tree
+# the repositories are cloned into, both under the service user's home.
+lxc_semaphore_db_file: "{{ lxc_semaphore_home }}/database.sqlite"
+lxc_semaphore_tmp_path: "{{ lxc_semaphore_home }}/tmp"
+lxc_semaphore_bin: /usr/bin/semaphore
+lxc_semaphore_port: 3000
+# The address the server binds; empty binds every interface.
+lxc_semaphore_interface: ""
+# The URL users reach the UI at when it sits behind a reverse proxy (Semaphore's
+# web_host); empty when the CT's own address is the URL.
+lxc_semaphore_web_host: ""
+lxc_semaphore_non_admin_can_create_project: false
+# Any further config.json keys (https://docs.semaphoreui.com/administration-guide/configuration/),
+# deep-merged over the ones this role writes.
+lxc_semaphore_extra_config: {}
+# The markers server asserts before configuring anything: the baseline
+# lxc_guest writes and the template marker the bake writes.
+lxc_semaphore_baseline_marker: "{{ lxc_baseline_marker_path }}"
+lxc_semaphore_template_marker: "{{ lxc_template_marker_path }}"
+
+# --- The administrator and the keys (SECRET): the vaulted secrets file -------
+# server refuses to run while any of the four below is empty; they come from
+# inventory/secrets/semaphore.yml passed with -e (never the inventory). The
+# administrator is created once, when absent; its password is managed in the
+# UI afterwards and never rewritten by this role.
+lxc_semaphore_admin_login: admin
+lxc_semaphore_admin_name: "Semaphore Admin"
+lxc_semaphore_admin_email: "admin@localhost"
+lxc_semaphore_admin_password: ""
+# Three independent keys, each `head -c32 /dev/urandom | base64`: the session
+# cookie signing key, the cookie encryption key and the key the stored access
+# keys (SSH keys, passwords) are encrypted with. Changing the last one after
+# first use makes every stored key unreadable.
+lxc_semaphore_cookie_hash: ""
+lxc_semaphore_cookie_encryption: ""
+lxc_semaphore_access_key_encryption: ""
