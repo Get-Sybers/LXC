@@ -1,5 +1,5 @@
 ---
-major_changes:
+changed:
   - >-
     The Templates workflow is manual only. It no longer bakes on pull
     requests, pushes or tags: a run is started by hand for one template,
