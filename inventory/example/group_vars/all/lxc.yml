@@ -10,7 +10,7 @@ lxc_node: "{{ groups['lxc_hosts'] | first }}"
 # role names its own released template (templates/<name>), so this is the
 # fallback only; it is fetched into the cache by lxc_guest when a URL and a
 # sha256 are set, and never fetched otherwise.
-lxc_template: "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+lxc_template: "local:vztmpl/debian-13-standard_13.6-1_amd64.tar.zst"
 lxc_template_url: ""
 lxc_template_checksum: ""
 # Where the `local` storage keeps templates (local:vztmpl/<file>).

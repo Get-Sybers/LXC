@@ -14,7 +14,12 @@ decide what the baked image contains are:
 When any of them differs between the base and the head commit, the manifest's
 ``lxc_template_version`` must be a literal ``X.Y.Z`` at the head and must have
 moved forward from the base (a new manifest releases as whatever it says).
-The Templates workflow's refusal to overwrite an existing release is the
+The repository's tags say what "released" means: a version whose
+``<name>/v<version>`` tag exists has shipped and is immutable, so it is never
+accepted as the head's version; a base version that was never tagged may be
+renumbered instead, backwards included, since nothing shipped under it. (The
+full-history checkout the Version Gate runs on carries every tag.) The
+Templates workflow's refusal to overwrite an existing release is the
 backstop; this is the gate, so a changed image never reaches ``main`` under a
 version that is already published.
 
@@ -71,12 +76,21 @@ def semver(v: str) -> tuple[int, int, int] | None:
     return tuple(int(x) for x in m.groups()) if m else None  # type: ignore[return-value]
 
 
-def judge(name: str, old_manifest: str | None, new_manifest: str, hits: list[str]) -> tuple[bool, str]:
-    """(ok, message) for one template whose watched files changed."""
+def released_tags() -> frozenset[str]:
+    """Every <name>/v<version> tag in this clone: the template versions that shipped."""
+    return frozenset(tag for tag in git("tag", "-l", "*/v*").splitlines() if tag)
+
+
+def judge(name: str, old_manifest: str | None, new_manifest: str, hits: list[str],
+          tags: frozenset[str] = frozenset()) -> tuple[bool, str]:
+    """(ok, message) for one template whose watched files changed; tags are the released versions."""
     new = manifest_version(new_manifest)
     if new is None or semver(new) is None:
         return False, (f"templates/{name}/template.yml: lxc_template_version must be a literal X.Y.Z "
                        f"(got {new!r}); it is this repository's release of the template, not the service's version")
+    if f"{name}/v{new}" in tags:
+        return False, (f"templates/{name}/template.yml: {name}/v{new} is already released and a released "
+                       f"template is immutable — pick a version that was never published")
     if old_manifest is None:
         return True, f"templates/{name}: new template, releases as {name}/v{new}"
     old = manifest_version(old_manifest)
@@ -86,7 +100,10 @@ def judge(name: str, old_manifest: str | None, new_manifest: str, hits: list[str
         return False, (f"templates/{name}/template.yml: the image changed ({', '.join(hits)}) but "
                        f"lxc_template_version stayed {old} — raise it in this PR; {name}/v{old} is immutable")
     if semver(new) < semver(old):  # type: ignore[operator]
-        return False, f"templates/{name}/template.yml: lxc_template_version went backwards: {old} -> {new}"
+        if f"{name}/v{old}" in tags:
+            return False, (f"templates/{name}/template.yml: lxc_template_version went backwards from the "
+                           f"released {old} to {new}")
+        return True, f"templates/{name}: {old} -> {new} (renumbered: {name}/v{old} was never released)"
     return True, f"templates/{name}: {old} -> {new}"
 
 
@@ -94,6 +111,7 @@ def check(base: str, head: str) -> int:
     changed = [line for line in git("diff", "--name-only", base, head).splitlines() if line]
     manifests = [line for line in git("ls-tree", "-r", "--name-only", head, "templates/").splitlines()
                  if re.fullmatch(r"templates/[^/]+/template\.yml", line)]
+    tags = released_tags()
     fail = 0
     for path in sorted(manifests):
         name = path.split("/")[1]
@@ -102,7 +120,7 @@ def check(base: str, head: str) -> int:
         if not hits:
             print(f"templates/{name}: unchanged")
             continue
-        ok, msg = judge(name, show(base, path), new_manifest, hits)
+        ok, msg = judge(name, show(base, path), new_manifest, hits, tags)
         print(("" if ok else "::error file=" + path + "::") + msg)
         fail |= not ok
     return int(fail)
@@ -110,17 +128,22 @@ def check(base: str, head: str) -> int:
 
 def self_test() -> int:
     base = 'lxc_template_name: x\nlxc_template_version: "1.0.0"\nlxc_template_bake:\n  - role: get_sybers.lxc.lxc_guest\n  - role: get_sybers.lxc.lxc_x\n'
+    shipped = frozenset({"x/v1.0.0"})
+    none = frozenset()
     cases = [
-        (None, base, ["templates/x/template.yml"], True),                       # new template
-        (base, base, ["templates/x/README.md"], False),                         # changed, not raised
-        (base, base.replace("1.0.0", "1.0.1"), ["roles/lxc_x/tasks/bake.yml"], True),
-        (base, base.replace("1.0.0", "0.9.0"), ["templates/x/template.yml"], False),  # backwards
-        (base, base.replace('"1.0.0"', '"{{ lxc_x_version }}"'), ["templates/x/template.yml"], False),  # not literal
-        (base.replace('"1.0.0"', '"{{ lxc_x_version }}"'), base, ["templates/x/template.yml"], True),  # base unpinned
+        (None, base, ["templates/x/template.yml"], none, True),                       # new template
+        (base, base, ["templates/x/README.md"], none, False),                         # changed, not raised
+        (base, base.replace("1.0.0", "1.0.1"), ["roles/lxc_x/tasks/bake.yml"], none, True),
+        (base, base.replace("1.0.0", "0.9.0"), ["templates/x/template.yml"], shipped, False),  # backwards from a release
+        (base, base.replace("1.0.0", "0.9.0"), ["templates/x/template.yml"], none, True),  # renumbered, never released
+        (base, base.replace("1.0.0", "1.0.1"), ["templates/x/template.yml"], frozenset({"x/v1.0.1"}), False),  # already released
+        (None, base, ["templates/x/template.yml"], shipped, False),                   # new manifest under a released version
+        (base, base.replace('"1.0.0"', '"{{ lxc_x_version }}"'), ["templates/x/template.yml"], none, False),  # not literal
+        (base.replace('"1.0.0"', '"{{ lxc_x_version }}"'), base, ["templates/x/template.yml"], none, True),  # base unpinned
     ]
     bad = 0
-    for old, new, hits, expect in cases:
-        ok, msg = judge("x", old, new, hits)
+    for old, new, hits, tags, expect in cases:
+        ok, msg = judge("x", old, new, hits, tags)
         print(("ok  " if ok == expect else "BAD ") + msg)
         bad |= ok != expect
     watched = watched_paths("x", base)

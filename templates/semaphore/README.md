@@ -9,9 +9,9 @@ entry point.
 
 | | |
 | --- | --- |
-| Release tag | `semaphore/v<template release>` (`semaphore/v1.0.0`; the service version is in the marker's `service=`) |
+| Release tag | `semaphore/v<template release>` (`semaphore/v0.1.0`; the service version is in the marker's `service=`) |
 | Artifact | `debian-13-semaphore_<version>_<arch>.tar.zst` + `.sha256`, cosign bundle, provenance attestation |
-| Base | `debian-13-standard_13.1-2_amd64.tar.zst` from `download.proxmox.com` |
+| Base | `debian-13-standard_13.6-1_amd64.tar.zst` from `download.proxmox.com` |
 | Bake steps | `lxc_guest` `baseline`, then `lxc_semaphore` `bake` |
 | Consumed by | `inventory/group_vars/all/semaphore.yml` (`lxc_semaphore_template_checksum`), `inventory/secrets/semaphore.yml`, `playbooks/deploy-semaphore.yml` |
 
