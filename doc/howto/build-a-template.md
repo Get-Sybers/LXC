@@ -99,5 +99,12 @@ python3 scripts/base_template_checksum.py debian-13-standard_13.2-1_amd64.tar.zs
 Bake locally the same way the workflow does, from the repository root as root, with the pinned collections on the collections path:
 
 ```sh
-sudo env ANSIBLE_COLLECTIONS_PATH=... ansible-playbook playbooks/bake-template.yml -e lxc_template_dir=$PWD/templates/op-connect
+sudo env ANSIBLE_COLLECTIONS_PATH=... ansible-playbook playbooks/bake-template.yml \
+  -e lxc_template_dir=$PWD/templates/op-connect -e lxc_template_workdir=$PWD/build/op-connect
 ```
+
+A failed step unmounts the kernel filesystems the play mounted under the work rootfs (`proc`, `sys`, a bind of the build host's
+`/dev`, `dev/pts`) and leaves the rootfs in place to inspect. Only an interrupted run can leave them mounted: check `findmnt` for
+mounts under a work tree before removing it, because the host's `/dev` is bound there. The download step accepts a base file that is
+already in `<workdir>/base/` at the pinned checksum, so a node's own template cache (`/var/lib/vz/template/cache/`) can stand in for
+`download.proxmox.com`.
