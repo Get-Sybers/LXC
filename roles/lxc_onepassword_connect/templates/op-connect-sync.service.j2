@@ -13,6 +13,30 @@ Environment=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ExecStart={{ lxc_onepassword_connect_bin_dir }}/connect-sync
 Restart=always
 RestartSec=5
+# Least-privilege sandbox (offsets the nesting AppArmor profile; premise rule 11).
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths={{ lxc_onepassword_connect_data_dir }}
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+UMask=0077
 
 [Install]
 WantedBy=multi-user.target

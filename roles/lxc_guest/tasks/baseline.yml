@@ -4,6 +4,10 @@
 # SSH server; it runs its service natively under systemd, so it carries no
 # container runtime. The marker written last is what every service role asserts
 # before it configures anything.
+# The purge list (vars/main.yml) is the appliance surface floor: no SSH
+# server, and no legacy or unused network services (local MTA, mDNS, RPC,
+# inetd, telnet and friends) — removed if present, a no-op otherwise.
+# Raise lxc_guest_baseline_version when it changes; the marker records it.
 - name: "baseline | Purge the SSH server and anything this guest must never carry"
   ansible.builtin.apt:
     name: "{{ lxc_guest_baseline_purge_packages + lxc_guest_baseline_extra_purge }}"

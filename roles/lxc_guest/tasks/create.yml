@@ -49,6 +49,14 @@
   delay: 1
   changed_when: false
   check_mode: false
+- name: "create | Drop extra Linux capabilities on the container (defense in depth)"
+  ansible.builtin.lineinfile:
+    path: "/etc/pve/lxc/{{ lxc_guest_vmid }}.conf"
+    regexp: '^lxc\.cap\.drop:'
+    line: "lxc.cap.drop: {{ lxc_guest_cap_drop | join(' ') }}"
+    insertafter: EOF
+    create: false
+  when: lxc_guest_cap_drop | length > 0
 - name: "create | Start the container"
   ansible.builtin.command:
     argv: [pct, start, "{{ lxc_guest_vmid }}"]

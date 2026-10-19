@@ -71,6 +71,23 @@
           - "'enable: 1' in (__lxc_guest_fw['content'] | b64decode)"
         fail_msg: "/etc/pve/firewall/{{ lxc_guest_vmid }}.fw is not default-deny inbound."
         quiet: true
+- name: "postcheck | Extra capabilities are dropped"
+  when: lxc_guest_cap_drop | length > 0
+  block:
+    - name: "postcheck | Read the CT config file"
+      ansible.builtin.slurp:
+        path: "/etc/pve/lxc/{{ lxc_guest_vmid }}.conf"
+      register: __lxc_guest_conf
+    - name: "postcheck | lxc.cap.drop names the hardened set"
+      ansible.builtin.assert:
+        that:
+          - "'lxc.cap.drop:' in (__lxc_guest_conf['content'] | b64decode)"
+          - >-
+            lxc_guest_cap_drop
+            | reject('in', (__lxc_guest_conf['content'] | b64decode))
+            | list | length == 0
+        fail_msg: "/etc/pve/lxc/{{ lxc_guest_vmid }}.conf is missing the lxc.cap.drop hardening."
+        quiet: true
 - name: "postcheck | It carries every requested feature"
   ansible.builtin.assert:
     that: >-

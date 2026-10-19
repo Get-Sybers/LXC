@@ -139,6 +139,12 @@ argument_specs:
         default: ACCEPT
         choices: [ACCEPT, REJECT, DROP]
         description: "Host output policy when managing the datacenter firewall."
+      lxc_guest_cap_drop:
+        type: list
+        elements: str
+        required: false
+        default: [sys_module, sys_rawio, sys_time, sys_boot, mac_admin, mac_override, wake_alarm]
+        description: "Linux capabilities dropped from the container bounding set (lxc.cap.drop). sys_admin is kept so the guest's systemd sandboxes work under nesting."
       lxc_guest_baseline_marker: &lxc_guest_baseline_marker
         type: str
         required: false

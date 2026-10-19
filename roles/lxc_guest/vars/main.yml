@@ -12,11 +12,30 @@ lxc_guest_description_marker: "Ansible-managed: get_sybers.lxc.lxc_guest"
 # preflight exists to refuse).
 lxc_guest_unprivileged: true
 # Bumped when the baseline changes what it enforces; the marker records it.
-lxc_guest_baseline_version: 1
+lxc_guest_baseline_version: 2
 # The guest is reached only through `pct exec` from the node: no SSH daemon.
 lxc_guest_baseline_purge_packages:
   - openssh-server
   - openssh-sftp-server
+  # Legacy / unused network surface — purged if present, a no-op otherwise.
+  # None of the services (op-connect, semaphore, distrobuilder) use these.
+  - telnet
+  - telnetd
+  - ftp
+  - tnftp
+  - rsh-client
+  - rsh-redone-client
+  - nis
+  - talk
+  - finger
+  - xinetd
+  - openbsd-inetd
+  - inetutils-inetd
+  - avahi-daemon
+  - rpcbind
+  - nfs-common
+  - exim4-base
+  - exim4-daemon-light
 # A container runtime inside the guest would need nesting and a wider syscall
 # surface; the premise runs services natively under systemd instead. Presence
 # is refused, not removed — it means someone put it there on purpose.
