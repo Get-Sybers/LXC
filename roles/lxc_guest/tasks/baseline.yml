@@ -52,6 +52,7 @@
     group: root
     mode: "0755"
   when: lxc_guest_firewall | bool
+  notify: Reload nftables
 - name: "baseline | Note whether systemd is running (not the bake chroot)"
   ansible.builtin.stat:
     path: /run/systemd/system
