@@ -11,7 +11,7 @@
     input_policy: "{{ lxc_guest_firewall_host_input_policy }}"
     output_policy: "{{ lxc_guest_firewall_host_output_policy }}"
   when: lxc_guest_cluster_firewall_manage | bool
-- name: "firewall | Write the guest's default-deny firewall — /etc/pve/firewall/{{ lxc_guest_vmid }}.fw"
+- name: "firewall | Write the default-deny firewall for CT {{ lxc_guest_vmid }}"
   ansible.builtin.template:
     src: guest-firewall.fw.j2
     dest: "/etc/pve/firewall/{{ lxc_guest_vmid }}.fw"
