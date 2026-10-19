@@ -1,0 +1,9 @@
+---
+added:
+  - >-
+    New ``lxc_velociraptor`` role, ``velociraptor`` template and
+    ``deploy-velociraptor.yml`` play: a Velociraptor DFIR server as a native,
+    least-privilege ``systemd`` service in a hardened, in-guest-firewalled,
+    unprivileged LXC, from the official release binary verified against its
+    pinned checksum, with a self-signed CA and the GUI administrator seeded
+    from the vaulted secrets file.

@@ -1,0 +1,28 @@
+---
+- name: "verify | Probe the Velociraptor GUI (authenticated; self-signed TLS)"
+  ansible.builtin.uri:
+    url: "https://127.0.0.1:{{ lxc_velociraptor_gui_port }}/app/index.html"
+    method: GET
+    url_username: "{{ lxc_velociraptor_admin_user }}"
+    url_password: "{{ lxc_velociraptor_admin_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    status_code: [200]
+  register: __lxc_velociraptor_verify
+  until: (__lxc_velociraptor_verify.status | default(-1)) == 200
+  retries: 20
+  delay: 3
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  no_log: true
+- name: "verify | Assert velociraptor is healthy"
+  ansible.builtin.assert:
+    that:
+      - (__lxc_velociraptor_verify.status | default(-1)) == 200
+    fail_msg: >-
+      velociraptor did not answer with HTTP 200 at
+      https://127.0.0.1:{{ lxc_velociraptor_gui_port }}/app/index.html.
+      Inspect `journalctl -u velociraptor` inside the container.
+    success_msg: "velociraptor is healthy (GUI returned HTTP 200 on the admin login)."
+    quiet: true

@@ -1,0 +1,100 @@
+---
+# --- Placement of the Velociraptor LXC (per site; see README) ---------------
+# Handed to lxc_guest by container.yml / remove.yml. The node defaults to the
+# collection variable the inventory defines (standards §4d).
+lxc_velociraptor_node: "{{ lxc_node }}"
+# The CT id: required, no safe default. lxc_guest refuses 0; the inventory
+# (group_vars/all/velociraptor.yml) sets it.
+lxc_velociraptor_vmid: 0
+lxc_velociraptor_hostname: velociraptor
+# This repository's release of the velociraptor template (templates/velociraptor/
+# template.yml sets the same X.Y.Z for the bake): it names the artifact, the
+# release tag and the template marker, and server refuses a guest baked at
+# another. Raised with every change to the image; the service version below is
+# what the image carries. lxc_guest fetches the template into the node's cache
+# by the checksum the inventory pins; an empty checksum is refused.
+lxc_velociraptor_template_version: "0.1.0"
+lxc_velociraptor_template_file: >-
+  debian-13-velociraptor_{{ lxc_velociraptor_template_version }}_{{ lxc_velociraptor_arch }}.tar.zst
+lxc_velociraptor_template: "local:vztmpl/{{ lxc_velociraptor_template_file }}"
+lxc_velociraptor_template_url: >-
+  {{ lxc_template_release_base }}/velociraptor/v{{ lxc_velociraptor_template_version }}/{{ lxc_velociraptor_template_file }}
+lxc_velociraptor_template_checksum: ""
+lxc_velociraptor_storage: "{{ lxc_storage }}"
+# Velociraptor keeps every client's files and the collected hunts in its
+# datastore, so the rootfs is sized for a lab's worth of collection.
+lxc_velociraptor_rootfs_gb: 16
+lxc_velociraptor_cores: 2
+lxc_velociraptor_memory_mb: 2048
+# Full Proxmox net0 string. DHCP on the mgmt bridge by default; for a static
+# address use e.g. "name=eth0,bridge=vmbr0,ip=192.0.2.170/24,gw=192.0.2.1".
+lxc_velociraptor_net0: "name=eth0,bridge={{ lxc_bridge }},ip=dhcp"
+lxc_velociraptor_nameserver: ""
+# Debian 13's systemd 257 needs nested namespaces; the CT stays unprivileged.
+lxc_velociraptor_features: ["nesting=1"]
+lxc_velociraptor_onboot: true
+lxc_velociraptor_pool: ""
+# The play-inventory group the running CT is added to (the guest-side plays
+# target it).
+lxc_velociraptor_group: velociraptor
+
+# --- Velociraptor version + binary ------------------------------------------
+# The version and arch name the released template; templates/velociraptor/
+# template.yml sets the same values for the bake, so the image and the deploy
+# agree. Velociraptor ships one Go binary per release, gzipped; the pinned
+# checksum is the .gz asset's sha256 (the release publishes no checksums file,
+# so it is computed from the asset itself). Raise the three together.
+lxc_velociraptor_version: "0.77.3"
+lxc_velociraptor_arch: amd64
+lxc_velociraptor_release_base: "https://github.com/Velocidex/velociraptor/releases/download"
+lxc_velociraptor_binary_file: "velociraptor-v{{ lxc_velociraptor_version }}-linux-{{ lxc_velociraptor_arch }}.gz"
+lxc_velociraptor_binary_url: "{{ lxc_velociraptor_release_base }}/v{{ lxc_velociraptor_version }}/{{ lxc_velociraptor_binary_file }}"
+lxc_velociraptor_binary_checksum: "sha256:c2c4eb585f16b622cd57de04995a7a13c076ee455bc2a828fd9243cec2ccfed8"
+# gzip (base image) unpacks the .gz; ca-certificates is for the binary's own
+# outbound TLS. Nothing else is baked in: Velociraptor is self-contained.
+lxc_velociraptor_bake_packages:
+  - ca-certificates
+lxc_velociraptor_stage_dir: /var/tmp/velociraptor-bake
+
+# --- Service layout inside the CT -------------------------------------------
+lxc_velociraptor_user: velociraptor
+# The datastore (FileBaseDataStore) and the service user's home are one tree:
+# the clients' files, the hunts and the server logs all live under it.
+lxc_velociraptor_datastore: /var/lib/velociraptor
+lxc_velociraptor_config_dir: /etc/velociraptor
+lxc_velociraptor_config_file: "{{ lxc_velociraptor_config_dir }}/server.config.yaml"
+lxc_velociraptor_bin: /usr/local/bin/velociraptor
+# The GUI (analysts' browser) and the client frontend are reachable; the API
+# and the monitoring listener stay on loopback. The in-guest firewall opens
+# only what lxc_velociraptor_firewall_allow lists.
+lxc_velociraptor_gui_port: 8889
+lxc_velociraptor_gui_bind: "0.0.0.0"
+lxc_velociraptor_frontend_port: 8000
+lxc_velociraptor_frontend_bind: "0.0.0.0"
+lxc_velociraptor_api_port: 8001
+lxc_velociraptor_api_bind: "127.0.0.1"
+lxc_velociraptor_monitoring_port: 8003
+lxc_velociraptor_monitoring_bind: "127.0.0.1"
+# Inbound ports the in-guest firewall opens (default-deny otherwise): the GUI
+# and the client frontend. The API and monitoring ports stay loopback-only.
+lxc_velociraptor_firewall_allow:
+  - { proto: tcp, port: "{{ lxc_velociraptor_gui_port }}", comment: "Velociraptor GUI" }
+  - { proto: tcp, port: "{{ lxc_velociraptor_frontend_port }}", comment: "Velociraptor client frontend" }
+# The hostname or address analysts and clients reach the server at: it fills
+# the GUI public_url and the clients' server_urls in the generated config. Set
+# it to the CT's DNS name or address in the inventory; the default is the
+# hostname, which only resolves where that name does.
+lxc_velociraptor_public_hostname: "{{ lxc_velociraptor_hostname }}"
+# The markers server asserts before configuring anything: the baseline
+# lxc_guest writes and the template marker the bake writes.
+lxc_velociraptor_baseline_marker: "{{ lxc_baseline_marker_path }}"
+lxc_velociraptor_template_marker: "{{ lxc_template_marker_path }}"
+
+# --- The GUI administrator (SECRET): the vaulted secrets file ---------------
+# server refuses to run while the password is empty; it comes from the vaulted
+# inventory/secrets/velociraptor.yml passed with -e (never the inventory;
+# inventory/secrets/README.md shows the file). The administrator is created
+# once, when absent; its password is managed in the GUI afterwards and never
+# rewritten by this role.
+lxc_velociraptor_admin_user: admin
+lxc_velociraptor_admin_password: ""

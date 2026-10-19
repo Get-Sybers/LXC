@@ -1,0 +1,103 @@
+---
+# Runs INSIDE the build rootfs over the chroot connection (playbooks/
+# bake-template.yml). Everything that is image content and nothing that is site
+# state: no configuration, no datastore contents, no administrator, no service
+# start. The unit is enabled by creating the multi-user.target.wants link
+# directly — exactly what `systemctl enable` does for WantedBy=multi-user.target
+# — because systemd is not running in a chroot.
+- name: "bake | Install the packages baked beside the binary"
+  ansible.builtin.apt:
+    name: "{{ lxc_velociraptor_bake_packages }}"
+    state: present
+    update_cache: true
+- name: "bake | The unprivileged service user"
+  ansible.builtin.user:
+    name: "{{ lxc_velociraptor_user }}"
+    home: "{{ lxc_velociraptor_datastore }}"
+    system: true
+    create_home: true
+    shell: /usr/sbin/nologin
+- name: "bake | The configuration directory (root-owned; the service only reads it)"
+  ansible.builtin.file:
+    path: "{{ lxc_velociraptor_config_dir }}"
+    state: directory
+    owner: root
+    group: "{{ lxc_velociraptor_user }}"
+    mode: "0750"
+- name: "bake | The datastore directory"
+  ansible.builtin.file:
+    path: "{{ lxc_velociraptor_datastore }}"
+    state: directory
+    owner: "{{ lxc_velociraptor_user }}"
+    group: "{{ lxc_velociraptor_user }}"
+    mode: "0750"
+- name: "bake | The staging directory"
+  ansible.builtin.file:
+    path: "{{ lxc_velociraptor_stage_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+- name: "bake | Download the Velociraptor binary (gzipped) and verify it against the pinned checksum"
+  ansible.builtin.get_url:
+    url: "{{ lxc_velociraptor_binary_url }}"
+    dest: "{{ lxc_velociraptor_stage_dir }}/{{ lxc_velociraptor_binary_file }}"
+    checksum: "{{ lxc_velociraptor_binary_checksum }}"
+    owner: root
+    group: root
+    mode: "0644"
+- name: "bake | Unpack the binary (keep the verified .gz)"
+  ansible.builtin.command:
+    argv:
+      - gunzip
+      - --keep
+      - --force
+      - "{{ lxc_velociraptor_stage_dir }}/{{ lxc_velociraptor_binary_file }}"
+    creates: "{{ lxc_velociraptor_stage_dir }}/{{ lxc_velociraptor_binary_file | regex_replace('\\.gz$', '') }}"
+- name: "bake | Install the binary"
+  ansible.builtin.copy:
+    src: "{{ lxc_velociraptor_stage_dir }}/{{ lxc_velociraptor_binary_file | regex_replace('\\.gz$', '') }}"
+    dest: "{{ lxc_velociraptor_bin }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+- name: "bake | Read the installed version"
+  ansible.builtin.command:
+    argv: ["{{ lxc_velociraptor_bin }}", version]
+  register: __lxc_velociraptor_installed
+  changed_when: false
+- name: "bake | The installed binary is the pinned release"
+  ansible.builtin.assert:
+    that: __lxc_velociraptor_installed.stdout is search('(?m)^version:\s*' ~ (lxc_velociraptor_version | regex_escape) ~ '\s*$')
+    fail_msg: >-
+      {{ lxc_velociraptor_bin }} does not report version {{ lxc_velociraptor_version }}:
+      the binary at {{ lxc_velociraptor_binary_url }} is not the release the
+      manifest names. Reported:
+      {{ __lxc_velociraptor_installed.stdout | regex_search('(?m)^version:.*$') | default('<no version line>') }}.
+    quiet: true
+- name: "bake | Install the velociraptor systemd unit"
+  ansible.builtin.template:
+    src: velociraptor.service.j2
+    dest: /etc/systemd/system/velociraptor.service
+    owner: root
+    group: root
+    mode: "0644"
+- name: "bake | The multi-user.target.wants directory"
+  ansible.builtin.file:
+    path: /etc/systemd/system/multi-user.target.wants
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+- name: "bake | Enable the unit for multi-user.target"
+  ansible.builtin.file:
+    src: /etc/systemd/system/velociraptor.service
+    dest: /etc/systemd/system/multi-user.target.wants/velociraptor.service
+    state: link
+    owner: root
+    group: root
+- name: "bake | Remove the staging directory"
+  ansible.builtin.file:
+    path: "{{ lxc_velociraptor_stage_dir }}"
+    state: absent

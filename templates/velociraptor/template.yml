@@ -1,0 +1,35 @@
+---
+# The Velociraptor DFIR server template. Loaded by playbooks/bake-template.yml;
+# every input the bake reads is declared here and nowhere else.
+lxc_template_name: velociraptor
+# The Velociraptor release baked in, and this repository's release of the
+# template (X.Y.Z): the artifact, the release tag (velociraptor/v<version>) and
+# the template marker carry the latter. Raise lxc_template_version in every PR
+# that changes the image — a new Velociraptor release, a changed bake (the
+# Version Gate refuses the PR otherwise); a released version is immutable.
+# Velociraptor publishes no checksums file, so the pin is the sha256 of the
+# release's gzipped linux-amd64 asset itself (velociraptor-v<version>-linux-amd64.gz);
+# the bake refuses a binary that does not match it.
+lxc_velociraptor_version: "0.77.3"
+lxc_velociraptor_arch: amd64
+lxc_velociraptor_binary_checksum: "sha256:c2c4eb585f16b622cd57de04995a7a13c076ee455bc2a828fd9243cec2ccfed8"
+lxc_template_version: "0.1.0"
+lxc_template_service_version: "{{ lxc_velociraptor_version }}"
+lxc_template_arch: "{{ lxc_velociraptor_arch }}"
+lxc_template_output: "debian-13-{{ lxc_template_name }}_{{ lxc_template_version }}_{{ lxc_template_arch }}.tar.zst"
+# The stock Proxmox system template the bake starts from, over plain HTTP as
+# Proxmox serves it (the checksum is the verification), and its sha512 as
+# published in Proxmox's own signed index, read from a node's pveam-verified copy:
+#   python3 scripts/base_template_checksum.py debian-13-standard_13.6-1_amd64.tar.zst
+# The bake refuses to run while the checksum is empty.
+lxc_template_base_url: "http://download.proxmox.com/images/system/debian-13-standard_13.6-1_amd64.tar.zst"
+lxc_template_base_checksum: >-
+  sha512:4c0c27ca6ceab5ef0b84db57825a00f26157ef1854bafe97297813e1cbe8ecb8cc9c453cab6b3b0efe1ba193a50c47ece1e41d950e411b8730b835b71e9e754b
+# The role entry points run inside the rootfs, in order, over the chroot
+# connection. The guest baseline first (no sshd, no container runtime, the
+# baseline marker), then the service's chroot-safe install.
+lxc_template_bake:
+  - role: get_sybers.lxc.lxc_guest
+    tasks_from: baseline
+  - role: get_sybers.lxc.lxc_velociraptor
+    tasks_from: bake

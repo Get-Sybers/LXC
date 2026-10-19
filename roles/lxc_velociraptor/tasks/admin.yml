@@ -1,0 +1,42 @@
+---
+# The GUI administrator is created once, when the login is absent. Velociraptor
+# writes users straight into the datastore (no running server needed), as the
+# service user. `user add` on an existing login resets the password, so it is
+# gated on `user show` reporting the user absent; the password is managed in
+# the GUI afterwards and never rewritten here.
+- name: "admin | Check whether the administrator exists"
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - "{{ lxc_velociraptor_user }}"
+      - --
+      - "{{ lxc_velociraptor_bin }}"
+      - --config
+      - "{{ lxc_velociraptor_config_file }}"
+      - user
+      - show
+      - "{{ lxc_velociraptor_admin_user }}"
+  register: __lxc_velociraptor_user_show
+  changed_when: false
+  failed_when: false
+  no_log: true
+- name: "admin | Create the administrator when absent (secret: the password)"
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - "{{ lxc_velociraptor_user }}"
+      - --
+      - "{{ lxc_velociraptor_bin }}"
+      - --config
+      - "{{ lxc_velociraptor_config_file }}"
+      - user
+      - add
+      - --role
+      - administrator
+      - "{{ lxc_velociraptor_admin_user }}"
+      - "{{ lxc_velociraptor_admin_password }}"
+  when: __lxc_velociraptor_user_show.rc != 0
+  changed_when: true
+  no_log: true

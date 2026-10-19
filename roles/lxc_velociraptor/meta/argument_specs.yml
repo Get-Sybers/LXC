@@ -1,0 +1,299 @@
+---
+argument_specs:
+  container:
+    short_description: "Ensure the Velociraptor LXC on the node through lxc_guest and add it to the play inventory."
+    description:
+      - >-
+        Runs on the Proxmox node (hosts: localhost, connection: local). Hands
+        this role's placement inputs to get_sybers.lxc.lxc_guest, which
+        preflights, creates, starts, waits for and add_hosts the container into
+        lxc_velociraptor_group over proxmox_pct_remote.
+    options:
+      lxc_velociraptor_node:
+        type: str
+        required: false
+        description: "PVE node the CT is created on. Computed default: the collection variable lxc_node."
+      lxc_velociraptor_vmid:
+        type: int
+        required: false
+        default: 0
+        description: "CT id (VMID) for the Velociraptor container. Required in practice: lxc_guest refuses 0; the inventory sets it."
+      lxc_velociraptor_hostname:
+        type: str
+        required: false
+        default: "velociraptor"
+        description: "Hostname of the CT; also its key in the play inventory."
+      lxc_velociraptor_template_version:
+        type: str
+        required: false
+        default: "0.1.0"
+        description: >-
+          This repository's release of the velociraptor template (the manifest's lxc_template_version, X.Y.Z):
+          names the artifact and the tag; server refuses a guest baked at another.
+      lxc_velociraptor_template_file:
+        type: str
+        required: false
+        description: "File name of the released template. Computed default: debian-13-velociraptor_<version>_<arch>.tar.zst."
+      lxc_velociraptor_template:
+        type: str
+        required: false
+        description: "storage:vztmpl/<file> of the released velociraptor template. Computed default: local:vztmpl/<template_file>."
+      lxc_velociraptor_template_url:
+        type: str
+        required: false
+        description: >-
+          Where lxc_guest fetches the template when it is not in the node's cache.
+          Computed default: <lxc_template_release_base>/velociraptor/v<version>/<template_file>, the GitHub Release asset.
+      lxc_velociraptor_template_checksum:
+        type: str
+        required: false
+        default: ""
+        description: "sha256:<hex> of the released template (from its .sha256), pinned in the inventory. Required for a fetch; an empty value is refused."
+      lxc_velociraptor_storage:
+        type: str
+        required: false
+        description: "Storage for the CT rootfs. Computed default: the collection variable lxc_storage."
+      lxc_velociraptor_rootfs_gb:
+        type: int
+        required: false
+        default: 16
+      lxc_velociraptor_cores:
+        type: int
+        required: false
+        default: 2
+      lxc_velociraptor_memory_mb:
+        type: int
+        required: false
+        default: 2048
+      lxc_velociraptor_net0:
+        type: str
+        required: false
+        description: "Full Proxmox net0 spec. Computed default: DHCP on the collection variable lxc_bridge."
+      lxc_velociraptor_nameserver:
+        type: str
+        required: false
+        default: ""
+      lxc_velociraptor_features:
+        type: list
+        elements: str
+        required: false
+        default: ["nesting=1"]
+        description: "Container features; nesting=1 because Debian 13's systemd 257 needs it. The CT stays unprivileged."
+      lxc_velociraptor_onboot:
+        type: bool
+        required: false
+        default: true
+      lxc_velociraptor_pool:
+        type: str
+        required: false
+        default: ""
+      lxc_velociraptor_group:
+        type: str
+        required: false
+        default: velociraptor
+        description: "Play-inventory group the running CT is added to."
+  bake:
+    short_description: "Bake the Velociraptor image content into a build rootfs (chroot-safe; no configuration, no start)."
+    description:
+      - >-
+        Runs inside the build rootfs over community.general.chroot, from
+        playbooks/bake-template.yml. Creates the unprivileged service user and
+        its directories, downloads the official release binary (gzipped) and
+        refuses it unless it carries the pinned checksum, unpacks it to
+        /usr/local/bin, asserts its reported version, and writes the systemd
+        unit and its multi-user.target.wants link. Everything site-specific —
+        the generated config, the administrator, the first start — is left to
+        server.
+    options:
+      lxc_velociraptor_version:
+        type: str
+        required: false
+        default: "0.77.3"
+        description: "Velociraptor release to bake; names the template and the binary asset."
+      lxc_velociraptor_arch:
+        type: str
+        required: false
+        default: "amd64"
+      lxc_velociraptor_release_base:
+        type: str
+        required: false
+        default: "https://github.com/Velocidex/velociraptor/releases/download"
+      lxc_velociraptor_binary_file:
+        type: str
+        required: false
+        description: "The gzipped binary asset name. Computed default: velociraptor-v<version>-linux-<arch>.gz."
+      lxc_velociraptor_binary_url:
+        type: str
+        required: false
+        description: "Computed default: <release_base>/v<version>/<binary_file>."
+      lxc_velociraptor_binary_checksum:
+        type: str
+        required: false
+        default: "sha256:c2c4eb585f16b622cd57de04995a7a13c076ee455bc2a828fd9243cec2ccfed8"
+        description: "The .gz asset's sha256 (the release has no checksums file); a binary that does not match it is refused."
+      lxc_velociraptor_bake_packages:
+        type: list
+        elements: str
+        required: false
+        default: [ca-certificates]
+        description: "Debian packages baked in beside the binary."
+      lxc_velociraptor_stage_dir:
+        type: str
+        required: false
+        default: "/var/tmp/velociraptor-bake"
+      lxc_velociraptor_user:
+        type: str
+        required: false
+        default: "velociraptor"
+      lxc_velociraptor_datastore:
+        type: str
+        required: false
+        default: "/var/lib/velociraptor"
+      lxc_velociraptor_config_dir:
+        type: str
+        required: false
+        default: "/etc/velociraptor"
+      lxc_velociraptor_config_file:
+        type: str
+        required: false
+        default: "/etc/velociraptor/server.config.yaml"
+      lxc_velociraptor_bin:
+        type: str
+        required: false
+        default: "/usr/local/bin/velociraptor"
+  server:
+    short_description: "Configure and start Velociraptor inside a CT created from the released template."
+    description:
+      - >-
+        Runs inside the CT (over proxmox_pct_remote). Refuses a guest without
+        the lxc_guest baseline marker or without the velociraptor template
+        marker at this role's version, opens the service ports in the in-guest
+        firewall, generates server.config.yaml once (self-signed CA, the site
+        ports and URLs) if it is absent, creates the GUI administrator when
+        absent, enables and starts the baked unit, and verifies the GUI. It
+        installs nothing: the binary and the unit come from the template.
+    options:
+      lxc_velociraptor_template_version:
+        type: str
+        required: false
+        default: "0.1.0"
+        description: >-
+          This repository's release of the velociraptor template (the manifest's lxc_template_version, X.Y.Z):
+          names the artifact and the tag; server refuses a guest baked at another.
+      lxc_velociraptor_version:
+        type: str
+        required: false
+        default: "0.77.3"
+        description: "The release the template must carry; server refuses another."
+      lxc_velociraptor_user:
+        type: str
+        required: false
+        default: "velociraptor"
+      lxc_velociraptor_datastore:
+        type: str
+        required: false
+        default: "/var/lib/velociraptor"
+        description: "The FileBaseDataStore location and the service user's home."
+      lxc_velociraptor_config_dir:
+        type: str
+        required: false
+        default: "/etc/velociraptor"
+      lxc_velociraptor_config_file:
+        type: str
+        required: false
+        default: "/etc/velociraptor/server.config.yaml"
+      lxc_velociraptor_bin:
+        type: str
+        required: false
+        default: "/usr/local/bin/velociraptor"
+      lxc_velociraptor_gui_port:
+        type: int
+        required: false
+        default: 8889
+      lxc_velociraptor_gui_bind:
+        type: str
+        required: false
+        default: "0.0.0.0"
+        description: "Address the GUI binds; the in-guest firewall is what limits reachability."
+      lxc_velociraptor_frontend_port:
+        type: int
+        required: false
+        default: 8000
+      lxc_velociraptor_frontend_bind:
+        type: str
+        required: false
+        default: "0.0.0.0"
+        description: "Address the client frontend binds; the in-guest firewall is what limits reachability."
+      lxc_velociraptor_api_port:
+        type: int
+        required: false
+        default: 8001
+      lxc_velociraptor_api_bind:
+        type: str
+        required: false
+        default: "127.0.0.1"
+        description: "Address the gRPC API binds; loopback-only by default (not opened in the firewall)."
+      lxc_velociraptor_monitoring_port:
+        type: int
+        required: false
+        default: 8003
+      lxc_velociraptor_monitoring_bind:
+        type: str
+        required: false
+        default: "127.0.0.1"
+        description: "Address the monitoring listener binds; loopback-only by default (not opened in the firewall)."
+      lxc_velociraptor_firewall_allow:
+        type: list
+        elements: dict
+        required: false
+        default: []
+        description: "Inbound ports the in-guest firewall opens (default-deny otherwise). Each item: proto (tcp/udp, default tcp), port, optional comment."
+        options:
+          proto:
+            type: str
+            required: false
+            default: tcp
+          port:
+            type: int
+            required: true
+          comment:
+            type: str
+            required: false
+      lxc_velociraptor_public_hostname:
+        type: str
+        required: false
+        description: "Hostname/address that fills the GUI public_url and the clients' server_urls. Computed default: the CT hostname."
+      lxc_velociraptor_baseline_marker:
+        type: str
+        required: false
+        description: "Marker lxc_guest's baseline writes. Computed default: the collection variable lxc_baseline_marker_path."
+      lxc_velociraptor_template_marker:
+        type: str
+        required: false
+        description: "Marker the bake writes (name, version, base). Computed default: the collection variable lxc_template_marker_path."
+      lxc_velociraptor_admin_user:
+        type: str
+        required: false
+        default: "admin"
+        description: "The GUI administrator's login, created when absent."
+      lxc_velociraptor_admin_password:
+        type: str
+        required: false
+        default: ""
+        description: "SECRET. The administrator's initial password; required. Set once, managed in the GUI afterwards."
+  remove:
+    short_description: "Tear the Velociraptor LXC down through lxc_guest (opt-in: lxc_guest_confirm_destroy=true)."
+    description:
+      - "Placement inputs as for container; only node, vmid and hostname decide which CT is destroyed."
+    options:
+      lxc_velociraptor_node:
+        type: str
+        required: false
+      lxc_velociraptor_vmid:
+        type: int
+        required: false
+        default: 0
+      lxc_velociraptor_hostname:
+        type: str
+        required: false
+        default: "velociraptor"

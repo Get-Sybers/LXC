@@ -1,0 +1,139 @@
+---
+# Runs INSIDE the running CT over proxmox_pct_remote. The image content is
+# already there (tasks/bake.yml, in the released template); this does the
+# site-specific rest: the firewall drop-in, the generated configuration, the
+# administrator, the first start, the health check.
+- name: "server | Stat the lxc_guest baseline marker"
+  ansible.builtin.stat:
+    path: "{{ lxc_velociraptor_baseline_marker }}"
+  register: __lxc_velociraptor_baseline
+- name: "server | Refuse a guest that has not been through the hardened baseline"
+  ansible.builtin.assert:
+    that: __lxc_velociraptor_baseline.stat.exists
+    fail_msg: >-
+      {{ lxc_velociraptor_baseline_marker }} is absent, so this guest has not
+      been through get_sybers.lxc.lxc_guest's baseline (no SSH daemon, no
+      container runtime). The released velociraptor template carries it; a
+      guest created from anything else is not configured by this role.
+    quiet: true
+- name: "server | Open the service ports in the in-guest firewall"
+  ansible.builtin.template:
+    src: nftables-allow.nft.j2
+    dest: /etc/nftables.d/10-velociraptor.nft
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nftables
+  when: lxc_velociraptor_firewall_allow | length > 0
+- name: "server | Read the template marker"
+  ansible.builtin.slurp:
+    src: "{{ lxc_velociraptor_template_marker }}"
+  register: __lxc_velociraptor_tmpl
+  failed_when: false
+- name: "server | Parse the template marker"
+  ansible.builtin.set_fact:
+    __lxc_velociraptor_tmpl_fields: >-
+      {{ dict((__lxc_velociraptor_tmpl.content | default('') | b64decode).splitlines()
+              | select('search', '=') | map('split', '=', 1) | list) }}
+- name: "server | Refuse a guest that was not created from the velociraptor template"
+  ansible.builtin.assert:
+    that:
+      - __lxc_velociraptor_tmpl_fields['name'] | default('') == 'velociraptor'
+      - __lxc_velociraptor_tmpl_fields['version'] | default('') == lxc_velociraptor_template_version | string
+      - __lxc_velociraptor_tmpl_fields['service'] | default('') == lxc_velociraptor_version | string
+    fail_msg: >-
+      {{ lxc_velociraptor_template_marker }} says
+      name={{ __lxc_velociraptor_tmpl_fields['name'] | default('<absent>') }}
+      version={{ __lxc_velociraptor_tmpl_fields['version'] | default('<absent>') }}
+      service={{ __lxc_velociraptor_tmpl_fields['service'] | default('<absent>') }};
+      this role configures velociraptor {{ lxc_velociraptor_version }} from template
+      release {{ lxc_velociraptor_template_version }}. The binary is baked into
+      the released template (templates/velociraptor), never installed into a
+      running guest. Create the CT from the matching release, or set
+      lxc_velociraptor_version to the one it carries.
+    quiet: true
+- name: "server | Stat the baked binary"
+  ansible.builtin.stat:
+    path: "{{ lxc_velociraptor_bin }}"
+  register: __lxc_velociraptor_binary
+- name: "server | The baked binary is present"
+  ansible.builtin.assert:
+    that: __lxc_velociraptor_binary.stat.exists
+    fail_msg: >-
+      {{ lxc_velociraptor_bin }} is missing. The template marker matched but the
+      image is incomplete — rebuild and re-release it.
+    quiet: true
+- name: "server | The administrator login and password must have been provided"
+  ansible.builtin.assert:
+    that:
+      - lxc_velociraptor_admin_user | length > 0
+      - lxc_velociraptor_admin_password | length > 0
+    fail_msg: >-
+      lxc_velociraptor_admin_user and lxc_velociraptor_admin_password must be
+      set: pass the vaulted inventory/secrets/velociraptor.yml with -e
+      (inventory/secrets/README.md shows the variables).
+    quiet: true
+  no_log: true
+- name: "server | The configuration and datastore directories"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ lxc_velociraptor_user }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ lxc_velociraptor_config_dir }}", owner: root, mode: "0750" }
+    - { path: "{{ lxc_velociraptor_datastore }}", owner: "{{ lxc_velociraptor_user }}", mode: "0750" }
+  loop_control:
+    label: "{{ item.path }}"
+- name: "server | Is the server configuration already present?"
+  ansible.builtin.stat:
+    path: "{{ lxc_velociraptor_config_file }}"
+  register: __lxc_velociraptor_config_stat
+- name: "server | Build the site overlay for the generated configuration"
+  ansible.builtin.set_fact:
+    __lxc_velociraptor_merge: >-
+      {{ {
+        'Datastore': {'location': lxc_velociraptor_datastore, 'filestore_directory': lxc_velociraptor_datastore},
+        'Frontend': {'hostname': lxc_velociraptor_public_hostname, 'bind_address': lxc_velociraptor_frontend_bind, 'bind_port': lxc_velociraptor_frontend_port},
+        'GUI': {'bind_address': lxc_velociraptor_gui_bind, 'bind_port': lxc_velociraptor_gui_port,
+        'public_url': 'https://' ~ lxc_velociraptor_public_hostname ~ ':' ~ lxc_velociraptor_gui_port ~ '/app/index.html'},
+        'API': {'bind_address': lxc_velociraptor_api_bind, 'bind_port': lxc_velociraptor_api_port},
+        'Monitoring': {'bind_address': lxc_velociraptor_monitoring_bind, 'bind_port': lxc_velociraptor_monitoring_port},
+        'Client': {'server_urls': ['https://' ~ lxc_velociraptor_public_hostname ~ ':' ~ lxc_velociraptor_frontend_port ~ '/']},
+      } }}
+- name: "server | Generate the server configuration once (secret: it carries the CA private keys)"
+  ansible.builtin.command:
+    argv:
+      - "{{ lxc_velociraptor_bin }}"
+      - config
+      - generate
+      - --nobanner
+      - --merge
+      - "{{ __lxc_velociraptor_merge | to_json }}"
+  register: __lxc_velociraptor_generated
+  changed_when: true
+  no_log: true
+  when: not __lxc_velociraptor_config_stat.stat.exists
+- name: "server | Write server.config.yaml (secret: it carries the CA private keys)"
+  ansible.builtin.copy:
+    content: "{{ __lxc_velociraptor_generated.stdout }}\n"
+    dest: "{{ lxc_velociraptor_config_file }}"
+    owner: root
+    group: "{{ lxc_velociraptor_user }}"
+    mode: "0640"
+  no_log: true
+  notify: Restart Velociraptor
+  when: not __lxc_velociraptor_config_stat.stat.exists
+- name: "server | Ensure the administrator exists"
+  ansible.builtin.include_tasks: admin.yml
+- name: "server | Enable and start velociraptor"
+  ansible.builtin.systemd_service:
+    name: velociraptor
+    enabled: true
+    state: started
+    daemon_reload: true
+- name: "server | Apply any pending restart before verifying"
+  ansible.builtin.meta: flush_handlers
+- name: "server | Verify the GUI answers"
+  ansible.builtin.include_tasks: verify.yml

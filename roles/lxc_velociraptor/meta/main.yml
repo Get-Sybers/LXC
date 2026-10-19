@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: lxc_velociraptor
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    Deploy Velociraptor (the DFIR endpoint-visibility and collection server)
+    as a native systemd service in a hardened Debian LXC, from the official
+    single release binary verified against its pinned checksum, with a
+    self-signed CA. The container itself comes from lxc_guest.
+  company: Get-Sybers
+  license: AGPL-3.0-only
+  min_ansible_version: "2.19.0"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [velociraptor, dfir, forensics, proxmox, lxc]
+dependencies: []
