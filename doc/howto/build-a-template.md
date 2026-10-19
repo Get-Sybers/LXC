@@ -57,7 +57,7 @@ touches a credential. Everything site-specific stays in `server`, which runs in 
 - **A release is immutable.** A publish refuses a tag that already exists: the gate keeps a changed image from reaching `main` under a
   published version, and the publish refuses to overwrite one if it ever does.
 
-The collection's own releases are `v<version>` tags; the Galaxy publish workflow skips any tag with a `/` in it. Both tag shapes are
+The collection's own releases are `v<version>` tags; a template release is a `<name>/v<version>` tag. Both tag shapes are
 immutable under `.github/rulesets/tags.json`. The `templates` environment is created once in the repository settings (*Settings →
 Environments*): a required reviewer and no secrets.
 

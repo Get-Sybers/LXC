@@ -36,7 +36,7 @@ changed:
     guest is created only from a released template (``doc/reference/hardened-lxc-premise.md``), documented in
     ``doc/howto/build-a-template.md``.
   - >-
-    The Galaxy release workflow runs only for ``v<version>`` tags; template tags
-    (``<name>/v<version>``) are immutable under the tag ruleset alongside them.
+    Collection release tags (``v<version>``) and template release tags
+    (``<name>/v<version>``) are both immutable under the tag ruleset.
     ``community.general`` is pinned as a build-only collection (the chroot
     connection).

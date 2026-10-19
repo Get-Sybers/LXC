@@ -9,7 +9,7 @@ ways: through the API the service itself serves, and through the roles here over
 the detector runs on every pull request.
 
 The collection is used from a checkout on the Proxmox node (the node-side plays) or from anywhere that reaches a service's API (the
-client plays). It is published to Ansible Galaxy as `get_sybers.lxc`; its templates are published as GitHub Releases of this repository.
+client plays). It is installed from this repository as a git source (`get_sybers.lxc`, from the `galaxy.yml` at the repository root), not published to Ansible Galaxy; its templates are published as GitHub Releases of this repository.
 
 ---
 
