@@ -2,5 +2,6 @@ Unless mentioned otherwise in a specific file's header, all content in this
 project is released under the GNU Affero General Public License v3.0 only
 (see LICENSE, declared as AGPL-3.0-only in galaxy.yml).
 
-The list of authors and contributors can be retrieved from the git
-commit history.
+This project is authored and maintained by the Get-Sybers lab
+(https://github.com/get-sybers): the @get-sybers/owners and
+@get-sybers/maintainers teams (see MAINTAINERS and .github/CODEOWNERS).
