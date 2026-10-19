@@ -1,0 +1,8 @@
+---
+changed:
+  - >-
+    The default template versions now point to the hardened releases:
+    ``lxc_onepassword_connect_template_version`` 0.1.2,
+    ``lxc_semaphore_template_version`` 0.1.2 and
+    ``lxc_distrobuilder_template_version`` 0.1.3. Re-pin each site's
+    ``lxc_<service>_template_checksum`` to the new release's ``.sha256``.

@@ -16,7 +16,7 @@ lxc_onepassword_connect_hostname: op-connect
 # release tag and the template marker, and server refuses a guest baked at
 # another. Raised with every change to the image; the service version below
 # is what the image carries.
-lxc_onepassword_connect_template_version: "0.1.1"
+lxc_onepassword_connect_template_version: "0.1.2"
 lxc_onepassword_connect_template_file: >-
   debian-13-op-connect_{{ lxc_onepassword_connect_template_version }}_{{ lxc_onepassword_connect_arch }}.tar.zst
 lxc_onepassword_connect_template: "local:vztmpl/{{ lxc_onepassword_connect_template_file }}"
