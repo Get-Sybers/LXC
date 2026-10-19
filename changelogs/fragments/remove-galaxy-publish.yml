@@ -1,0 +1,8 @@
+---
+removed:
+  - >-
+    The Ansible Galaxy publish workflow (``.github/workflows/release.yml``) is
+    gone: the collection is no longer published to Galaxy. It is installed
+    straight from this repository as a git source (the ``galaxy.yml`` manifest
+    at the repository root), and the templates continue to ship as signed
+    GitHub Releases.

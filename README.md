@@ -13,11 +13,23 @@ Licence: `AGPL-3.0-only` (see [`LICENSE`](LICENSE), declared in [`galaxy.yml`](g
 
 ## Install
 
+This collection is not on Ansible Galaxy. Install it from this repository, which carries the `galaxy.yml` manifest at its root:
+
 ```sh
-ansible-galaxy collection install get_sybers.lxc
+ansible-galaxy collection install git+https://github.com/Get-Sybers/LXC.git
 ```
 
-Consumers pin an exact version in their own `requirements.yml`. This collection's own runtime dependencies are pinned in
+Consumers pin an exact version in their own `requirements.yml` as a git source:
+
+```yaml
+---
+collections:
+  - name: https://github.com/Get-Sybers/LXC.git
+    type: git
+    version: v0.1.0
+```
+
+This collection's own runtime dependencies are pinned in
 [`requirements.yml`](requirements.yml); the `galaxy.yml` bounds are what [`scripts/upgrade_pins.py`](scripts/upgrade_pins.py) raises within.
 
 ## Contents
@@ -128,4 +140,4 @@ runs every scenario that includes it); a change to anything the scenarios share 
 manual dispatch always run everything. The boundary check runs on every event.
 
 Every change that touches a plugin needs a fragment in [`changelogs/fragments/`](changelogs/fragments). Releases follow standard 04: merge the
-changelog, publish a GitHub release tagged `v<galaxy.yml version>`.
+changelog, tag a GitHub release `v<galaxy.yml version>`, the git ref consumers pin; nothing goes to Ansible Galaxy.
