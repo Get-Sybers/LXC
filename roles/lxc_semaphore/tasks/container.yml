@@ -21,6 +21,7 @@
     lxc_guest_net0: "{{ lxc_semaphore_net0 }}"
     lxc_guest_nameserver: "{{ lxc_semaphore_nameserver }}"
     lxc_guest_features: "{{ lxc_semaphore_features }}"
+    lxc_guest_firewall_allow: "{{ lxc_semaphore_firewall_allow }}"
     lxc_guest_onboot: "{{ lxc_semaphore_onboot }}"
     lxc_guest_pool: "{{ lxc_semaphore_pool }}"
     lxc_guest_group: "{{ lxc_semaphore_group }}"

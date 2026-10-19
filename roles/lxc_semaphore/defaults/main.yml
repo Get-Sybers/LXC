@@ -76,6 +76,9 @@ lxc_semaphore_db_file: "{{ lxc_semaphore_home }}/database.sqlite"
 lxc_semaphore_tmp_path: "{{ lxc_semaphore_home }}/tmp"
 lxc_semaphore_bin: /usr/bin/semaphore
 lxc_semaphore_port: 3000
+# Inbound ports the per-guest firewall opens (default-deny otherwise).
+lxc_semaphore_firewall_allow:
+  - { proto: tcp, port: "{{ lxc_semaphore_port }}", comment: "Semaphore UI/API" }
 # The address the server binds; empty binds every interface.
 lxc_semaphore_interface: ""
 # The URL users reach the UI at when it sits behind a reverse proxy (Semaphore's

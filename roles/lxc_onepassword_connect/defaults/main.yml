@@ -57,6 +57,9 @@ lxc_onepassword_connect_home: /home/opuser
 lxc_onepassword_connect_data_dir: "{{ lxc_onepassword_connect_home }}/.op/data"
 lxc_onepassword_connect_bin_dir: /usr/local/bin
 lxc_onepassword_connect_api_port: 8080
+# Inbound ports the per-guest firewall opens (default-deny otherwise).
+lxc_onepassword_connect_firewall_allow:
+  - { proto: tcp, port: "{{ lxc_onepassword_connect_api_port }}", comment: "Connect API" }
 lxc_onepassword_connect_stage_dir: /var/tmp/op-connect-extract
 # The markers server asserts before configuring anything: the baseline
 # lxc_guest writes and the template marker the bake writes.

@@ -100,6 +100,45 @@ argument_specs:
         type: int
         required: false
         default: 300
+      lxc_guest_firewall:
+        type: bool
+        required: false
+        default: true
+        description: "Default-deny the guest's inbound via the Proxmox per-guest firewall; only lxc_guest_firewall_allow ports are open."
+      lxc_guest_firewall_allow:
+        type: list
+        elements: dict
+        required: false
+        default: []
+        description: "Inbound allows when the firewall is on. Each item: proto (tcp/udp, default tcp), port, optional comment."
+        options:
+          proto:
+            type: str
+            required: false
+            default: tcp
+          port:
+            type: int
+            required: true
+          comment:
+            type: str
+            required: false
+      lxc_guest_cluster_firewall_manage:
+        type: bool
+        required: false
+        default: true
+        description: "Turn on the Proxmox datacenter firewall master switch (idempotent) so per-guest firewalls apply."
+      lxc_guest_firewall_host_input_policy:
+        type: str
+        required: false
+        default: ACCEPT
+        choices: [ACCEPT, REJECT, DROP]
+        description: "Host input policy when managing the datacenter firewall. ACCEPT keeps the node open; DROP/REJECT firewall the node too (then allow 8006/22 and cluster ports yourself)."
+      lxc_guest_firewall_host_output_policy:
+        type: str
+        required: false
+        default: ACCEPT
+        choices: [ACCEPT, REJECT, DROP]
+        description: "Host output policy when managing the datacenter firewall."
       lxc_guest_baseline_marker: &lxc_guest_baseline_marker
         type: str
         required: false
@@ -129,6 +168,9 @@ argument_specs:
     options: *lxc_guest_options
   connect:
     short_description: "Assert the CT is running, wait for its init, add it to the play inventory over proxmox_pct_remote."
+    options: *lxc_guest_options
+  firewall:
+    short_description: "Default-deny the guest's inbound (per-guest Proxmox firewall) and turn on the datacenter master switch."
     options: *lxc_guest_options
   postcheck:
     short_description: "Re-read the CT config from Proxmox and assert ownership, placement, unprivileged, features and onboot."

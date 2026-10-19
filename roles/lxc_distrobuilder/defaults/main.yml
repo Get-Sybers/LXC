@@ -36,6 +36,8 @@ lxc_distrobuilder_nameserver: ""
 # nesting=1 is what lets a build mount proc and sysfs into the rootfs it is
 # assembling (the nested-container AppArmor profile); the CT stays unprivileged.
 lxc_distrobuilder_features: ["nesting=1"]
+# No inbound service; default-deny with no allows.
+lxc_distrobuilder_firewall_allow: []
 lxc_distrobuilder_onboot: true
 lxc_distrobuilder_pool: ""
 # The play-inventory group the running CT is added to (the guest-side plays

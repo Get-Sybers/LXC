@@ -4,6 +4,11 @@
     that: __lxc_guest_bridge_present is defined
     fail_msg: "Include tasks_from: facts.yml and preflight.yml before create.yml (tasks/main.yml does)."
     quiet: true
+- name: "create | Put the firewall flag on net0 to match lxc_guest_firewall"
+  ansible.builtin.set_fact:
+    __lxc_guest_net0_eff: >-
+      {{ (lxc_guest_net0 | regex_replace(',?firewall=[01]', ''))
+         ~ (',firewall=1' if lxc_guest_firewall | bool else ',firewall=0') }}
 # state: present with update: true (the module default since community.proxmox
 # 1.0, pinned here so a default flip cannot change the semantics): an absent CT
 # is created from the template; an existing one has its description, cores,
@@ -29,7 +34,7 @@
     pool: "{{ lxc_guest_pool if lxc_guest_pool | length > 0 else omit }}"
     disk: "{{ lxc_guest_storage }}:{{ lxc_guest_rootfs_gb }}"
     netif:
-      net0: "{{ lxc_guest_net0 }}"
+      net0: "{{ __lxc_guest_net0_eff }}"
     nameserver: "{{ lxc_guest_nameserver if lxc_guest_nameserver | length > 0 else omit }}"
     state: present
     update: true

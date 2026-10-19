@@ -1,0 +1,21 @@
+---
+# Default-deny the guest's inbound traffic. The guest is reached over pct exec,
+# not the network (premise); only the ports in lxc_guest_firewall_allow are
+# open. The per-guest config is /etc/pve/firewall/<vmid>.fw plus the net device
+# firewall= flag (set in create), both on pmxcfs so they follow a migrated CT.
+# A per-guest firewall applies only while the datacenter firewall master switch
+# is on. Node mechanics, so this lives in lxc_guest (premise rule 4).
+- name: "firewall | Enable the Proxmox datacenter firewall master switch"
+  community.proxmox.proxmox_cluster_firewall_options:
+    state: enabled
+    input_policy: "{{ lxc_guest_firewall_host_input_policy }}"
+    output_policy: "{{ lxc_guest_firewall_host_output_policy }}"
+  when: lxc_guest_cluster_firewall_manage | bool
+- name: "firewall | Write the guest's default-deny firewall — /etc/pve/firewall/{{ lxc_guest_vmid }}.fw"
+  ansible.builtin.template:
+    src: guest-firewall.fw.j2
+    dest: "/etc/pve/firewall/{{ lxc_guest_vmid }}.fw"
+    owner: root
+    group: www-data
+    mode: "0640"
+  when: lxc_guest_firewall | bool

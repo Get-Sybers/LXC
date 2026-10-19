@@ -21,6 +21,7 @@
     lxc_guest_net0: "{{ lxc_onepassword_connect_net0 }}"
     lxc_guest_nameserver: "{{ lxc_onepassword_connect_nameserver }}"
     lxc_guest_features: "{{ lxc_onepassword_connect_features }}"
+    lxc_guest_firewall_allow: "{{ lxc_onepassword_connect_firewall_allow }}"
     lxc_guest_onboot: "{{ lxc_onepassword_connect_onboot }}"
     lxc_guest_pool: "{{ lxc_onepassword_connect_pool }}"
     lxc_guest_group: "{{ lxc_onepassword_connect_group }}"

@@ -40,6 +40,24 @@ lxc_guest_pool: ""
 # play can target it over proxmox_pct_remote.
 lxc_guest_group: lxc_guests
 lxc_guest_create_timeout: 300
+# --- Firewall (Proxmox per-guest default-deny + datacenter master switch) -----
+# The guest is reached over pct exec, not the network, so its inbound is
+# default-deny: only lxc_guest_firewall_allow ports are open. Egress stays open
+# (DHCP, template/package fetches, the service's outbound API). The rules live
+# in /etc/pve/firewall/<vmid>.fw and the net device's firewall= flag, both on
+# pmxcfs, so they follow the CT when it migrates across a cluster.
+lxc_guest_firewall: true
+# Inbound allows, default-deny otherwise. Each item is {proto, port, comment?}.
+# The service role supplies its ports; empty means nothing inbound is open.
+lxc_guest_firewall_allow: []
+# A per-guest firewall applies only once the datacenter firewall master switch
+# is on. When true, lxc_guest turns it on (idempotent) and leaves the host's own
+# policy at ACCEPT, so it neither locks out the Proxmox API/SSH nor disrupts
+# guests that are not opted in. Firewall the node itself by setting the host
+# policies below (then allow 8006, 22 and the cluster ports yourself).
+lxc_guest_cluster_firewall_manage: true
+lxc_guest_firewall_host_input_policy: ACCEPT
+lxc_guest_firewall_host_output_policy: ACCEPT
 # --- Baseline (runs INSIDE the guest) ----------------------------------------
 # The marker every service role asserts before configuring anything. Defaults
 # to the collection variable so the service roles read the same path.
