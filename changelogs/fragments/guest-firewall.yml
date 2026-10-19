@@ -1,16 +1,11 @@
 ---
 security:
   - >-
-    ``lxc_guest`` now default-denies a guest's inbound traffic with the Proxmox
-    per-guest firewall: ``policy_in: DROP`` in ``/etc/pve/firewall/<vmid>.fw``
-    with the net device's ``firewall=1`` flag, opening only the ports a service
-    declares through the new ``lxc_<service>_firewall_allow`` (op-connect 8080,
-    semaphore 3000, distrobuilder none). ``lxc_guest`` turns on the datacenter
-    firewall master switch (``community.proxmox.proxmox_cluster_firewall_options``)
-    while leaving the host policy at ``ACCEPT`` so the Proxmox API and host SSH
-    stay reachable, and every guest that is not opted in is unaffected. The
-    rules live on pmxcfs keyed by vmid, so they follow a migrated CT across a
-    cluster. New inputs ``lxc_guest_firewall``, ``lxc_guest_firewall_allow``,
-    ``lxc_guest_cluster_firewall_manage``,
-    ``lxc_guest_firewall_host_input_policy`` and
-    ``lxc_guest_firewall_host_output_policy``.
+    The guest baseline installs an in-guest ``nftables`` firewall that
+    default-denies inbound (``policy drop``; loopback, established/related, ICMP
+    and DHCP aside) and allows all egress. Each service opens only its own ports
+    through ``lxc_<service>_firewall_allow`` as an ``/etc/nftables.d/*.nft``
+    drop-in (op-connect 8080, semaphore 3000, distrobuilder none). The firewall
+    is entirely inside the container -- no Proxmox host or cluster firewall
+    state is touched -- and ``pct exec`` management is unaffected. New input
+    ``lxc_guest_firewall`` (default true).

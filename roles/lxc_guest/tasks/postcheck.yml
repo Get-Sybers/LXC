@@ -49,28 +49,6 @@
       net0 on every run, so Proxmox did not accept the requested value — check
       the create task's result and `pct config {{ lxc_guest_vmid }}`.
     quiet: true
-- name: "postcheck | The firewall flag is set on net0"
-  ansible.builtin.assert:
-    that: "'firewall=1' in (__lxc_guest_post['net0'] | default(''))"
-    fail_msg: >-
-      net0 does not carry firewall=1, so the per-guest firewall is not applied.
-      Actual net0: {{ __lxc_guest_post['net0'] | default('<no net0>') }}.
-    quiet: true
-  when: lxc_guest_firewall | bool
-- name: "postcheck | The guest firewall is default-deny inbound"
-  when: lxc_guest_firewall | bool
-  block:
-    - name: "postcheck | Read the guest firewall file"
-      ansible.builtin.slurp:
-        path: "/etc/pve/firewall/{{ lxc_guest_vmid }}.fw"
-      register: __lxc_guest_fw
-    - name: "postcheck | Policy is DROP and the firewall is enabled"
-      ansible.builtin.assert:
-        that:
-          - "'policy_in: DROP' in (__lxc_guest_fw['content'] | b64decode)"
-          - "'enable: 1' in (__lxc_guest_fw['content'] | b64decode)"
-        fail_msg: "/etc/pve/firewall/{{ lxc_guest_vmid }}.fw is not default-deny inbound."
-        quiet: true
 - name: "postcheck | Extra capabilities are dropped"
   when: lxc_guest_cap_drop | length > 0
   block:

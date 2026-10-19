@@ -1,0 +1,23 @@
+#!/usr/sbin/nft -f
+# {{ ansible_managed }}
+# Default-deny inbound. This guest is reached over pct exec from the node, not
+# the network; services open their own ports via /etc/nftables.d/ drop-ins.
+# Egress is allowed. Managed by get_sybers.lxc (lxc_guest baseline).
+flush ruleset
+table inet filter {
+    chain input {
+        type filter hook input priority 0; policy drop;
+        iif "lo" accept
+        ct state established,related accept
+        ct state invalid drop
+        meta l4proto { icmp, ipv6-icmp } accept
+        udp dport { 68, 546 } accept
+        include "/etc/nftables.d/*.nft"
+    }
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+    }
+    chain output {
+        type filter hook output priority 0; policy accept;
+    }
+}

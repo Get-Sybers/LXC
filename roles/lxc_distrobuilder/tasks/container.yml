@@ -21,7 +21,6 @@
     lxc_guest_net0: "{{ lxc_distrobuilder_net0 }}"
     lxc_guest_nameserver: "{{ lxc_distrobuilder_nameserver }}"
     lxc_guest_features: "{{ lxc_distrobuilder_features }}"
-    lxc_guest_firewall_allow: "{{ lxc_distrobuilder_firewall_allow }}"
     lxc_guest_onboot: "{{ lxc_distrobuilder_onboot }}"
     lxc_guest_pool: "{{ lxc_distrobuilder_pool }}"
     lxc_guest_group: "{{ lxc_distrobuilder_group }}"

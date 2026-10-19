@@ -31,6 +31,40 @@
       natively under systemd (doc/reference/hardened-lxc-premise.md). Something put
       this here on purpose; refusing to configure the guest until it is gone.
     quiet: true
+- name: "baseline | Install nftables for the in-guest firewall"
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+  when: lxc_guest_firewall | bool
+- name: "baseline | Create the firewall drop-in directory"
+  ansible.builtin.file:
+    path: /etc/nftables.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: lxc_guest_firewall | bool
+- name: "baseline | Write the default-deny inbound ruleset"
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: "0755"
+  when: lxc_guest_firewall | bool
+- name: "baseline | Note whether systemd is running (not the bake chroot)"
+  ansible.builtin.stat:
+    path: /run/systemd/system
+  register: __lxc_guest_booted
+  when: lxc_guest_firewall | bool
+- name: "baseline | Enable and start nftables on a booted guest"
+  ansible.builtin.systemd_service:
+    name: nftables
+    enabled: true
+    state: started
+  when:
+    - lxc_guest_firewall | bool
+    - __lxc_guest_booted.stat.exists | default(false)
 - name: "baseline | Write the baseline marker"
   ansible.builtin.copy:
     content: |

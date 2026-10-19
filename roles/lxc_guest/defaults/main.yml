@@ -40,24 +40,14 @@ lxc_guest_pool: ""
 # play can target it over proxmox_pct_remote.
 lxc_guest_group: lxc_guests
 lxc_guest_create_timeout: 300
-# --- Firewall (Proxmox per-guest default-deny + datacenter master switch) -----
-# The guest is reached over pct exec, not the network, so its inbound is
-# default-deny: only lxc_guest_firewall_allow ports are open. Egress stays open
-# (DHCP, template/package fetches, the service's outbound API). The rules live
-# in /etc/pve/firewall/<vmid>.fw and the net device's firewall= flag, both on
-# pmxcfs, so they follow the CT when it migrates across a cluster.
+# --- Firewall (in-guest nftables, installed by the baseline) -----------------
+# The guest is reached over pct exec, not the network, so the baseline installs
+# an in-guest nftables firewall that default-denies inbound (loopback,
+# established/related, ICMP and DHCP aside) and allows all egress. Each service
+# opens only its own ports (lxc_<service>_firewall_allow) with an nftables
+# drop-in under /etc/nftables.d/. Entirely inside the container: no Proxmox host
+# or cluster firewall state is touched. Set false to skip installing it.
 lxc_guest_firewall: true
-# Inbound allows, default-deny otherwise. Each item is {proto, port, comment?}.
-# The service role supplies its ports; empty means nothing inbound is open.
-lxc_guest_firewall_allow: []
-# A per-guest firewall applies only once the datacenter firewall master switch
-# is on. When true, lxc_guest turns it on (idempotent) and leaves the host's own
-# policy at ACCEPT, so it neither locks out the Proxmox API/SSH nor disrupts
-# guests that are not opted in. Firewall the node itself by setting the host
-# policies below (then allow 8006, 22 and the cluster ports yourself).
-lxc_guest_cluster_firewall_manage: true
-lxc_guest_firewall_host_input_policy: ACCEPT
-lxc_guest_firewall_host_output_policy: ACCEPT
 # --- Capabilities (defense in depth; the container is unprivileged already) -
 # Capabilities dropped from the container bounding set via lxc.cap.drop in
 # /etc/pve/lxc/<vmid>.conf. A sealed appliance needs none of these. sys_admin

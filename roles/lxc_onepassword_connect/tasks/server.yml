@@ -15,6 +15,15 @@
       container runtime). The released op-connect template carries it; a guest
       created from anything else is not configured by this role.
     quiet: true
+- name: "server | Open the service ports in the in-guest firewall"
+  ansible.builtin.template:
+    src: nftables-allow.nft.j2
+    dest: /etc/nftables.d/10-op-connect.nft
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nftables
+  when: lxc_onepassword_connect_firewall_allow | length > 0
 - name: "server | Read the template marker"
   ansible.builtin.slurp:
     src: "{{ lxc_onepassword_connect_template_marker }}"

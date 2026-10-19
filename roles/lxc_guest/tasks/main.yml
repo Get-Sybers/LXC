@@ -9,7 +9,5 @@
   ansible.builtin.include_tasks: preflight.yml
 - name: "Create, start and connect the container"
   ansible.builtin.include_tasks: create.yml
-- name: "Default-deny the guest's inbound (per-guest firewall)"
-  ansible.builtin.include_tasks: firewall.yml
 - name: "Post-check — re-read the config from Proxmox"
   ansible.builtin.include_tasks: postcheck.yml
