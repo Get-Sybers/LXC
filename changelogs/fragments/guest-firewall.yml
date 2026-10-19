@@ -1,0 +1,11 @@
+---
+security:
+  - >-
+    The guest baseline installs an in-guest ``nftables`` firewall that
+    default-denies inbound (``policy drop``; loopback, established/related, ICMP
+    and DHCP aside) and allows all egress. Each service opens only its own ports
+    through ``lxc_<service>_firewall_allow`` as an ``/etc/nftables.d/*.nft``
+    drop-in (op-connect 8080, semaphore 3000, distrobuilder none). The firewall
+    is entirely inside the container -- no Proxmox host or cluster firewall
+    state is touched -- and ``pct exec`` management is unaffected. New input
+    ``lxc_guest_firewall`` (default true).

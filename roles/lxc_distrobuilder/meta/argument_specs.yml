@@ -80,6 +80,23 @@ argument_specs:
         required: false
         default: ["nesting=1"]
         description: "Container features; nesting=1 lets a build mount proc and sysfs into the rootfs it assembles. The CT stays unprivileged."
+      lxc_distrobuilder_firewall_allow:
+        type: list
+        elements: dict
+        required: false
+        default: []
+        description: "Inbound ports the per-guest firewall opens (default-deny otherwise); passed to lxc_guest."
+        options:
+          proto:
+            type: str
+            required: false
+            default: tcp
+          port:
+            type: int
+            required: true
+          comment:
+            type: str
+            required: false
       lxc_distrobuilder_onboot:
         type: bool
         required: false

@@ -4,6 +4,10 @@
 # SSH server; it runs its service natively under systemd, so it carries no
 # container runtime. The marker written last is what every service role asserts
 # before it configures anything.
+# The purge list (vars/main.yml) is the appliance surface floor: no SSH
+# server, and no legacy or unused network services (local MTA, mDNS, RPC,
+# inetd, telnet and friends) — removed if present, a no-op otherwise.
+# Raise lxc_guest_baseline_version when it changes; the marker records it.
 - name: "baseline | Purge the SSH server and anything this guest must never carry"
   ansible.builtin.apt:
     name: "{{ lxc_guest_baseline_purge_packages + lxc_guest_baseline_extra_purge }}"
@@ -27,6 +31,41 @@
       natively under systemd (doc/reference/hardened-lxc-premise.md). Something put
       this here on purpose; refusing to configure the guest until it is gone.
     quiet: true
+- name: "baseline | Install nftables for the in-guest firewall"
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+  when: lxc_guest_firewall | bool
+- name: "baseline | Create the firewall drop-in directory"
+  ansible.builtin.file:
+    path: /etc/nftables.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: lxc_guest_firewall | bool
+- name: "baseline | Write the default-deny inbound ruleset"
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: "0755"
+  when: lxc_guest_firewall | bool
+  notify: Reload nftables
+- name: "baseline | Note whether systemd is running (not the bake chroot)"
+  ansible.builtin.stat:
+    path: /run/systemd/system
+  register: __lxc_guest_booted
+  when: lxc_guest_firewall | bool
+- name: "baseline | Enable and start nftables on a booted guest"
+  ansible.builtin.systemd_service:
+    name: nftables
+    enabled: true
+    state: started
+  when:
+    - lxc_guest_firewall | bool
+    - __lxc_guest_booted.stat.exists | default(false)
 - name: "baseline | Write the baseline marker"
   ansible.builtin.copy:
     content: |

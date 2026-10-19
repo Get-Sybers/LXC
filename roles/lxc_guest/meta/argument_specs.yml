@@ -100,6 +100,20 @@ argument_specs:
         type: int
         required: false
         default: 300
+      lxc_guest_firewall: &lxc_guest_firewall
+        type: bool
+        required: false
+        default: true
+        description: "Install the in-guest nftables firewall in the baseline (default-deny inbound; services open their own ports)."
+      lxc_guest_cap_drop:
+        type: list
+        elements: str
+        required: false
+        default: [sys_module, sys_rawio, sys_time, sys_boot, mac_admin, mac_override, wake_alarm]
+        description: >-
+          Linux capabilities dropped from the container bounding set
+          (lxc.cap.drop). sys_admin is kept so the guest's systemd sandboxes
+          work under nesting.
       lxc_guest_baseline_marker: &lxc_guest_baseline_marker
         type: str
         required: false
@@ -143,6 +157,7 @@ argument_specs:
     options:
       lxc_guest_baseline_marker: *lxc_guest_baseline_marker
       lxc_guest_baseline_extra_purge: *lxc_guest_baseline_extra_purge
+      lxc_guest_firewall: *lxc_guest_firewall
   remove:
     short_description: "Opt-in destroy of a CT this role created — refuses without lxc_guest_confirm_destroy and refuses a CT that is not ours."
     options: *lxc_guest_options

@@ -1,0 +1,9 @@
+---
+# Reload the in-guest firewall when the baseline rewrites its ruleset. Gated on a
+# booted guest so the template bake (which runs the baseline in a chroot with no
+# running systemd) writes the file without trying to reload it.
+- name: Reload nftables
+  ansible.builtin.systemd_service:
+    name: nftables
+    state: reloaded
+  when: __lxc_guest_booted.stat.exists | default(false)

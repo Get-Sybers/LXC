@@ -40,6 +40,28 @@ lxc_guest_pool: ""
 # play can target it over proxmox_pct_remote.
 lxc_guest_group: lxc_guests
 lxc_guest_create_timeout: 300
+# --- Firewall (in-guest nftables, installed by the baseline) -----------------
+# The guest is reached over pct exec, not the network, so the baseline installs
+# an in-guest nftables firewall that default-denies inbound (loopback,
+# established/related, ICMP and DHCP aside) and allows all egress. Each service
+# opens only its own ports (lxc_<service>_firewall_allow) with an nftables
+# drop-in under /etc/nftables.d/. Entirely inside the container: no Proxmox host
+# or cluster firewall state is touched. Set false to skip installing it.
+lxc_guest_firewall: true
+# --- Capabilities (defense in depth; the container is unprivileged already) -
+# Capabilities dropped from the container bounding set via lxc.cap.drop in
+# /etc/pve/lxc/<vmid>.conf. A sealed appliance needs none of these. sys_admin
+# is deliberately NOT dropped: the guest's systemd needs it for the per-service
+# sandboxes (ProtectSystem, PrivateTmp) that nesting enables. Applied on start;
+# an existing CT picks them up on its next restart.
+lxc_guest_cap_drop:
+  - sys_module
+  - sys_rawio
+  - sys_time
+  - sys_boot
+  - mac_admin
+  - mac_override
+  - wake_alarm
 # --- Baseline (runs INSIDE the guest) ----------------------------------------
 # The marker every service role asserts before configuring anything. Defaults
 # to the collection variable so the service roles read the same path.

@@ -31,7 +31,7 @@
     - name: The marker records the baseline version and the role
       ansible.builtin.assert:
         that:
-          - "'baseline=1' in (__lxc_test_marker.content | b64decode)"
+          - "'baseline=2' in (__lxc_test_marker.content | b64decode)"
           - "'role=get_sybers.lxc.lxc_guest' in (__lxc_test_marker.content | b64decode)"
-        fail_msg: "the baseline marker does not carry baseline=1 / role=get_sybers.lxc.lxc_guest"
+        fail_msg: "the baseline marker does not carry baseline=2 / role=get_sybers.lxc.lxc_guest"
         quiet: true

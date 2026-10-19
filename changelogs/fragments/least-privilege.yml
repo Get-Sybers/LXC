@@ -1,0 +1,20 @@
+---
+security:
+  - >-
+    The service units run least-privilege: ``op-connect-api``,
+    ``op-connect-sync`` and ``semaphore`` gain a systemd sandbox
+    (``NoNewPrivileges``, an empty ``CapabilityBoundingSet``,
+    ``ProtectSystem=strict`` with only the data dir writable,
+    ``PrivateTmp``/``PrivateDevices``, the ``ProtectKernel*`` set,
+    ``RestrictAddressFamilies`` and ``SystemCallFilter=@system-service``).
+    ``lxc_guest`` also drops the capabilities a sealed appliance never needs via
+    ``lxc.cap.drop`` (new ``lxc_guest_cap_drop``), keeping ``sys_admin`` so the
+    guest's systemd sandboxes work under nesting.
+  - >-
+    The guest baseline removes more attack surface: it now also purges, if
+    present, a local MTA, mDNS, RPC, inetd and the legacy remote-shell and ftp
+    clients. ``lxc_guest_baseline_version`` is 2.
+changed:
+  - >-
+    Template versions raised for the hardened images: ``op-connect`` 0.1.2,
+    ``semaphore`` 0.1.2 and ``distrobuilder`` 0.1.3.

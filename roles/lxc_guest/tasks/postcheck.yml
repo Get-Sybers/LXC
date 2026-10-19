@@ -49,6 +49,23 @@
       net0 on every run, so Proxmox did not accept the requested value — check
       the create task's result and `pct config {{ lxc_guest_vmid }}`.
     quiet: true
+- name: "postcheck | Extra capabilities are dropped"
+  when: lxc_guest_cap_drop | length > 0
+  block:
+    - name: "postcheck | Read the CT config file"
+      ansible.builtin.slurp:
+        path: "/etc/pve/lxc/{{ lxc_guest_vmid }}.conf"
+      register: __lxc_guest_conf
+    - name: "postcheck | Capabilities are dropped in the CT config"
+      ansible.builtin.assert:
+        that:
+          - "'lxc.cap.drop:' in (__lxc_guest_conf['content'] | b64decode)"
+          - >-
+            lxc_guest_cap_drop
+            | reject('in', (__lxc_guest_conf['content'] | b64decode))
+            | list | length == 0
+        fail_msg: "/etc/pve/lxc/{{ lxc_guest_vmid }}.conf is missing the lxc.cap.drop hardening."
+        quiet: true
 - name: "postcheck | It carries every requested feature"
   ansible.builtin.assert:
     that: >-

@@ -13,7 +13,7 @@ lxc_template_name: semaphore
 lxc_semaphore_version: "2.19.16"
 lxc_semaphore_arch: amd64
 lxc_semaphore_package_checksum: "sha256:56c4ac99b712b3fde11a7d600a0789870a3b945bab0c12f41d91864e0aeb85b8"
-lxc_template_version: "0.1.1"
+lxc_template_version: "0.1.2"
 lxc_template_service_version: "{{ lxc_semaphore_version }}"
 lxc_template_arch: "{{ lxc_semaphore_arch }}"
 lxc_template_output: "debian-13-{{ lxc_template_name }}_{{ lxc_template_version }}_{{ lxc_template_arch }}.tar.zst"
