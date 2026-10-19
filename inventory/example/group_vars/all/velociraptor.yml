@@ -1,0 +1,22 @@
+---
+# Velociraptor DFIR server LXC placement (deploy-velociraptor.yml). The
+# administrator password is NOT here — it lives in the vaulted
+# inventory/secrets/velociraptor.yml passed with -e (doc/howto/deploy-velociraptor.md).
+# Copied into place by `make config`; the copy is untracked.
+lxc_velociraptor_node: "{{ lxc_node }}"
+# A free CT id, cluster-wide (`pvesh get /cluster/resources --type vm` lists
+# the taken ones). lxc_guest refuses 0.
+lxc_velociraptor_vmid: 0
+# The guest's net0. DHCP on the management bridge by default; for a fixed
+# address: "name=eth0,bridge={{ lxc_bridge }},ip=192.0.2.170/24,gw=192.0.2.1".
+lxc_velociraptor_net0: "name=eth0,bridge={{ lxc_bridge }},ip=dhcp"
+# The hostname or address analysts reach the GUI at and that enrolled clients
+# connect back to (it fills the GUI public_url and the clients' server_urls in
+# the generated config). CHANGE-ME to the CT's DNS name or address — the
+# default, the hostname, only resolves where that name does.
+lxc_velociraptor_public_hostname: "CHANGE-ME"
+# The released template this CT is created from: the velociraptor/v<version>
+# GitHub Release (templates/velociraptor). lxc_guest fetches it into the node's
+# cache by this checksum when it is not there. Pin the value from the release's
+# .sha256 asset; an empty checksum refuses the fetch.
+lxc_velociraptor_template_checksum: ""

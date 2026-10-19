@@ -26,6 +26,7 @@ on:
           - op-connect
           - semaphore
           - distrobuilder
+          - velociraptor
       publish:
         description: "Publish the bake as the <name>/v<version> GitHub Release (signed, attested; from main only)"
         required: false

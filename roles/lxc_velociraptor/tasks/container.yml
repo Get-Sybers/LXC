@@ -1,0 +1,26 @@
+---
+# Node side. The container's whole lifecycle is lxc_guest's; this file only
+# names the Velociraptor placement. The vars are scoped to this include
+# (standards §5: a runtime temporary, not configuration — the configuration is
+# the lxc_velociraptor_* inputs in the inventory).
+- name: "container | Ensure the Velociraptor LXC through lxc_guest"
+  ansible.builtin.include_role:
+    name: get_sybers.lxc.lxc_guest
+  vars:
+    lxc_guest_node: "{{ lxc_velociraptor_node }}"
+    lxc_guest_vmid: "{{ lxc_velociraptor_vmid }}"
+    lxc_guest_hostname: "{{ lxc_velociraptor_hostname }}"
+    lxc_guest_purpose: "Velociraptor DFIR server (velociraptor.service)"
+    lxc_guest_template: "{{ lxc_velociraptor_template }}"
+    lxc_guest_template_url: "{{ lxc_velociraptor_template_url }}"
+    lxc_guest_template_checksum: "{{ lxc_velociraptor_template_checksum }}"
+    lxc_guest_storage: "{{ lxc_velociraptor_storage }}"
+    lxc_guest_rootfs_gb: "{{ lxc_velociraptor_rootfs_gb }}"
+    lxc_guest_cores: "{{ lxc_velociraptor_cores }}"
+    lxc_guest_memory_mb: "{{ lxc_velociraptor_memory_mb }}"
+    lxc_guest_net0: "{{ lxc_velociraptor_net0 }}"
+    lxc_guest_nameserver: "{{ lxc_velociraptor_nameserver }}"
+    lxc_guest_features: "{{ lxc_velociraptor_features }}"
+    lxc_guest_onboot: "{{ lxc_velociraptor_onboot }}"
+    lxc_guest_pool: "{{ lxc_velociraptor_pool }}"
+    lxc_guest_group: "{{ lxc_velociraptor_group }}"
