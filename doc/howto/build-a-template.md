@@ -1,20 +1,22 @@
 # 03 — Template build and release
 
 **Premise:** a container is created only from a template this repository built. Templates are baked in GitHub Actions from a stock Proxmox
-system template, published as GitHub Releases with a checksum, a signature and a build attestation, and fetched onto a node by the exact
-checksum the inventory pins. A node never builds an image and never installs a service into a running guest.
+system template, published to the GitHub Container Registry (GHCR) as signed, attested **OCI images**, and imported onto a node through
+Proxmox's own OCI support. A node never builds an image and never installs a service into a running guest.
 
-One sentence governs the rest: **the release is the image, the checksum is its identity, and `pct create` is the only thing that happens
+One sentence governs the rest: **the image is the template, its digest is its identity, and `pct create` is the only thing that happens
 on the node.**
 
 ## 1. How Proxmox consumes a template
 
-`pct create` takes any rootfs tarball that sits in a template storage, named `local:vztmpl/<file>`. That is all a Proxmox template is, and
-it is the same thing `pveam` downloads for the stock Debian and TurnKey appliances. `pveam` itself reads only the two indexes Proxmox
-hard-codes (`download.proxmox.com` and `releases.turnkeylinux.org`), so a template released here reaches the node through `lxc_guest`'s
-`template` step instead: a `get_url` into the `local` storage's cache directory, verified against the pinned `sha256:`, after which the
-template is indistinguishable from one `pveam` fetched. There is no second mechanism: a template that is not in the cache and has no
-pinned checksum is refused, not downloaded.
+The sealed template is a single rootfs tarball (`.tar.zst`). It is published as an **OCI image** whose one layer is that exact tarball
+(reported as `application/vnd.oci.image.layer.v1.tar+zstd`), under a real OCI image config that carries the template's labels. Proxmox VE
+9 reads OCI images natively: `pct create` detects an OCI archive and maps its config into the container config, so an image published here
+runs as a system container just like a `pveam` appliance. The node pulls it with `skopeo` (built into PVE's OCI support) — the registry
+token handshake and the layer are handled for you, so there is no checksum to paste for the pull; the image digest is the identity.
+
+There is no second mechanism: `pct create` takes either a `pveam`/release rootfs tarball in `local:vztmpl/<file>` or an OCI image pulled
+into that same storage. A template with no image in the registry and nothing in the cache is not created.
 
 ## 2. The bake
 
@@ -34,7 +36,7 @@ A `bake` entry point is chroot-safe by construction: it installs, creates users,
 `multi-user.target.wants` symlinks (what `systemctl enable` does for `WantedBy=multi-user.target`), and it never starts a service or
 touches a credential. Everything site-specific stays in `server`, which runs in the booted container.
 
-## 3. The release
+## 3. The publish
 
 [`.github/workflows/templates.yml`](../../.github/workflows/templates.yml):
 
@@ -43,50 +45,61 @@ touches a credential. Everything site-specific stays in `server`, which runs in 
   run before a single step executes; nothing is baked or shipped without that approval.
 - **A bake** (publish off) builds the template from any branch and keeps the `.tar.zst` and its `.sha256` as a workflow artifact for two
   weeks, so a change to an image can be inspected as a built image.
-- **A publish** (publish on, `main` only) bakes, then creates the `<name>/v<version>` tag and GitHub Release carrying the `.tar.zst`, its
-  `.sha256`, a keyless cosign signature bundle (`<file>.sigstore.json`) and a GitHub build-provenance attestation. The release notes give
-  the three verification commands and the inventory key to pin. The version is never an input: it is the manifest's
-  `lxc_template_version`, read back from the artifact the bake named, so the tag follows the reviewed manifest and nothing else.
+- **A publish** (publish on, `main` only) bakes, then pushes the sealed `.tar.zst` unchanged — as the single `tar+zstd` layer of an OCI
+  image under a real `image.config.v1+json` config carrying the template labels — to `ghcr.io/<owner>/lxc/<name>:v<version>`. It signs
+  the image (keyless cosign), attaches a GitHub build-provenance attestation to the registry, and tags the commit `<name>/v<version>`.
+  Authentication is the workflow's built-in `GITHUB_TOKEN` with `packages: write`; no secret or key is configured. The version is never
+  an input: it is the manifest's `lxc_template_version`, read back from the artifact the bake named. **No GitHub Release is created.**
 - **The version is the template's own.** `lxc_template_version` is this repository's release of the template (`X.Y.Z`), separate from
   the service version the image carries (`lxc_template_service_version`, written to the marker as `service=`). It is raised in the pull
   request that changes the image, whether that is a new service release or a changed bake, and the Version Gate
   ([`.github/workflows/version-gate.yml`](../../.github/workflows/version-gate.yml), `scripts/check_template_pins.py`, the
   `lxc-template-pin` check the `main` ruleset requires) refuses a pull request that changes a manifest directory, the service role's
-  bake inputs or the `lxc_guest` baseline without moving it forward. A version that was never released may be renumbered
-  (backwards included) instead, and a version whose `<name>/v<version>` tag already exists is refused either way.
-- **A release is immutable.** A publish refuses a tag that already exists: the gate keeps a changed image from reaching `main` under a
-  published version, and the publish refuses to overwrite one if it ever does.
+  bake inputs or the `lxc_guest` baseline without moving it forward, using the `<name>/v<version>` git tags to know what has shipped. A
+  version that was never tagged may be renumbered (backwards included) instead.
+- **A publish is immutable.** The workflow refuses to push a `ghcr.io/<owner>/lxc/<name>:v<version>` tag that already exists, and the gate
+  keeps a changed image from reaching `main` under an already-tagged version.
 
-The collection's own releases are `v<version>` tags; a template release is a `<name>/v<version>` tag. Both tag shapes are
-immutable under `.github/rulesets/tags.json`. The `templates` environment is created once in the repository settings (*Settings →
-Environments*): a required reviewer and no secrets.
+The `<name>/v<version>` git tag is immutable under `.github/rulesets/tags.json`. The `templates` environment is created once in the
+repository settings (*Settings → Environments*): a required reviewer and no secrets. The package is private on first publish; make it
+public once per template in its GHCR settings so nodes can pull it without credentials.
 
-## 4. On the node
+## 4. On the node — importing from GHCR
 
-The inventory pins the released template per service:
-
-```yaml
-# inventory/group_vars/all/onepassword.yml
-lxc_onepassword_connect_template_checksum: "sha256:<the value in the release's .sha256>"
-```
-
-The URL and the file name derive from the role's template release (`lxc_onepassword_connect_template_version`, the manifest's
-`lxc_template_version`) and the collection variable `lxc_template_release_base` (this repository's GitHub Releases; point it at a mirror
-for a lab with no reach to `github.com`), so raising the template release and pinning the new checksum is the whole upgrade. `lxc_guest`'s `template` step then fetches the artifact into `/var/lib/vz/template/cache/` when it is not
-there, `preflight` sees it on the storage, and `create` proceeds. The service role's `server` entry point refuses a guest whose template
-marker does not say `name=<service>` at the role's template release and service version: the binaries come from the release, never
-from an install into a live guest.
-
-## 5. Verifying a release by hand
+Browse the published versions, then pull one into a template storage and create the container from it. Run on the node:
 
 ```sh
-sha256sum -c debian-13-op-connect_0.1.1_amd64.tar.zst.sha256
-cosign verify-blob --bundle debian-13-op-connect_0.1.1_amd64.tar.zst.sigstore.json \
-  --certificate-identity-regexp '^https://github.com/get-sybers/lxc/' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  debian-13-op-connect_0.1.1_amd64.tar.zst
-gh attestation verify debian-13-op-connect_0.1.1_amd64.tar.zst -R get-sybers/lxc
+# list the versions published for a template
+pvesh get /nodes/<node>/query-oci-repo-tags --reference ghcr.io/<owner>/lxc/<name>
+
+# pull a version into the `local` storage's template cache (uses skopeo; no checksum to paste)
+pvesh create /nodes/<node>/storage/local/oci-registry-pull \
+  --reference ghcr.io/<owner>/lxc/<name>:v<version> --filename <name>
+
+# create the container from it — pct detects the OCI image and maps its config
+pct create <vmid> local:vztmpl/<name>.tar --hostname <name> --rootfs <storage>:<gb> \
+  --unprivileged 1 --features nesting=1 --memory <mb> --cores <n> --net0 name=eth0,bridge=<bridge>,ip=dhcp
 ```
+
+The pull needs `skopeo` on the node (part of PVE's OCI support) and the package to be public (or a `docker login ghcr.io` for a private
+one). `pct create` then extracts the `tar+zstd` layer and reads the OCI config; the service role's `server` entry point afterwards
+refuses a guest whose template marker does not say `name=<service>` at the role's template release and service version, so the binaries
+come from the image, never from an install into a live guest.
+
+> **Migration note.** The deploy playbooks still drive the node through `lxc_guest`, whose `template` step currently `get_url`s a release
+> tarball by a pinned `sha256:`. Moving that step to the GHCR import above (so `deploy-<service>.yml` pulls the OCI image) is the
+> consume-side follow-up to the GHCR publish; until it lands, the commands here are the manual import path.
+
+## 5. Verifying a published image by hand
+
+```sh
+cosign verify ghcr.io/<owner>/lxc/<name>:v<version> \
+  --certificate-identity-regexp '^https://github.com/get-sybers/lxc/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+gh attestation verify oci://ghcr.io/<owner>/lxc/<name>:v<version> -R get-sybers/lxc
+```
+
+Both resolve the image by digest; the cosign signature and the build-provenance attestation prove it was published by this workflow.
 
 ## 6. Raising a base template
 
