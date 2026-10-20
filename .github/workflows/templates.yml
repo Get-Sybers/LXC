@@ -1,19 +1,18 @@
 ---
-# Bake one LXC template under templates/ and, when asked, publish it as a
-# GitHub Release. Manual only: a run is started by hand (workflow_dispatch)
-# and the job waits for the `templates` environment's required reviewer before
-# it does anything, so nothing is baked or shipped without that approval.
+# Bake one LXC template under templates/ and, when asked, publish it as an OCI
+# image package in GHCR (ghcr.io/<owner>/lxc/<name>:v<version>). Manual only: a
+# run is started by hand (workflow_dispatch) and waits for the `templates`
+# environment's required reviewer before it does anything.
 #
 # The version is never an input: it is the manifest's lxc_template_version
-# (this repository's release of the template, X.Y.Z, raised in the PR that
-# changes the image — the Version Gate enforces that), read back from the
-# artifact the bake names. A publish creates the <name>/v<version> tag and
-# release (the .tar.zst and its .sha256 as assets, a keyless cosign signature
-# bundle beside them, a GitHub build-provenance attestation) and refuses a tag
-# that already exists: a released template is immutable. A publish runs from
-# main only; a bake alone may run from any branch to inspect the artifact. The node-side fetch (lxc_guest)
-# verifies the .sha256 the inventory pins; `cosign verify-blob` and
-# `gh attestation verify` prove the artifact came from this workflow.
+# (X.Y.Z, raised in the PR that changes the image — the Version Gate enforces
+# that via the <name>/v<version> git tag). A publish pushes the sealed .tar.zst
+# unchanged as the image's single tar+zstd layer, under a real OCI image config
+# carrying the template's labels; signs the image (keyless cosign) and attaches
+# a build-provenance attestation; and tags the commit <name>/v<version>. It
+# refuses a GHCR tag that already exists (a released template is immutable) and
+# runs from main only; a bake alone may run from any branch to inspect the
+# artifact. The node pulls the image through Proxmox's OCI support.
 name: Templates
 on:
   workflow_dispatch:
@@ -29,17 +28,17 @@ on:
           - velociraptor
           - ghost9
       publish:
-        description: "Publish the bake as the <name>/v<version> GitHub Release (signed, attested; from main only)"
+        description: "Publish the bake as the ghcr.io/<owner>/lxc/<name>:v<version> package (signed, attested; from main only)"
         required: false
         type: boolean
         default: false
 permissions: {}
-# One bake per template at a time; never cancel a publish mid-flight.
 concurrency:
   group: templates-${{ inputs.template }}
   cancel-in-progress: false
 env:
   ANSIBLE_CORE_PIN: "2.21.5"
+  ORAS_VERSION: "1.3.5"
 jobs:
   bake:
     name: bake (${{ inputs.template }})
@@ -49,6 +48,7 @@ jobs:
       contents: write
       id-token: write
       attestations: write
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -69,8 +69,6 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install the bake toolchain into a venv (root runs it unchanged)
-        # The bake needs root (chroot, ownership-preserving tar), so everything it
-        # runs lives in one venv and one collections directory that sudo can reach.
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q zstd
           python3 -m venv build/venv
@@ -95,23 +93,24 @@ jobs:
             -e "lxc_template_depcache_dir=$PWD/build/$TEMPLATE/depcache"
           sudo chown -R "$(id -u):$(id -g)" "build/$TEMPLATE"
           cat build/"$TEMPLATE"/*.sha256
-      # The artifact is <base>-<name>_<version>_<arch>.tar.zst; the version in
-      # it is the manifest's X.Y.Z, so the tag follows the manifest and nothing else.
-      - name: Resolve the artifact and its version
+      - name: Resolve the artifact, version and arch
         id: art
         env:
           TEMPLATE: ${{ inputs.template }}
         run: |
           file="$(basename build/"$TEMPLATE"/*.tar.zst)"
-          version="${file#*_}"; version="${version%_*}"
+          rest="${file%.tar.zst}"
+          version="${rest%_*}"; version="${version##*_}"
+          arch="${rest##*_}"
           echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' \
             || { echo "::error::cannot read a version out of $file"; exit 1; }
           {
             echo "file=$file"
             echo "version=$version"
+            echo "arch=$arch"
             echo "tag=$TEMPLATE/v$version"
           } | tee -a "$GITHUB_OUTPUT"
-          echo "Baked \`$TEMPLATE\` $version as \`$file\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Baked \`$TEMPLATE\` $version ($arch) as \`$file\`" >> "$GITHUB_STEP_SUMMARY"
       - name: Keep the artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -121,62 +120,109 @@ jobs:
             build/${{ inputs.template }}/*.sha256
           if-no-files-found: error
           retention-days: 14
-      # A released template is immutable. If the bake changed on main without
-      # the manifest's version moving, this is where the publish fails — raise
-      # the version in a PR first, never re-ship an existing one.
-      - name: Refuse to overwrite an existing release
+      - name: Install oras
         if: ${{ inputs.publish }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.art.outputs.tag }}
-          REPO: ${{ github.repository }}
         run: |
-          if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
-            echo "::error::$TAG is already released — raise the version in the manifest in a PR before publishing"
-            exit 1
-          fi
+          base="https://github.com/oras-project/oras/releases/download/v$ORAS_VERSION"
+          curl -fsSLO "$base/oras_${ORAS_VERSION}_linux_amd64.tar.gz"
+          curl -fsSLO "$base/oras_${ORAS_VERSION}_checksums.txt"
+          grep "oras_${ORAS_VERSION}_linux_amd64.tar.gz" "oras_${ORAS_VERSION}_checksums.txt" | sha256sum -c -
+          tar xzf "oras_${ORAS_VERSION}_linux_amd64.tar.gz" oras && sudo install oras /usr/local/bin/oras
       - name: Install cosign
         if: ${{ inputs.publish }}
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-      - name: Sign the template (keyless, Sigstore)
+      - name: Build and push the OCI image to GHCR
+        id: push
         if: ${{ inputs.publish }}
         env:
           TEMPLATE: ${{ inputs.template }}
+          VERSION: ${{ steps.art.outputs.version }}
+          ARCH: ${{ steps.art.outputs.arch }}
+          FILE: ${{ steps.art.outputs.file }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
         run: |
-          for f in build/"$TEMPLATE"/*.tar.zst; do
-            cosign sign-blob --yes --bundle "$f.sigstore.json" "$f"
-          done
+          image="ghcr.io/${OWNER,,}/lxc/$TEMPLATE"
+          layer="build/$TEMPLATE/$FILE"
+          echo "$GH_TOKEN" | oras login ghcr.io -u "$ACTOR" --password-stdin
+          if oras manifest fetch "$image:v$VERSION" >/dev/null 2>&1; then
+            echo "::error::$image:v$VERSION already exists — raise the version in the manifest in a PR before publishing"; exit 1
+          fi
+          layer_digest="sha256:$(sha256sum "$layer" | cut -d' ' -f1)"
+          layer_size="$(stat -c%s "$layer")"
+          diff_id="sha256:$(zstd -dc "$layer" | sha256sum | cut -d' ' -f1)"
+          created="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          jq -n --arg arch "$ARCH" --arg created "$created" --arg diff "$diff_id" \
+            --arg src "https://github.com/$REPO" --arg title "${OWNER,,}/$TEMPLATE" \
+            --arg ver "$VERSION" --arg rev "$SHA" --arg tmpl "$TEMPLATE" '{
+              created: $created, architecture: $arch, os: "linux",
+              config: {
+                User: "0:0",
+                Env: ["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],
+                Entrypoint: ["/sbin/init"], WorkingDir: "/",
+                Labels: {
+                  "org.opencontainers.image.source": $src,
+                  "org.opencontainers.image.title": $title,
+                  "org.opencontainers.image.version": $ver,
+                  "org.opencontainers.image.revision": $rev,
+                  "org.opencontainers.image.licenses": "AGPL-3.0",
+                  "org.opencontainers.image.description": ("get_sybers.lxc hardened LXC template: " + $tmpl),
+                  "com.get-sybers.contract": "1",
+                  "com.get-sybers.hardened": "true",
+                  "com.get-sybers.template": $tmpl
+                }
+              },
+              rootfs: { type: "layers", diff_ids: [$diff] }
+            }' > config.json
+          config_digest="sha256:$(sha256sum config.json | cut -d' ' -f1)"
+          config_size="$(stat -c%s config.json)"
+          jq -n --arg cd "$config_digest" --argjson cs "$config_size" --arg ld "$layer_digest" \
+            --argjson ls "$layer_size" --arg src "https://github.com/$REPO" --arg created "$created" '{
+              schemaVersion: 2, mediaType: "application/vnd.oci.image.manifest.v1+json",
+              config: { mediaType: "application/vnd.oci.image.config.v1+json", digest: $cd, size: $cs },
+              layers: [ { mediaType: "application/vnd.oci.image.layer.v1.tar+zstd", digest: $ld, size: $ls } ],
+              annotations: { "org.opencontainers.image.created": $created, "org.opencontainers.image.source": $src }
+            }' > manifest.json
+          oras blob push "$image" "$layer"
+          oras blob push "$image" config.json
+          oras manifest push "$image:v$VERSION" manifest.json
+          digest="$(oras manifest fetch --descriptor "$image:v$VERSION" | jq -r .digest)"
+          {
+            echo "image=$image"
+            echo "ref=$image:v$VERSION"
+            echo "digest=$digest"
+          } | tee -a "$GITHUB_OUTPUT"
+      - name: Sign the image (keyless, Sigstore)
+        if: ${{ inputs.publish }}
+        env:
+          IMAGE: ${{ steps.push.outputs.image }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "$IMAGE@$DIGEST"
       - name: Attest build provenance
         if: ${{ inputs.publish }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: build/${{ inputs.template }}/*.tar.zst
-      - name: Publish the GitHub Release (creates the tag)
+          subject-name: ${{ steps.push.outputs.image }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+      - name: Tag the commit and record it
         if: ${{ inputs.publish }}
         env:
           GH_TOKEN: ${{ github.token }}
-          TEMPLATE: ${{ inputs.template }}
-          TAG: ${{ steps.art.outputs.tag }}
-          VERSION: ${{ steps.art.outputs.version }}
-          FILE: ${{ steps.art.outputs.file }}
           REPO: ${{ github.repository }}
+          TAG: ${{ steps.art.outputs.tag }}
           SHA: ${{ github.sha }}
+          REF: ${{ steps.push.outputs.ref }}
+          DIGEST: ${{ steps.push.outputs.digest }}
         run: |
+          if ! gh api "repos/$REPO/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            gh api "repos/$REPO/git/refs" -f "ref=refs/tags/$TAG" -f "sha=$SHA" >/dev/null
+          fi
           {
-            echo "LXC template \`$TEMPLATE\` $VERSION, built by the Templates workflow from \`templates/$TEMPLATE\` at $SHA."
-            echo
-            echo "Verify:"
-            echo
-            echo '```sh'
-            echo "sha256sum -c $FILE.sha256"
-            echo "cosign verify-blob --bundle $FILE.sigstore.json \\"
-            echo "  --certificate-identity-regexp '^https://github.com/$REPO/' \\"
-            echo "  --certificate-oidc-issuer https://token.actions.githubusercontent.com $FILE"
-            echo "gh attestation verify $FILE -R $REPO"
-            echo '```'
-            echo
-            echo "Pin on the node: \`lxc_${TEMPLATE//-/_}_template_checksum: sha256:<the value in $FILE.sha256>\`."
-          } > notes.md
-          gh release create "$TAG" -R "$REPO" --target "$SHA" --title "$TEMPLATE $VERSION" --notes-file notes.md \
-            build/"$TEMPLATE"/*.tar.zst build/"$TEMPLATE"/*.sha256 build/"$TEMPLATE"/*.sigstore.json
-          echo "Published https://github.com/$REPO/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"
+            echo "Published \`$REF\`"
+            echo "- digest \`$DIGEST\`"
+            echo "- pull on a node through Proxmox's OCI support (\`pct create\` from the registry ref)"
+          } >> "$GITHUB_STEP_SUMMARY"
