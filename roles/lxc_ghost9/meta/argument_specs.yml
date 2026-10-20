@@ -138,10 +138,22 @@ argument_specs:
         required: false
         default: "1.112.6"
         description: "Pinned n8n release installed from npm."
+      lxc_ghost9_microsoft_prod_deb_url:
+        type: str
+        required: false
+        default: "https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb"
+        description: >-
+          The Microsoft config package that adds the .NET apt feed and its
+          signing key. Debian 13's sqv verification needs this key, not the raw
+          microsoft.asc, so the feed is added from this .deb rather than via
+          lxc_ghost9_apt_repos.
       lxc_ghost9_apt_repos:
         type: dict
         required: false
-        description: "The signed apt repositories added for the build (microsoft, nodesource, grafana): each key_url, uri, suite, components."
+        description: >-
+          The signed apt repositories added for the build (nodesource, grafana):
+          each key_url, uri, suite, components. The Microsoft .NET feed is added
+          separately via lxc_ghost9_microsoft_prod_deb_url.
       lxc_ghost9_bake_packages:
         type: list
         elements: str
@@ -304,6 +316,24 @@ argument_specs:
         required: false
         default: ""
         description: "SECRET. The n8n owner account password; required. Set once, managed in n8n afterwards."
+      lxc_ghost9_n8n_api_scopes:
+        type: list
+        elements: str
+        required: false
+        default:
+          - workflow:create
+          - workflow:delete
+          - workflow:list
+          - workflow:move
+          - workflow:read
+          - workflow:update
+          - workflow:activate
+          - workflow:deactivate
+          - execution:delete
+          - execution:read
+          - execution:retry
+          - execution:list
+        description: "Scopes granted to the n8n public API key the GHOSTS API uses to list and drive workflows and executions."
   remove:
     short_description: "Tear the GHOSTS LXC down through lxc_guest (opt-in: lxc_guest_confirm_destroy=true)."
     description:
