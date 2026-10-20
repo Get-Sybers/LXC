@@ -77,6 +77,8 @@
   ansible.builtin.command:
     argv: [npm, install, "--global", "n8n@{{ lxc_ghost9_n8n_version }}"]
     creates: /usr/lib/node_modules/n8n/bin/n8n
+  environment:
+    npm_config_cache: /var/cache/lxc-build/npm
 
 # --- Service users + directories --------------------------------------------
 - name: "bake | The API service user"
@@ -107,6 +109,12 @@
     - { path: "{{ lxc_ghost9_n8n_workflows_dir }}", owner: "{{ lxc_ghost9_n8n_user }}", group: "{{ lxc_ghost9_n8n_user }}", mode: "0750" }
     - { path: "/etc/ghost9", owner: root, group: root, mode: "0755" }
     - { path: "{{ lxc_ghost9_stage_dir }}", owner: root, group: root, mode: "0700" }
+    # Build-dependency caches. The bake points NuGet and npm here; the Templates
+    # workflow bind-mounts a persisted actions/cache over them (manifest
+    # lxc_template_build_caches), and the seal removes the whole tree so it never
+    # ships in the image. Real directories when no cache is mounted (local bake).
+    - { path: /var/cache/lxc-build/nuget, owner: root, group: root, mode: "0777" }
+    - { path: /var/cache/lxc-build/npm, owner: root, group: root, mode: "0777" }
   loop_control:
     label: "{{ item.path }}"
 
@@ -139,6 +147,7 @@
     DOTNET_CLI_HOME: "{{ lxc_ghost9_stage_dir }}/dotnet"
     XDG_RUNTIME_DIR: "{{ lxc_ghost9_stage_dir }}"
     HOME: "{{ lxc_ghost9_stage_dir }}"
+    NUGET_PACKAGES: /var/cache/lxc-build/nuget
 - name: "bake | Copy the full API config tree over the published one (publish omits most of it)"
   ansible.builtin.command:
     cmd: "cp -a {{ lxc_ghost9_source_dir }}/src/Ghosts.Api/config/. {{ lxc_ghost9_api_root }}/config/"
@@ -157,11 +166,15 @@
     argv: [npm, ci]
     chdir: "{{ lxc_ghost9_source_dir }}/src/Ghosts.Frontend"
     creates: "{{ lxc_ghost9_source_dir }}/src/Ghosts.Frontend/node_modules"
+  environment:
+    npm_config_cache: /var/cache/lxc-build/npm
 - name: "bake | Build the UI (production)"
   ansible.builtin.command:
     argv: [npm, run, build, "--", "--configuration", production]
     chdir: "{{ lxc_ghost9_source_dir }}/src/Ghosts.Frontend"
     creates: "{{ lxc_ghost9_source_dir }}/src/Ghosts.Frontend/dist/Ghosts.Frontend/browser/index.html"
+  environment:
+    npm_config_cache: /var/cache/lxc-build/npm
 - name: "bake | Deploy the built UI to the web root"
   ansible.builtin.command:
     cmd: "cp -a {{ lxc_ghost9_source_dir }}/src/Ghosts.Frontend/dist/Ghosts.Frontend/browser/. {{ lxc_ghost9_ui_root }}/"
