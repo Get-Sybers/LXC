@@ -72,7 +72,9 @@
     owner: "{{ lxc_ghost9_n8n_user }}"
     group: "{{ lxc_ghost9_n8n_user }}"
     mode: "0640"
-  when: not __lxc_ghost9_n8n_imported.stat.exists
+  when:
+    - not __lxc_ghost9_n8n_imported.stat.exists
+    - (__lxc_ghost9_n8n_wf.rc | default(1)) == 0
 # --- Best-effort: mint the public API key the GHOSTS API consumes -----------
 - name: "provision_n8n | Does the API key already exist?"
   ansible.builtin.stat:
