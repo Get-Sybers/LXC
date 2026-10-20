@@ -1,0 +1,125 @@
+---
+# Runs INSIDE the CT after n8n is up. Idempotent: creates the owner account only
+# when n8n still asks for first-run setup, imports the GHOSTS workflows once
+# (sentinel-guarded), and best-effort mints the API key the GHOSTS API reads via
+# N8N_API_KEY_FILE. n8n keeps running with workflows even if the key step fails.
+- name: "provision_n8n | Wait for the n8n REST API to answer"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ lxc_ghost9_n8n_port }}/rest/settings"
+    method: GET
+    status_code: [200]
+  register: __lxc_ghost9_n8n_settings
+  until: (__lxc_ghost9_n8n_settings.status | default(-1)) == 200
+  retries: 40
+  delay: 5
+  changed_when: false
+  check_mode: false
+  failed_when: false
+- name: "provision_n8n | Assert n8n is up"
+  ansible.builtin.assert:
+    that: (__lxc_ghost9_n8n_settings.status | default(-1)) == 200
+    fail_msg: "n8n did not answer at http://127.0.0.1:{{ lxc_ghost9_n8n_port }}/rest/settings — inspect `journalctl -u ghosts-n8n`."
+    quiet: true
+- name: "provision_n8n | Is first-run owner setup still needed?"
+  ansible.builtin.set_fact:
+    __lxc_ghost9_n8n_setup_needed: >-
+      {{ (__lxc_ghost9_n8n_settings.json.data.userManagement.showSetupOnFirstLoad
+          if (__lxc_ghost9_n8n_settings.json.data is defined)
+          else __lxc_ghost9_n8n_settings.json.userManagement.showSetupOnFirstLoad) | default(true) }}
+- name: "provision_n8n | Create the n8n owner account (secret: the password)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ lxc_ghost9_n8n_port }}/rest/owner/setup"
+    method: POST
+    body_format: json
+    body:
+      email: "{{ lxc_ghost9_n8n_owner_email }}"
+      firstName: GHOSTS
+      lastName: Admin
+      password: "{{ lxc_ghost9_n8n_owner_password }}"
+    status_code: [200, 201]
+  register: __lxc_ghost9_n8n_owner
+  when: __lxc_ghost9_n8n_setup_needed | bool
+  changed_when: __lxc_ghost9_n8n_setup_needed | bool
+  failed_when: false
+  no_log: true
+- name: "provision_n8n | Has the GHOSTS workflow set been imported?"
+  ansible.builtin.stat:
+    path: "{{ lxc_ghost9_n8n_home }}/.n8n/.ghost9_workflows_imported"
+  register: __lxc_ghost9_n8n_imported
+- name: "provision_n8n | Import the GHOSTS workflows (once)"
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - "{{ lxc_ghost9_n8n_user }}"
+      - --
+      - env
+      - "HOME={{ lxc_ghost9_n8n_home }}"
+      - "N8N_USER_FOLDER={{ lxc_ghost9_n8n_home }}"
+      - n8n
+      - "import:workflow"
+      - --separate
+      - "--input={{ lxc_ghost9_n8n_workflows_dir }}"
+    chdir: "{{ lxc_ghost9_n8n_home }}"
+  register: __lxc_ghost9_n8n_wf
+  when: not __lxc_ghost9_n8n_imported.stat.exists
+  changed_when: true
+  failed_when: false
+- name: "provision_n8n | Mark the workflow import complete"
+  ansible.builtin.file:
+    path: "{{ lxc_ghost9_n8n_home }}/.n8n/.ghost9_workflows_imported"
+    state: touch
+    owner: "{{ lxc_ghost9_n8n_user }}"
+    group: "{{ lxc_ghost9_n8n_user }}"
+    mode: "0640"
+  when: not __lxc_ghost9_n8n_imported.stat.exists
+# --- Best-effort: mint the public API key the GHOSTS API consumes -----------
+- name: "provision_n8n | Does the API key already exist?"
+  ansible.builtin.stat:
+    path: "{{ lxc_ghost9_n8n_home }}/.n8n/.api_key"
+  register: __lxc_ghost9_n8n_keyfile
+- name: "provision_n8n | Mint and hand off the n8n API key"
+  when: not __lxc_ghost9_n8n_keyfile.stat.exists
+  block:
+    - name: "provision_n8n | Log in to n8n (secret)"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ lxc_ghost9_n8n_port }}/rest/login"
+        method: POST
+        body_format: json
+        body:
+          emailOrLdapLoginId: "{{ lxc_ghost9_n8n_owner_email }}"
+          password: "{{ lxc_ghost9_n8n_owner_password }}"
+        status_code: [200]
+      register: __lxc_ghost9_n8n_login
+      changed_when: false
+      failed_when: false
+      no_log: true
+    - name: "provision_n8n | Create a public API key for the GHOSTS API"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ lxc_ghost9_n8n_port }}/rest/api-keys"
+        method: POST
+        headers:
+          Cookie: "{{ __lxc_ghost9_n8n_login.cookies_string | default('') }}"
+        body_format: json
+        body:
+          label: ghosts-api
+          expiresAt: null
+          scopes: "{{ lxc_ghost9_n8n_api_scopes }}"
+        status_code: [200, 201]
+      register: __lxc_ghost9_n8n_key
+      when: (__lxc_ghost9_n8n_login.status | default(0)) == 200
+      changed_when: true
+      failed_when: false
+      no_log: true
+    - name: "provision_n8n | Write the API key file for the GHOSTS API to read"
+      ansible.builtin.copy:
+        content: "{{ __lxc_ghost9_n8n_key.json.data.rawApiKey | default('') }}"
+        dest: "{{ lxc_ghost9_n8n_home }}/.n8n/.api_key"
+        owner: "{{ lxc_ghost9_n8n_user }}"
+        group: "{{ lxc_ghost9_api_user }}"
+        mode: "0640"
+      when:
+        - __lxc_ghost9_n8n_key is defined
+        - (__lxc_ghost9_n8n_key.json.data.rawApiKey | default('')) | length > 0
+      no_log: true
+      notify: Restart ghosts-api

@@ -1,0 +1,39 @@
+---
+- name: Converge (expect a controlled failure)
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: The server entry point must refuse a guest without the baseline marker
+      block:
+        - name: Run the server entry point on a guest that skipped the baseline
+          ansible.builtin.include_role:
+            name: get_sybers.lxc.lxc_ghost9
+            tasks_from: server
+      rescue:
+        - name: The role stopped at the baseline assertion
+          ansible.builtin.assert:
+            that:
+              - ansible_failed_result is defined
+              - "'has not been through get_sybers.lxc.lxc_guest' in (ansible_failed_result.msg | default(''))"
+            fail_msg: >-
+              failed, but not at the baseline assertion:
+              {{ ansible_failed_result | default({}) }}
+            quiet: true
+        - name: Record the controlled failure
+          ansible.builtin.set_fact:
+            __ghost9_failed_cleanly: true
+    - name: The failure path was taken
+      ansible.builtin.assert:
+        that: __ghost9_failed_cleanly | default(false)
+        fail_msg: "lxc_ghost9 server did not refuse a guest without the baseline marker"
+        quiet: true
+    - name: Stat the API environment file (nothing may have been written)
+      ansible.builtin.stat:
+        path: /etc/ghost9/api.env
+      register: __ghost9_apienv_stat
+    - name: The refusal came before any change
+      ansible.builtin.assert:
+        that: not __ghost9_apienv_stat.stat.exists
+        fail_msg: "/etc/ghost9/api.env exists — server changed the guest before refusing it"
+        quiet: true

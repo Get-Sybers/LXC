@@ -1,0 +1,4 @@
+# {{ ansible_managed }}
+{% for r in lxc_ghost9_firewall_allow %}
+{{ r.proto | default('tcp') }} dport {{ r.port }} accept comment "{{ r.comment | default('get_sybers.lxc') }}"
+{% endfor %}

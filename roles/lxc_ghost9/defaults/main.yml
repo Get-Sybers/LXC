@@ -1,0 +1,147 @@
+---
+# --- Placement of the GHOSTS ("ghost9") LXC (per site; see README) ----------
+# Handed to lxc_guest by container.yml / remove.yml. The node defaults to the
+# collection variable the inventory defines (standards §4d).
+lxc_ghost9_node: "{{ lxc_node }}"
+# The CT id: required, no safe default. lxc_guest refuses 0; the inventory
+# (group_vars/all/ghost9.yml) sets it.
+lxc_ghost9_vmid: 0
+lxc_ghost9_hostname: ghost9
+# This repository's release of the ghost9 template (templates/ghost9/template.yml
+# sets the same X.Y.Z for the bake): it names the artifact, the release tag and
+# the template marker, and server refuses a guest baked at another. Raised with
+# every change to the image; the service version below is the GHOSTS version the
+# image carries. lxc_guest fetches the template into the node's cache by the
+# checksum the inventory pins; an empty checksum is refused.
+lxc_ghost9_template_version: "0.1.0"
+lxc_ghost9_template_file: >-
+  debian-13-ghost9_{{ lxc_ghost9_template_version }}_{{ lxc_ghost9_arch }}.tar.zst
+lxc_ghost9_template: "local:vztmpl/{{ lxc_ghost9_template_file }}"
+lxc_ghost9_template_url: >-
+  {{ lxc_template_release_base }}/ghost9/v{{ lxc_ghost9_template_version }}/{{ lxc_ghost9_template_file }}
+lxc_ghost9_template_checksum: ""
+lxc_ghost9_storage: "{{ lxc_storage }}"
+# Five services, two source builds (the .NET API and the Angular UI) and
+# Postgres/Grafana/n8n data: the rootfs and memory are sized accordingly.
+lxc_ghost9_rootfs_gb: 20
+lxc_ghost9_cores: 4
+lxc_ghost9_memory_mb: 6144
+lxc_ghost9_swap_mb: 2048
+# Full Proxmox net0 string. DHCP on the mgmt bridge by default; for a static
+# address use e.g. "name=eth0,bridge=vmbr0,ip=192.0.2.180/24,gw=192.0.2.1".
+lxc_ghost9_net0: "name=eth0,bridge={{ lxc_bridge }},ip=dhcp"
+lxc_ghost9_nameserver: ""
+# Debian 13's systemd 257 needs nested namespaces; the CT stays unprivileged.
+lxc_ghost9_features: ["nesting=1"]
+lxc_ghost9_onboot: true
+lxc_ghost9_pool: ""
+# The play-inventory group the running CT is added to (the guest-side plays
+# target it).
+lxc_ghost9_group: ghost9
+
+# --- GHOSTS version + source -------------------------------------------------
+# The version names the released template and the source tag; templates/ghost9/
+# template.yml sets the same values for the bake, so the image and the deploy
+# agree. The pin is the sha256 of the source tarball of the tag (GHOSTS ships no
+# checksums file, so it is computed from the asset). Raise the three together.
+lxc_ghost9_version: "9.3.0"
+lxc_ghost9_arch: amd64
+lxc_ghost9_source_tag: "v{{ lxc_ghost9_version }}"
+lxc_ghost9_source_url: "https://codeload.github.com/cmu-sei/GHOSTS/tar.gz/refs/tags/{{ lxc_ghost9_source_tag }}"
+lxc_ghost9_source_sha256: "sha256:5e89e4c4c222ab31316e2e967b023c6e1163c21561dc0fe9a0783bd747daa70d"
+lxc_ghost9_source_root: /usr/local/src
+lxc_ghost9_source_dir: "{{ lxc_ghost9_source_root }}/GHOSTS-{{ lxc_ghost9_version }}"
+lxc_ghost9_stage_dir: /var/tmp/ghost9-bake
+
+# --- Build toolchain (baked; installed from signed apt repos + npm) ----------
+# .NET 10 (API), Node.js 22 (UI build + n8n), PostgreSQL + nginx + Grafana, and
+# n8n pinned from npm. Each third-party apt repo is added signed-by its key.
+lxc_ghost9_dotnet_sdk_package: dotnet-sdk-10.0
+lxc_ghost9_node_major: "22"
+lxc_ghost9_n8n_version: "1.112.6"
+# The Microsoft .NET feed is added from the official config package (it carries
+# the exact signing key Debian 13's sqv verification needs); NodeSource and
+# Grafana are added signed-by their keys.
+lxc_ghost9_microsoft_prod_deb_url: https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb
+lxc_ghost9_apt_repos:
+  nodesource:
+    key_url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    uri: "https://deb.nodesource.com/node_{{ lxc_ghost9_node_major }}.x"
+    suite: nodistro
+    components: main
+  grafana:
+    key_url: https://apt.grafana.com/gpg.key
+    uri: https://apt.grafana.com
+    suite: stable
+    components: main
+# Base packages the bake installs from the distro before the source build.
+lxc_ghost9_bake_packages:
+  - ca-certificates
+  - curl
+  - gpg
+  - git
+  - nginx
+  - postgresql
+  - grafana
+
+# --- Service layout inside the CT (all native systemd services) --------------
+lxc_ghost9_root: /opt/ghost9
+lxc_ghost9_api_root: "{{ lxc_ghost9_root }}/api"
+lxc_ghost9_api_user: ghosts
+lxc_ghost9_api_bin: "/usr/bin/dotnet {{ lxc_ghost9_api_root }}/ghosts.api.dll"
+lxc_ghost9_api_port: 5000
+# The Angular UI: static files served by nginx; runtime URLs come from
+# assets/config.json, written by server to the public hostname.
+lxc_ghost9_ui_root: /var/www/ghost9
+lxc_ghost9_ui_port: 4200
+# n8n: workflow automation, SQLite-backed under its data dir, public API on.
+lxc_ghost9_n8n_user: n8n
+lxc_ghost9_n8n_home: /var/lib/n8n
+lxc_ghost9_n8n_port: 5678
+lxc_ghost9_n8n_workflows_dir: "{{ lxc_ghost9_root }}/n8n-workflows"
+# Grafana: dashboards over the ghosts DB, embedded in the UI (anonymous admin).
+lxc_ghost9_grafana_port: 3000
+# PostgreSQL: loopback only; the API creates/extends its own schema at startup.
+lxc_ghost9_db_name: ghosts
+lxc_ghost9_db_user: ghosts
+lxc_ghost9_db_port: 5432
+# The address analysts reach the UI/API/Grafana/n8n at from a browser: it fills
+# the UI's assets/config.json and the API CORS origins. Set it to the CT's DNS
+# name or address in the inventory; the default is the hostname.
+lxc_ghost9_public_hostname: "{{ lxc_ghost9_hostname }}"
+# Inbound ports the in-guest firewall opens (default-deny otherwise): the UI,
+# the API, Grafana and n8n. PostgreSQL stays loopback-only (not opened).
+lxc_ghost9_firewall_allow:
+  - { proto: tcp, port: "{{ lxc_ghost9_ui_port }}", comment: "GHOSTS UI" }
+  - { proto: tcp, port: "{{ lxc_ghost9_api_port }}", comment: "GHOSTS API" }
+  - { proto: tcp, port: "{{ lxc_ghost9_grafana_port }}", comment: "GHOSTS Grafana" }
+  - { proto: tcp, port: "{{ lxc_ghost9_n8n_port }}", comment: "GHOSTS n8n" }
+# The markers server asserts before configuring anything: the baseline lxc_guest
+# writes and the template marker the bake writes.
+lxc_ghost9_baseline_marker: "{{ lxc_baseline_marker_path }}"
+lxc_ghost9_template_marker: "{{ lxc_template_marker_path }}"
+
+# --- Secrets (SECRET): the vaulted secrets file ------------------------------
+# server refuses to run while any of these is empty; they come from the vaulted
+# inventory/secrets/ghost9.yml passed with -e (never the inventory;
+# inventory/secrets/README.md shows the file). The Postgres password backs the
+# API connection string and the Grafana datasource; the n8n owner is created
+# once, when absent, and managed in n8n afterwards.
+lxc_ghost9_db_password: ""
+lxc_ghost9_n8n_owner_email: "admin@ghosts.local"
+lxc_ghost9_n8n_owner_password: ""
+# Scopes granted to the n8n public API key the GHOSTS API uses to list and
+# drive workflows and executions.
+lxc_ghost9_n8n_api_scopes:
+  - workflow:create
+  - workflow:delete
+  - workflow:list
+  - workflow:move
+  - workflow:read
+  - workflow:update
+  - workflow:activate
+  - workflow:deactivate
+  - execution:delete
+  - execution:read
+  - execution:retry
+  - execution:list

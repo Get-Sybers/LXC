@@ -1,0 +1,35 @@
+---
+# The GHOSTS ("ghost9") server template. Loaded by playbooks/bake-template.yml;
+# every input the bake reads is declared here and nowhere else. GHOSTS runs as
+# native systemd services (NO Docker): PostgreSQL, the .NET API, the Angular UI
+# behind nginx, n8n and Grafana — each a regular service.
+lxc_template_name: ghost9
+# The GHOSTS release baked in, and this repository's release of the template
+# (X.Y.Z). Raise lxc_template_version in every PR that changes the image (a new
+# GHOSTS release, a changed bake); the Version Gate enforces it and a released
+# version is immutable. GHOSTS publishes no checksums file, so the pin is the
+# sha256 of the source tarball of the tag (codeload .tar.gz); the bake refuses a
+# source tree that does not match it.
+lxc_ghost9_version: "9.3.0"
+lxc_ghost9_arch: amd64
+lxc_ghost9_source_sha256: "sha256:5e89e4c4c222ab31316e2e967b023c6e1163c21561dc0fe9a0783bd747daa70d"
+lxc_template_version: "0.1.0"
+lxc_template_service_version: "{{ lxc_ghost9_version }}"
+lxc_template_arch: "{{ lxc_ghost9_arch }}"
+lxc_template_output: "debian-13-{{ lxc_template_name }}_{{ lxc_template_version }}_{{ lxc_template_arch }}.tar.zst"
+# The stock Proxmox system template the bake starts from, over plain HTTP as
+# Proxmox serves it (the checksum is the verification), and its sha512 as
+# published in Proxmox's own signed index, read from a node's pveam-verified copy:
+#   python3 scripts/base_template_checksum.py debian-13-standard_13.6-1_amd64.tar.zst
+# The bake refuses to run while the checksum is empty.
+lxc_template_base_url: "http://download.proxmox.com/images/system/debian-13-standard_13.6-1_amd64.tar.zst"
+lxc_template_base_checksum: >-
+  sha512:4c0c27ca6ceab5ef0b84db57825a00f26157ef1854bafe97297813e1cbe8ecb8cc9c453cab6b3b0efe1ba193a50c47ece1e41d950e411b8730b835b71e9e754b
+# The role entry points run inside the rootfs, in order, over the chroot
+# connection. The guest baseline first (no sshd, no container runtime — GHOSTS
+# runs natively, so this holds — the baseline marker), then the service install.
+lxc_template_bake:
+  - role: get_sybers.lxc.lxc_guest
+    tasks_from: baseline
+  - role: get_sybers.lxc.lxc_ghost9
+    tasks_from: bake

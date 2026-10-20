@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+apiVersion: 1
+datasources:
+  - name: ghosts
+    uid: ghosts
+    type: postgres
+    access: proxy
+    url: 127.0.0.1:{{ lxc_ghost9_db_port }}
+    user: {{ lxc_ghost9_db_user }}
+    isDefault: true
+    jsonData:
+      database: {{ lxc_ghost9_db_name }}
+      sslmode: disable
+      postgresVersion: 1600
+    secureJsonData:
+      password: "{{ lxc_ghost9_db_password }}"

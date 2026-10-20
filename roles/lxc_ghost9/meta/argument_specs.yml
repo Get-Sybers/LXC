@@ -1,0 +1,322 @@
+---
+argument_specs:
+  container:
+    short_description: "Ensure the GHOSTS LXC on the node through lxc_guest and add it to the play inventory."
+    description:
+      - >-
+        Runs on the Proxmox node (hosts: localhost, connection: local). Hands
+        this role's placement inputs to get_sybers.lxc.lxc_guest, which
+        preflights, creates, starts, waits for and add_hosts the container into
+        lxc_ghost9_group over proxmox_pct_remote.
+    options:
+      lxc_ghost9_node:
+        type: str
+        required: false
+        description: "PVE node the CT is created on. Computed default: the collection variable lxc_node."
+      lxc_ghost9_vmid:
+        type: int
+        required: false
+        default: 0
+        description: "CT id. Required in practice: lxc_guest refuses 0; the inventory sets it."
+      lxc_ghost9_hostname:
+        type: str
+        required: false
+        default: "ghost9"
+      lxc_ghost9_template_version:
+        type: str
+        required: false
+        default: "0.1.0"
+        description: "This repository's release of the ghost9 template (the manifest's lxc_template_version, X.Y.Z); server refuses a guest baked at another."
+      lxc_ghost9_template_file:
+        type: str
+        required: false
+        description: "File name of the released template. Computed default: debian-13-ghost9_<version>_<arch>.tar.zst."
+      lxc_ghost9_template:
+        type: str
+        required: false
+        description: "storage:vztmpl/<file> of the released ghost9 template. Computed default: local:vztmpl/<template_file>."
+      lxc_ghost9_template_url:
+        type: str
+        required: false
+        description: "Where lxc_guest fetches the template when absent from the node cache. Computed default: the ghost9/v<version> GitHub Release asset."
+      lxc_ghost9_template_checksum:
+        type: str
+        required: false
+        default: ""
+        description: "sha256:<hex> of the released template, pinned in the inventory. Required for a fetch; an empty value is refused."
+      lxc_ghost9_storage:
+        type: str
+        required: false
+        description: "Storage for the CT rootfs. Computed default: the collection variable lxc_storage."
+      lxc_ghost9_rootfs_gb:
+        type: int
+        required: false
+        default: 20
+      lxc_ghost9_cores:
+        type: int
+        required: false
+        default: 4
+      lxc_ghost9_memory_mb:
+        type: int
+        required: false
+        default: 6144
+      lxc_ghost9_swap_mb:
+        type: int
+        required: false
+        default: 2048
+      lxc_ghost9_net0:
+        type: str
+        required: false
+        description: "Full Proxmox net0 spec. Computed default: DHCP on the collection variable lxc_bridge."
+      lxc_ghost9_nameserver:
+        type: str
+        required: false
+        default: ""
+      lxc_ghost9_features:
+        type: list
+        elements: str
+        required: false
+        default: ["nesting=1"]
+        description: "Container features; nesting=1 because Debian 13's systemd 257 needs it. The CT stays unprivileged."
+      lxc_ghost9_onboot:
+        type: bool
+        required: false
+        default: true
+      lxc_ghost9_pool:
+        type: str
+        required: false
+        default: ""
+      lxc_ghost9_group:
+        type: str
+        required: false
+        default: ghost9
+        description: "Play-inventory group the running CT is added to."
+  bake:
+    short_description: "Bake the GHOSTS server stack into a build rootfs (chroot-safe; native services, no start)."
+    description:
+      - >-
+        Runs inside the build rootfs over community.general.chroot, from
+        playbooks/bake-template.yml. Adds the Microsoft/NodeSource/Grafana apt
+        repositories, installs .NET 10, Node.js, PostgreSQL, nginx, Grafana and
+        n8n, builds the GHOSTS API and Angular UI from the checksum-pinned
+        source, installs the systemd units, the nginx site and the provisioning
+        content, and enables every service. No site configuration, no secrets,
+        no start — server does that.
+    options:
+      lxc_ghost9_version:
+        type: str
+        required: false
+        default: "9.3.0"
+        description: "GHOSTS release to bake; names the template, the source tag and the template marker's service field."
+      lxc_ghost9_arch:
+        type: str
+        required: false
+        default: "amd64"
+      lxc_ghost9_source_tag:
+        type: str
+        required: false
+        description: "Computed default: v<version>."
+      lxc_ghost9_source_url:
+        type: str
+        required: false
+        description: "Computed default: the codeload .tar.gz of the tag."
+      lxc_ghost9_source_sha256:
+        type: str
+        required: false
+        default: "sha256:5e89e4c4c222ab31316e2e967b023c6e1163c21561dc0fe9a0783bd747daa70d"
+        description: "sha256 of the source tarball of the tag (GHOSTS ships no checksums file); a source tree that does not match it is refused."
+      lxc_ghost9_dotnet_sdk_package:
+        type: str
+        required: false
+        default: "dotnet-sdk-10.0"
+      lxc_ghost9_node_major:
+        type: str
+        required: false
+        default: "22"
+      lxc_ghost9_n8n_version:
+        type: str
+        required: false
+        default: "1.112.6"
+        description: "Pinned n8n release installed from npm."
+      lxc_ghost9_apt_repos:
+        type: dict
+        required: false
+        description: "The signed apt repositories added for the build (microsoft, nodesource, grafana): each key_url, uri, suite, components."
+      lxc_ghost9_bake_packages:
+        type: list
+        elements: str
+        required: false
+        default: [ca-certificates, curl, gpg, git, nginx, postgresql, grafana]
+      lxc_ghost9_source_root:
+        type: str
+        required: false
+        default: "/usr/local/src"
+      lxc_ghost9_source_dir:
+        type: str
+        required: false
+      lxc_ghost9_stage_dir:
+        type: str
+        required: false
+        default: "/var/tmp/ghost9-bake"
+      lxc_ghost9_root:
+        type: str
+        required: false
+        default: "/opt/ghost9"
+      lxc_ghost9_api_root:
+        type: str
+        required: false
+        default: "/opt/ghost9/api"
+      lxc_ghost9_api_user:
+        type: str
+        required: false
+        default: "ghosts"
+      lxc_ghost9_ui_root:
+        type: str
+        required: false
+        default: "/var/www/ghost9"
+      lxc_ghost9_n8n_user:
+        type: str
+        required: false
+        default: "n8n"
+      lxc_ghost9_n8n_home:
+        type: str
+        required: false
+        default: "/var/lib/n8n"
+      lxc_ghost9_n8n_workflows_dir:
+        type: str
+        required: false
+        default: "/opt/ghost9/n8n-workflows"
+  server:
+    short_description: "Configure and start the GHOSTS stack inside a CT created from the released template."
+    description:
+      - >-
+        Runs inside the CT (over proxmox_pct_remote). Refuses a guest without
+        the lxc_guest baseline marker or the ghost9 template marker, opens the
+        service ports in the in-guest firewall, creates the PostgreSQL role and
+        database, writes the API environment, the UI runtime config and the
+        Grafana datasource, starts PostgreSQL / n8n / Grafana / nginx, provisions
+        n8n (owner, workflows, API key), starts the API, and verifies the stack.
+    options:
+      lxc_ghost9_version:
+        type: str
+        required: false
+        default: "9.3.0"
+        description: "The GHOSTS release the template must carry; server refuses another."
+      lxc_ghost9_template_version:
+        type: str
+        required: false
+        default: "0.1.0"
+      lxc_ghost9_api_root:
+        type: str
+        required: false
+        default: "/opt/ghost9/api"
+      lxc_ghost9_api_user:
+        type: str
+        required: false
+        default: "ghosts"
+      lxc_ghost9_api_port:
+        type: int
+        required: false
+        default: 5000
+      lxc_ghost9_ui_root:
+        type: str
+        required: false
+        default: "/var/www/ghost9"
+      lxc_ghost9_ui_port:
+        type: int
+        required: false
+        default: 4200
+      lxc_ghost9_n8n_user:
+        type: str
+        required: false
+        default: "n8n"
+      lxc_ghost9_n8n_home:
+        type: str
+        required: false
+        default: "/var/lib/n8n"
+      lxc_ghost9_n8n_port:
+        type: int
+        required: false
+        default: 5678
+      lxc_ghost9_n8n_workflows_dir:
+        type: str
+        required: false
+        default: "/opt/ghost9/n8n-workflows"
+      lxc_ghost9_grafana_port:
+        type: int
+        required: false
+        default: 3000
+      lxc_ghost9_db_name:
+        type: str
+        required: false
+        default: "ghosts"
+      lxc_ghost9_db_user:
+        type: str
+        required: false
+        default: "ghosts"
+      lxc_ghost9_db_port:
+        type: int
+        required: false
+        default: 5432
+      lxc_ghost9_public_hostname:
+        type: str
+        required: false
+        description: >-
+          Hostname/address the browser reaches the UI/API/Grafana/n8n at; fills
+          assets/config.json and the API CORS origins. Computed default: the CT hostname.
+      lxc_ghost9_firewall_allow:
+        type: list
+        elements: dict
+        required: false
+        default: []
+        description: "Inbound ports the in-guest firewall opens (default-deny otherwise). Each item: proto (default tcp), port, optional comment."
+        options:
+          proto:
+            type: str
+            required: false
+            default: tcp
+          port:
+            type: int
+            required: true
+          comment:
+            type: str
+            required: false
+      lxc_ghost9_baseline_marker:
+        type: str
+        required: false
+        description: "Marker lxc_guest's baseline writes. Computed default: the collection variable lxc_baseline_marker_path."
+      lxc_ghost9_template_marker:
+        type: str
+        required: false
+        description: "Marker the bake writes. Computed default: the collection variable lxc_template_marker_path."
+      lxc_ghost9_db_password:
+        type: str
+        required: false
+        default: ""
+        description: "SECRET. The PostgreSQL password for the ghosts role (API connection string + Grafana datasource); required."
+      lxc_ghost9_n8n_owner_email:
+        type: str
+        required: false
+        default: "admin@ghosts.local"
+        description: "The n8n owner account email, created when absent."
+      lxc_ghost9_n8n_owner_password:
+        type: str
+        required: false
+        default: ""
+        description: "SECRET. The n8n owner account password; required. Set once, managed in n8n afterwards."
+  remove:
+    short_description: "Tear the GHOSTS LXC down through lxc_guest (opt-in: lxc_guest_confirm_destroy=true)."
+    description:
+      - "Placement inputs as for container; only node, vmid and hostname decide which CT is destroyed."
+    options:
+      lxc_ghost9_node:
+        type: str
+        required: false
+      lxc_ghost9_vmid:
+        type: int
+        required: false
+        default: 0
+      lxc_ghost9_hostname:
+        type: str
+        required: false
+        default: "ghost9"

@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+server {
+    listen {{ lxc_ghost9_ui_port }} default_server;
+    listen [::]:{{ lxc_ghost9_ui_port }} default_server;
+    server_name _;
+    root {{ lxc_ghost9_ui_root }};
+    index index.html;
+
+    # Angular single-page app: unknown paths fall back to index.html.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

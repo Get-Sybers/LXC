@@ -25,6 +25,7 @@ tags:
   - semaphore
   - distrobuilder
   - velociraptor
+  - ghost9
 repository: https://github.com/get-sybers/lxc
 documentation: https://github.com/get-sybers/lxc/blob/main/README.md
 homepage: https://github.com/get-sybers/lxc

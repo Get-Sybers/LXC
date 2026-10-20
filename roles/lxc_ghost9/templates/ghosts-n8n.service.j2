@@ -1,0 +1,54 @@
+# {{ ansible_managed }}
+[Unit]
+Description=GHOSTS n8n workflow automation
+Documentation=https://docs.n8n.io/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ lxc_ghost9_n8n_user }}
+Group={{ lxc_ghost9_n8n_user }}
+WorkingDirectory={{ lxc_ghost9_n8n_home }}
+Environment=HOME={{ lxc_ghost9_n8n_home }}
+Environment=N8N_USER_FOLDER={{ lxc_ghost9_n8n_home }}
+Environment=N8N_PORT={{ lxc_ghost9_n8n_port }}
+Environment=N8N_ENABLE_API=true
+Environment=N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
+Environment=N8N_SECURE_COOKIE=false
+Environment=N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+Environment=N8N_DIAGNOSTICS_ENABLED=false
+ExecStart=/usr/bin/n8n start
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+ReadWritePaths={{ lxc_ghost9_n8n_home }}
+# Least-privilege sandbox (offsets the nesting AppArmor profile; premise rule 11).
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+# GHOSTS (.NET / Node) probes optional kernel facilities at startup; return
+# EPERM for filtered syscalls instead of SIGSYS-killing the process.
+SystemCallErrorNumber=EPERM
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
