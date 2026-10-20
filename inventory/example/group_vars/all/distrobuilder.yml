@@ -9,11 +9,9 @@ lxc_distrobuilder_vmid: 0
 # The guest's net0. DHCP on the management bridge by default; for a fixed
 # address: "name=eth0,bridge={{ lxc_bridge }},ip=192.0.2.170/24,gw=192.0.2.1".
 lxc_distrobuilder_net0: "name=eth0,bridge={{ lxc_bridge }},ip=dhcp"
-# The released template this CT is created from: the distrobuilder/v<version>
-# GitHub Release (templates/distrobuilder). lxc_guest fetches it into the
-# node's cache by this checksum when it is not there. Pin the value from the
-# release's .sha256 asset; an empty checksum refuses the fetch.
-lxc_distrobuilder_template_checksum: ""
+# Created from the GHCR OCI image ghcr.io/get-sybers/lxc/distrobuilder, pulled by the
+# play with Proxmox's OCI support. Make the package public (or log the node in:
+# skopeo login ghcr.io). Pin an exact image with lxc_distrobuilder_template_image: <ref>@sha256:<digest>.
 # The image definitions server places in the CT: {name, src} copies a file
 # from this node, {name, url, checksum} fetches one inside the CT by a pinned
 # checksum. The lxc/lxc-ci repository's images/*.yaml are the usual sources;

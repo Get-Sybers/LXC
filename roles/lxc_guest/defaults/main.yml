@@ -12,6 +12,10 @@ lxc_guest_hostname: ""
 lxc_guest_purpose: ""
 # storage:vztmpl/<file> — a template this collection released (templates/<name>).
 lxc_guest_template: "{{ lxc_template }}"
+# A GHCR OCI image ref (ghcr.io/<owner>/lxc/<name>:v<version>, or @sha256:<digest>
+# to pin exactly) pulled with Proxmox's OCI support when the template is not in
+# the cache. Preferred over the release URL below; empty falls back to it.
+lxc_guest_template_image: "{{ lxc_template_image | default('') }}"
 # Where the template is fetched from when it is not in the node's cache, and
 # the sha256 it must have (pinned in the inventory from the release's .sha256).
 # A fetch with an empty checksum is refused; no URL means no fetch.

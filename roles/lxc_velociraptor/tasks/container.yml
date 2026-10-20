@@ -12,6 +12,7 @@
     lxc_guest_hostname: "{{ lxc_velociraptor_hostname }}"
     lxc_guest_purpose: "Velociraptor DFIR server (velociraptor.service)"
     lxc_guest_template: "{{ lxc_velociraptor_template }}"
+    lxc_guest_template_image: "{{ lxc_velociraptor_template_image }}"
     lxc_guest_template_url: "{{ lxc_velociraptor_template_url }}"
     lxc_guest_template_checksum: "{{ lxc_velociraptor_template_checksum }}"
     lxc_guest_storage: "{{ lxc_velociraptor_storage }}"

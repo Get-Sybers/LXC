@@ -1,0 +1,10 @@
+---
+changed:
+  - >-
+    ``lxc_guest`` - add an OCI-image fetch path (``lxc_guest_template_image``) that pulls a
+    template from GHCR with Proxmox's native OCI support (``oci-registry-pull`` then
+    ``pct create``, which detects the OCI archive), preferred over the release-URL fetch.
+    Each service defaults ``lxc_<service>_template_image`` to
+    ``ghcr.io/get-sybers/lxc/<name>:v<version>`` (point ``lxc_template_registry_base`` at a
+    mirror, or pin ``...@sha256:<digest>`` for an exact image), so a deploy play pulls the
+    signed, attested OCI image the node runs directly.

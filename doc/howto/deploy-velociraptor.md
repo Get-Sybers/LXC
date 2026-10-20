@@ -25,9 +25,7 @@ ports in the in-guest firewall, generate the configuration, create the administr
 - The site configuration in place: `make config`, then replace every `CHANGE-ME` in `inventory/hosts.yml`,
   `inventory/group_vars/all/lxc.yml` and `inventory/group_vars/all/velociraptor.yml` (node names, rootfs storage, the CT id, the public
   hostname). The repository carries only the template, `inventory/example/`; your copies are untracked.
-- The released template's checksum pinned in your `inventory/group_vars/all/velociraptor.yml` (`lxc_velociraptor_template_checksum`, from the
-  `.sha256` asset of the `velociraptor/v<version>` release). The play fetches the template into the node's cache itself; nothing is
-  downloaded without the pin. Verify the release first if you want to: [build-a-template.md §5](build-a-template.md#5-verifying-a-release-by-hand).
+- The template is pulled from `ghcr.io/get-sybers/lxc/velociraptor` by the play (Proxmox's OCI support). The package must be **public**, or the node logged in to GHCR (`skopeo login ghcr.io`). To pin an exact image instead of the moving `:v<version>` tag, set `lxc_velociraptor_template_image` to `…@sha256:<digest>` in your inventory. Verify the release first if you want to: [build-a-template.md §5](build-a-template.md#5-verifying-a-release-by-hand).
 - The node can reach `github.com` to fetch the release asset once (or place the file in `/var/lib/vz/template/cache/` yourself).
 - An admin PVE API credential in the environment (`PROXMOX_TOKEN_ID` + `PROXMOX_TOKEN_SECRET`, or `PROXMOX_PASSWORD`).
 - The collection installed where the play runs: `ansible-galaxy collection install -r requirements.yml` (the play runs **on the node**, as

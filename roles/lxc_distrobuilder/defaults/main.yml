@@ -17,9 +17,13 @@ lxc_distrobuilder_hostname: distrobuilder
 # another. Raised with every change to the image; the service version below
 # is what the image carries.
 lxc_distrobuilder_template_version: "0.1.3"
+lxc_distrobuilder_template_name: "distrobuilder"
 lxc_distrobuilder_template_file: >-
   debian-13-distrobuilder_{{ lxc_distrobuilder_template_version }}_{{ lxc_distrobuilder_arch }}.tar.zst
-lxc_distrobuilder_template: "local:vztmpl/{{ lxc_distrobuilder_template_file }}"
+lxc_distrobuilder_template: "local:vztmpl/{{ lxc_distrobuilder_template_name }}.tar"
+lxc_distrobuilder_template_registry_base: "{{ lxc_template_registry_base | default('ghcr.io/get-sybers/lxc') }}"
+lxc_distrobuilder_template_image: >-
+  {{ lxc_distrobuilder_template_registry_base }}/{{ lxc_distrobuilder_template_name }}:v{{ lxc_distrobuilder_template_version }}
 lxc_distrobuilder_template_url: >-
   {{ lxc_template_release_base }}/distrobuilder/v{{ lxc_distrobuilder_template_version }}/{{ lxc_distrobuilder_template_file }}
 lxc_distrobuilder_template_checksum: ""

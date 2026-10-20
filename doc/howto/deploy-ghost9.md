@@ -22,8 +22,7 @@ creates the CT from it and does only the site-specific rest.
 
 - `make config`, then replace every `CHANGE-ME` in `inventory/hosts.yml`, `inventory/group_vars/all/lxc.yml` and
   `inventory/group_vars/all/ghost9.yml` (node names, rootfs storage, the CT id, the public hostname).
-- The released template's checksum pinned in your `inventory/group_vars/all/ghost9.yml` (`lxc_ghost9_template_checksum`, from the `.sha256`
-  asset of the `ghost9/v<version>` release). The play fetches the template into the node's cache itself; nothing is downloaded without the pin.
+- The template is pulled from `ghcr.io/get-sybers/lxc/ghost9` by the play (Proxmox's OCI support). The package must be **public**, or the node logged in to GHCR (`skopeo login ghcr.io`). To pin an exact image instead of the moving `:v<version>` tag, set `lxc_ghost9_template_image` to `…@sha256:<digest>` in your inventory.
 - The node can reach `github.com` to fetch the release asset once.
 - An admin PVE API credential in the environment (`PROXMOX_TOKEN_ID` + `PROXMOX_TOKEN_SECRET`, or `PROXMOX_PASSWORD`).
 - The collection installed where the play runs: `ansible-galaxy collection install -r requirements.yml` (the play runs **on the node**, as root).

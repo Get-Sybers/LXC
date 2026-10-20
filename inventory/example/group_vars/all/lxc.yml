@@ -19,6 +19,8 @@ lxc_template_cache_dir: /var/lib/vz/template/cache
 # (<base>/<name>/v<version>/<file>). Point it at a mirror to serve a lab with
 # no reach to github.com.
 lxc_template_release_base: https://github.com/get-sybers/lxc/releases/download
+# Registry the template OCI images are pulled from; point at a mirror if needed.
+lxc_template_registry_base: ghcr.io/get-sybers/lxc
 # Rootfs storage for every guest: `pvesm status` lists yours (the shared
 # Ceph pool for HA, a local ZFS or LVM-thin pool otherwise).
 lxc_storage: CHANGE-ME

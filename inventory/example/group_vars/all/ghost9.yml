@@ -14,8 +14,6 @@ lxc_ghost9_net0: "name=eth0,bridge={{ lxc_bridge }},ip=dhcp"
 # UI's assets/config.json and the API CORS origins). CHANGE-ME to the CT's DNS
 # name or address — the default, the hostname, only resolves where that name does.
 lxc_ghost9_public_hostname: "CHANGE-ME"
-# The released template this CT is created from: the ghost9/v<version> GitHub
-# Release (templates/ghost9). lxc_guest fetches it into the node's cache by this
-# checksum when it is not there. Pin the value from the release's .sha256 asset;
-# an empty checksum refuses the fetch.
-lxc_ghost9_template_checksum: ""
+# Created from the GHCR OCI image ghcr.io/get-sybers/lxc/ghost9, pulled by the
+# play with Proxmox's OCI support. Make the package public (or log the node in:
+# skopeo login ghcr.io). Pin an exact image with lxc_ghost9_template_image: <ref>@sha256:<digest>.

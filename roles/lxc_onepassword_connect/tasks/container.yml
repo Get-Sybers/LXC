@@ -12,6 +12,7 @@
     lxc_guest_hostname: "{{ lxc_onepassword_connect_hostname }}"
     lxc_guest_purpose: "1Password Connect server (op-connect-api + op-connect-sync)"
     lxc_guest_template: "{{ lxc_onepassword_connect_template }}"
+    lxc_guest_template_image: "{{ lxc_onepassword_connect_template_image }}"
     lxc_guest_template_url: "{{ lxc_onepassword_connect_template_url }}"
     lxc_guest_template_checksum: "{{ lxc_onepassword_connect_template_checksum }}"
     lxc_guest_storage: "{{ lxc_onepassword_connect_storage }}"
