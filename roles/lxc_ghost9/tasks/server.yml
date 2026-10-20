@@ -1,0 +1,191 @@
+---
+# Runs INSIDE the running CT over proxmox_pct_remote. The image content is
+# already baked (tasks/bake.yml); this does the site-specific rest: the firewall
+# drop-in, the Postgres role/db, the config that carries the public hostname and
+# the secrets, the ordered start of all five services, the n8n provisioning and
+# the health check.
+- name: "server | Stat the lxc_guest baseline marker"
+  ansible.builtin.stat:
+    path: "{{ lxc_ghost9_baseline_marker }}"
+  register: __lxc_ghost9_baseline
+- name: "server | Refuse a guest that has not been through the hardened baseline"
+  ansible.builtin.assert:
+    that: __lxc_ghost9_baseline.stat.exists
+    fail_msg: >-
+      {{ lxc_ghost9_baseline_marker }} is absent, so this guest has not been
+      through get_sybers.lxc.lxc_guest's baseline (no SSH daemon, no container
+      runtime). The released ghost9 template carries it; a guest created from
+      anything else is not configured by this role.
+    quiet: true
+- name: "server | Open the service ports in the in-guest firewall"
+  ansible.builtin.template:
+    src: nftables-allow.nft.j2
+    dest: /etc/nftables.d/10-ghost9.nft
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nftables
+  when: lxc_ghost9_firewall_allow | length > 0
+- name: "server | Read the template marker"
+  ansible.builtin.slurp:
+    src: "{{ lxc_ghost9_template_marker }}"
+  register: __lxc_ghost9_tmpl
+  failed_when: false
+- name: "server | Parse the template marker"
+  ansible.builtin.set_fact:
+    __lxc_ghost9_tmpl_fields: >-
+      {{ dict((__lxc_ghost9_tmpl.content | default('') | b64decode).splitlines()
+              | select('search', '=') | map('split', '=', 1) | list) }}
+- name: "server | Refuse a guest that was not created from the ghost9 template"
+  ansible.builtin.assert:
+    that:
+      - __lxc_ghost9_tmpl_fields['name'] | default('') == 'ghost9'
+      - __lxc_ghost9_tmpl_fields['version'] | default('') == lxc_ghost9_template_version | string
+      - __lxc_ghost9_tmpl_fields['service'] | default('') == lxc_ghost9_version | string
+    fail_msg: >-
+      {{ lxc_ghost9_template_marker }} says
+      name={{ __lxc_ghost9_tmpl_fields['name'] | default('<absent>') }}
+      version={{ __lxc_ghost9_tmpl_fields['version'] | default('<absent>') }}
+      service={{ __lxc_ghost9_tmpl_fields['service'] | default('<absent>') }};
+      this role configures GHOSTS {{ lxc_ghost9_version }} from template release
+      {{ lxc_ghost9_template_version }}. The stack is baked into the released
+      template (templates/ghost9), never installed into a running guest. Create
+      the CT from the matching release.
+    quiet: true
+- name: "server | Stat the baked artifacts"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: __lxc_ghost9_artifacts
+  loop:
+    - "{{ lxc_ghost9_api_root }}/ghosts.api.dll"
+    - "{{ lxc_ghost9_ui_root }}/index.html"
+    - /usr/bin/n8n
+    - /usr/bin/dotnet
+  loop_control:
+    label: "{{ item }}"
+- name: "server | The baked stack is present"
+  ansible.builtin.assert:
+    that: __lxc_ghost9_artifacts.results | map(attribute='stat.exists') | select('false') | list | length == 0
+    fail_msg: >-
+      A baked artifact is missing (API dll, UI, n8n or dotnet). The template
+      marker matched but the image is incomplete — rebuild and re-release it.
+    quiet: true
+- name: "server | The DB password and the n8n owner password must have been provided"
+  ansible.builtin.assert:
+    that:
+      - lxc_ghost9_db_password | length > 0
+      - lxc_ghost9_n8n_owner_email | length > 0
+      - lxc_ghost9_n8n_owner_password | length > 0
+    fail_msg: >-
+      lxc_ghost9_db_password, lxc_ghost9_n8n_owner_email and
+      lxc_ghost9_n8n_owner_password must be set: pass the vaulted
+      inventory/secrets/ghost9.yml with -e (inventory/secrets/README.md shows them).
+    quiet: true
+  no_log: true
+
+# --- PostgreSQL role + database ---------------------------------------------
+- name: "server | Ensure PostgreSQL is running"
+  ansible.builtin.systemd_service:
+    name: postgresql
+    enabled: true
+    state: started
+- name: "server | Does the ghosts DB role exist?"
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, psql, -tAc, "SELECT 1 FROM pg_roles WHERE rolname='{{ lxc_ghost9_db_user }}'"]
+  register: __lxc_ghost9_role
+  changed_when: false
+- name: "server | Create the ghosts DB role (secret: password)"
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - postgres
+      - --
+      - psql
+      - -c
+      - "CREATE ROLE {{ lxc_ghost9_db_user }} LOGIN PASSWORD '{{ lxc_ghost9_db_password | replace(\"'\", \"''\") }}'"
+  when: __lxc_ghost9_role.stdout | trim != "1"
+  changed_when: true
+  no_log: true
+- name: "server | Keep the ghosts role password in sync with the secret"
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - postgres
+      - --
+      - psql
+      - -c
+      - "ALTER ROLE {{ lxc_ghost9_db_user }} PASSWORD '{{ lxc_ghost9_db_password | replace(\"'\", \"''\") }}'"
+  changed_when: false
+  no_log: true
+- name: "server | Does the ghosts database exist?"
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, psql, -tAc, "SELECT 1 FROM pg_database WHERE datname='{{ lxc_ghost9_db_name }}'"]
+  register: __lxc_ghost9_db
+  changed_when: false
+- name: "server | Create the ghosts database"
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, psql, -c, "CREATE DATABASE {{ lxc_ghost9_db_name }} OWNER {{ lxc_ghost9_db_user }}"]
+  when: __lxc_ghost9_db.stdout | trim != "1"
+  changed_when: true
+
+# --- Site configuration (carries the public hostname and the secrets) -------
+- name: "server | Write the API environment file (secret: the DB password)"
+  ansible.builtin.template:
+    src: api.env.j2
+    dest: /etc/ghost9/api.env
+    owner: root
+    group: "{{ lxc_ghost9_api_user }}"
+    mode: "0640"
+  no_log: true
+  notify: Restart ghosts-api
+- name: "server | The UI assets directory"
+  ansible.builtin.file:
+    path: "{{ lxc_ghost9_ui_root }}/assets"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+- name: "server | Write the UI runtime config (browser-facing URLs)"
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ lxc_ghost9_ui_root }}/assets/config.json"
+    owner: root
+    group: root
+    mode: "0644"
+- name: "server | Write the Grafana datasource (secret: the DB password)"
+  ansible.builtin.template:
+    src: grafana-datasource.yml.j2
+    dest: /etc/grafana/provisioning/datasources/ghost9.yml
+    owner: root
+    group: grafana
+    mode: "0640"
+  no_log: true
+  notify: Restart grafana
+
+# --- Start the supporting services, then provision n8n, then the API --------
+- name: "server | Enable and start the supporting services"
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  loop:
+    - ghosts-n8n
+    - grafana-server
+    - nginx
+- name: "server | Apply the firewall reload and any pending restarts"
+  ansible.builtin.meta: flush_handlers
+- name: "server | Provision n8n (owner, workflows, API key)"
+  ansible.builtin.include_tasks: provision_n8n.yml
+- name: "server | Enable and start the GHOSTS API"
+  ansible.builtin.systemd_service:
+    name: ghosts-api
+    enabled: true
+    state: started
+    daemon_reload: true
+- name: "server | Apply any pending API restart before verifying"
+  ansible.builtin.meta: flush_handlers
+- name: "server | Verify the stack answers"
+  ansible.builtin.include_tasks: verify.yml

@@ -17,7 +17,8 @@ inventory/
 │       ├── onepassword.yml        #   1Password Connect LXC placement (secrets stay in secrets/)
 │       ├── distrobuilder.yml      #   distrobuilder build-box LXC placement and image definitions
 │       ├── semaphore.yml          #   Semaphore UI LXC placement (secrets stay in secrets/)
-│       └── velociraptor.yml       #   Velociraptor DFIR server LXC placement (secrets stay in secrets/)
+│       ├── velociraptor.yml       #   Velociraptor DFIR server LXC placement (secrets stay in secrets/)
+│       └── ghost9.yml             #   GHOSTS (ghost9) server LXC placement (secrets stay in secrets/)
 ├── hosts.yml                      # untracked — your copy
 ├── group_vars/all/*.yml           # untracked — your copies
 └── secrets/                       # vaulted -e files (see secrets/README.md); never loaded as inventory
@@ -27,7 +28,7 @@ inventory/
 
 ```sh
 make config                        # copies example/ into place without overwriting what is already there
-$EDITOR inventory/hosts.yml inventory/group_vars/all/lxc.yml inventory/group_vars/all/onepassword.yml inventory/group_vars/all/semaphore.yml inventory/group_vars/all/distrobuilder.yml inventory/group_vars/all/velociraptor.yml
+$EDITOR inventory/hosts.yml inventory/group_vars/all/lxc.yml inventory/group_vars/all/onepassword.yml inventory/group_vars/all/semaphore.yml inventory/group_vars/all/distrobuilder.yml inventory/group_vars/all/velociraptor.yml inventory/group_vars/all/ghost9.yml
 ```
 
 Replace every `CHANGE-ME`: the node names, the rootfs storage, the CT id, and the released template's checksum. `ansible.cfg` ignores

@@ -1,0 +1,8 @@
+---
+added:
+  - >-
+    New ``lxc_ghost9`` role, ``ghost9`` template and ``deploy-ghost9.yml`` play:
+    the GHOSTS (CERT/SEI NPC and user-simulation) server as native, sandboxed
+    ``systemd`` services in a hardened, in-guest-firewalled, unprivileged LXC —
+    PostgreSQL, the .NET 10 API, the Angular UI behind nginx, n8n and Grafana,
+    built from the checksum-pinned GHOSTS source. No Docker.

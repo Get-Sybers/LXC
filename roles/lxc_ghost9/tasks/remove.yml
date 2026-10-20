@@ -1,0 +1,13 @@
+---
+# Node side, opt-in. lxc_guest refuses without lxc_guest_confirm_destroy=true
+# on the command line and refuses a CT that is not the one described here.
+- name: "remove | Destroy the GHOSTS LXC through lxc_guest"
+  ansible.builtin.include_role:
+    name: get_sybers.lxc.lxc_guest
+    tasks_from: remove
+  vars:
+    lxc_guest_node: "{{ lxc_ghost9_node }}"
+    lxc_guest_vmid: "{{ lxc_ghost9_vmid }}"
+    lxc_guest_hostname: "{{ lxc_ghost9_hostname }}"
+    lxc_guest_template: "{{ lxc_ghost9_template }}"
+    lxc_guest_net0: "{{ lxc_ghost9_net0 }}"

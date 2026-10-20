@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: lxc_ghost9
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    Deploy GHOSTS (the CERT/SEI NPC and user-simulation framework) server as
+    native systemd services in a hardened Debian LXC — PostgreSQL, the .NET API,
+    the Angular UI behind nginx, n8n and Grafana, each built from the pinned
+    GHOSTS source. No Docker. The container itself comes from lxc_guest.
+  company: Get-Sybers
+  license: AGPL-3.0-only
+  min_ansible_version: "2.19.0"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [ghosts, ghost9, simulation, dfir, proxmox, lxc]
+dependencies: []

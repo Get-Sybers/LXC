@@ -1,0 +1,12 @@
+---
+# lxc_ghost9 negative — `server` must refuse a guest that has not been through
+# lxc_guest's baseline (no marker), stopping at the labelled assertion before it
+# writes anything (premise rule 5). The fresh substrate carries no marker. No
+# prepare; converge drives it.
+scenario:
+  test_sequence:
+    - dependency
+    - syntax
+    - create
+    - converge
+    - destroy

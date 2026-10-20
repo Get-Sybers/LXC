@@ -56,3 +56,21 @@ ansible-vault encrypt velociraptor.yml
 
 Run the deploy with `-e @inventory/secrets/velociraptor.yml --ask-vault-pass`. The administrator is created once, when absent; change its
 password in the GUI afterwards (the role never rewrites it). See `doc/howto/deploy-velociraptor.md`.
+
+## `ghost9.yml`
+
+Gives `playbooks/deploy-ghost9.yml` the PostgreSQL password (it backs the GHOSTS API connection string and the Grafana datasource) and the
+n8n owner account's password. Write it with these variables and encrypt it:
+
+```bash
+cat > ghost9.yml <<'YAML'
+---
+lxc_ghost9_db_password: "<a strong PostgreSQL password>"
+lxc_ghost9_n8n_owner_email: "admin@ghosts.local"
+lxc_ghost9_n8n_owner_password: "<the n8n owner's initial password>"
+YAML
+ansible-vault encrypt ghost9.yml
+```
+
+Run the deploy with `-e @inventory/secrets/ghost9.yml --ask-vault-pass`. The n8n owner is created once, when absent, and managed in n8n
+afterwards. See `doc/howto/deploy-ghost9.md`.
