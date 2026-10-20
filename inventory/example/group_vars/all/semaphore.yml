@@ -14,8 +14,6 @@ lxc_semaphore_net0: "name=eth0,bridge={{ lxc_bridge }},ip=dhcp"
 # (https://semaphore.example.test); empty when the CT's own address, port
 # 3000, is the URL.
 lxc_semaphore_web_host: ""
-# The released template this CT is created from: the semaphore/v<version>
-# GitHub Release (templates/semaphore). lxc_guest fetches it into the node's
-# cache by this checksum when it is not there. Pin the value from the release's
-# .sha256 asset; an empty checksum refuses the fetch.
-lxc_semaphore_template_checksum: ""
+# Created from the GHCR OCI image ghcr.io/get-sybers/lxc/semaphore, pulled by the
+# play with Proxmox's OCI support. Make the package public (or log the node in:
+# skopeo login ghcr.io). Pin an exact image with lxc_semaphore_template_image: <ref>@sha256:<digest>.

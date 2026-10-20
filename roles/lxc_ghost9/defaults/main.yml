@@ -14,9 +14,13 @@ lxc_ghost9_hostname: ghost9
 # image carries. lxc_guest fetches the template into the node's cache by the
 # checksum the inventory pins; an empty checksum is refused.
 lxc_ghost9_template_version: "0.1.1"
+lxc_ghost9_template_name: "ghost9"
 lxc_ghost9_template_file: >-
   debian-13-ghost9_{{ lxc_ghost9_template_version }}_{{ lxc_ghost9_arch }}.tar.zst
-lxc_ghost9_template: "local:vztmpl/{{ lxc_ghost9_template_file }}"
+lxc_ghost9_template: "local:vztmpl/{{ lxc_ghost9_template_name }}.tar"
+lxc_ghost9_template_registry_base: "{{ lxc_template_registry_base | default('ghcr.io/get-sybers/lxc') }}"
+lxc_ghost9_template_image: >-
+  {{ lxc_ghost9_template_registry_base }}/{{ lxc_ghost9_template_name }}:v{{ lxc_ghost9_template_version }}
 lxc_ghost9_template_url: >-
   {{ lxc_template_release_base }}/ghost9/v{{ lxc_ghost9_template_version }}/{{ lxc_ghost9_template_file }}
 lxc_ghost9_template_checksum: ""

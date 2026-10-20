@@ -30,6 +30,20 @@ argument_specs:
         description: >-
           This repository's release of the distrobuilder template (the manifest's lxc_template_version, X.Y.Z):
           names the artifact and the tag; server refuses a guest baked at another.
+      lxc_distrobuilder_template_name:
+        type: str
+        required: false
+        description: "The template's package/image name under the registry (the GHCR repo path)."
+      lxc_distrobuilder_template_registry_base:
+        type: str
+        required: false
+        description: "Registry the OCI image is pulled from. Computed default: lxc_template_registry_base, else ghcr.io/get-sybers/lxc."
+      lxc_distrobuilder_template_image:
+        type: str
+        required: false
+        description: >-
+          GHCR OCI image ref pulled with Proxmox's OCI support; preferred over the release URL.
+          Computed default: <registry_base>/<name>:v<version>. Pin @sha256:<digest> for an exact image.
       lxc_distrobuilder_template_file:
         type: str
         required: false

@@ -33,6 +33,13 @@ argument_specs:
         type: str
         required: false
         description: "storage:vztmpl/<file> of a template this collection released. Computed default: the collection variable lxc_template."
+      lxc_guest_template_image:
+        type: str
+        required: false
+        description: >-
+          GHCR OCI image ref (ghcr.io/<owner>/lxc/<name>:v<version>, or @sha256:<digest>)
+          pulled with Proxmox's OCI support when the template is not cached; preferred over
+          lxc_guest_template_url. Computed default: the collection variable lxc_template_image (empty).
       lxc_guest_template_url:
         type: str
         required: false

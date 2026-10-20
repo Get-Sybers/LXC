@@ -12,6 +12,7 @@
     lxc_guest_hostname: "{{ lxc_semaphore_hostname }}"
     lxc_guest_purpose: "Semaphore UI (semaphore.service)"
     lxc_guest_template: "{{ lxc_semaphore_template }}"
+    lxc_guest_template_image: "{{ lxc_semaphore_template_image }}"
     lxc_guest_template_url: "{{ lxc_semaphore_template_url }}"
     lxc_guest_template_checksum: "{{ lxc_semaphore_template_checksum }}"
     lxc_guest_storage: "{{ lxc_semaphore_storage }}"

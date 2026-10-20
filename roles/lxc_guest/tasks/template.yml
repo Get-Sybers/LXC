@@ -1,7 +1,10 @@
 ---
-# A template reaches a node only as the released artifact, verified by the
-# checksum the inventory pins. No URL: nothing is fetched and preflight decides
-# whether what is in the cache is enough. A URL with no checksum is refused.
+# A template reaches a node one of two ways, both into the `local` storage's
+# template cache where pct create finds it. Preferred: a GHCR OCI image
+# (lxc_guest_template_image), pulled with Proxmox's own OCI support (skopeo),
+# which pct create detects and maps into the container. Alternative: the
+# checksum-pinned release .tar.zst (lxc_guest_template_url). Neither set means
+# nothing is fetched and preflight decides whether the cache is enough.
 - name: "template | Derive the template's storage and cache path"
   ansible.builtin.set_fact:
     __lxc_guest_template_storage: "{{ (lxc_guest_template | string).split(':', 1) | first }}"
@@ -10,9 +13,47 @@
   ansible.builtin.stat:
     path: "{{ __lxc_guest_template_file }}"
   register: __lxc_guest_template_cached
+- name: "template | Pull the OCI image from the registry"
+  when:
+    - not __lxc_guest_template_cached.stat.exists
+    - lxc_guest_template_image | length > 0
+  block:
+    - name: "template | The OCI pull writes to the local directory storage"
+      ansible.builtin.assert:
+        that: __lxc_guest_template_storage == 'local'
+        fail_msg: >-
+          lxc_guest_template is on storage '{{ __lxc_guest_template_storage }}',
+          but the OCI pull writes only to the `local` storage's template cache.
+          Name it local:vztmpl/<file>.tar, or place the image there yourself.
+        quiet: true
+    - name: "template | Pull the OCI image into the cache (Proxmox oci-registry-pull, skopeo-backed)"
+      ansible.builtin.command:
+        argv:
+          - pvesh
+          - create
+          - "/nodes/{{ lxc_guest_node }}/storage/{{ __lxc_guest_template_storage }}/oci-registry-pull"
+          - "--reference"
+          - "{{ lxc_guest_template_image }}"
+          - "--filename"
+          - "{{ (lxc_guest_template | string).split('/') | last | regex_replace('\\.tar$', '') }}"
+      register: __lxc_guest_oci_pull
+      changed_when: true
+    - name: "template | The OCI pull landed the template in the cache"
+      ansible.builtin.stat:
+        path: "{{ __lxc_guest_template_file }}"
+      register: __lxc_guest_oci_cached
+    - name: "template | The OCI pull succeeded"
+      ansible.builtin.assert:
+        that: __lxc_guest_oci_cached.stat.exists
+        fail_msg: >-
+          Pulling {{ lxc_guest_template_image }} did not produce
+          {{ __lxc_guest_template_file }}. The package must be readable: make it
+          public, or log the node in to the registry first (skopeo login ghcr.io).
+        quiet: true
 - name: "template | Fetch the released template"
   when:
     - not __lxc_guest_template_cached.stat.exists
+    - lxc_guest_template_image | length == 0
     - lxc_guest_template_url | length > 0
   block:
     - name: "template | A fetch targets the local directory storage"

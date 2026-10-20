@@ -17,9 +17,13 @@ lxc_semaphore_hostname: semaphore
 # another. Raised with every change to the image; the service version below
 # is what the image carries.
 lxc_semaphore_template_version: "0.1.2"
+lxc_semaphore_template_name: "semaphore"
 lxc_semaphore_template_file: >-
   debian-13-semaphore_{{ lxc_semaphore_template_version }}_{{ lxc_semaphore_arch }}.tar.zst
-lxc_semaphore_template: "local:vztmpl/{{ lxc_semaphore_template_file }}"
+lxc_semaphore_template: "local:vztmpl/{{ lxc_semaphore_template_name }}.tar"
+lxc_semaphore_template_registry_base: "{{ lxc_template_registry_base | default('ghcr.io/get-sybers/lxc') }}"
+lxc_semaphore_template_image: >-
+  {{ lxc_semaphore_template_registry_base }}/{{ lxc_semaphore_template_name }}:v{{ lxc_semaphore_template_version }}
 lxc_semaphore_template_url: >-
   {{ lxc_template_release_base }}/semaphore/v{{ lxc_semaphore_template_version }}/{{ lxc_semaphore_template_file }}
 lxc_semaphore_template_checksum: ""

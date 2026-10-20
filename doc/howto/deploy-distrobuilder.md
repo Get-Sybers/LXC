@@ -24,9 +24,7 @@ and from then on every image is one run of the build play.
 - The site configuration in place: `make config`, then replace every `CHANGE-ME` in `inventory/hosts.yml`,
   `inventory/group_vars/all/lxc.yml` and `inventory/group_vars/all/distrobuilder.yml` (node names, rootfs storage, the CT id). The
   repository carries only the template, `inventory/example/`; your copies are untracked.
-- The released template's checksum pinned in your `inventory/group_vars/all/distrobuilder.yml` (`lxc_distrobuilder_template_checksum`,
-  from the `.sha256` asset of the `distrobuilder/v<version>` release). The play fetches the template into the node's cache itself;
-  nothing is downloaded without the pin. Verify the release first if you want to:
+- The template is pulled from `ghcr.io/get-sybers/lxc/distrobuilder` by the play (Proxmox's OCI support). The package must be **public**, or the node logged in to GHCR (`skopeo login ghcr.io`). To pin an exact image instead of the moving `:v<version>` tag, set `lxc_distrobuilder_template_image` to `…@sha256:<digest>` in your inventory. Verify the release first if you want to:
   [build-a-template.md §5](build-a-template.md#5-verifying-a-release-by-hand).
 - The node can reach `github.com` to fetch the release asset once (or place the file in `/var/lib/vz/template/cache/` yourself); the CT
   can reach the distribution archives the definitions name (`deb.debian.org`, a keyserver) when it builds.

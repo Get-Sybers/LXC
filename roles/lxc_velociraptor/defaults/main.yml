@@ -14,9 +14,13 @@ lxc_velociraptor_hostname: velociraptor
 # what the image carries. lxc_guest fetches the template into the node's cache
 # by the checksum the inventory pins; an empty checksum is refused.
 lxc_velociraptor_template_version: "0.1.0"
+lxc_velociraptor_template_name: "velociraptor"
 lxc_velociraptor_template_file: >-
   debian-13-velociraptor_{{ lxc_velociraptor_template_version }}_{{ lxc_velociraptor_arch }}.tar.zst
-lxc_velociraptor_template: "local:vztmpl/{{ lxc_velociraptor_template_file }}"
+lxc_velociraptor_template: "local:vztmpl/{{ lxc_velociraptor_template_name }}.tar"
+lxc_velociraptor_template_registry_base: "{{ lxc_template_registry_base | default('ghcr.io/get-sybers/lxc') }}"
+lxc_velociraptor_template_image: >-
+  {{ lxc_velociraptor_template_registry_base }}/{{ lxc_velociraptor_template_name }}:v{{ lxc_velociraptor_template_version }}
 lxc_velociraptor_template_url: >-
   {{ lxc_template_release_base }}/velociraptor/v{{ lxc_velociraptor_template_version }}/{{ lxc_velociraptor_template_file }}
 lxc_velociraptor_template_checksum: ""
