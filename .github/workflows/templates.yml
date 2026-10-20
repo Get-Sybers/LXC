@@ -126,7 +126,7 @@ jobs:
           base="https://github.com/oras-project/oras/releases/download/v$ORAS_VERSION"
           curl -fsSLO "$base/oras_${ORAS_VERSION}_linux_amd64.tar.gz"
           curl -fsSLO "$base/oras_${ORAS_VERSION}_checksums.txt"
-          grep "oras_${ORAS_VERSION}_linux_amd64.tar.gz" "oras_${ORAS_VERSION}_checksums.txt" | sha256sum -c -
+          grep -E "oras_${ORAS_VERSION}_linux_amd64\.tar\.gz$" "oras_${ORAS_VERSION}_checksums.txt" | sha256sum -c -
           tar xzf "oras_${ORAS_VERSION}_linux_amd64.tar.gz" oras && sudo install oras /usr/local/bin/oras
       - name: Install cosign
         if: ${{ inputs.publish }}
