@@ -13,7 +13,7 @@ lxc_ghost9_hostname: ghost9
 # every change to the image; the service version below is the GHOSTS version the
 # image carries. lxc_guest fetches the template into the node's cache by the
 # checksum the inventory pins; an empty checksum is refused.
-lxc_ghost9_template_version: "0.1.0"
+lxc_ghost9_template_version: "0.1.1"
 lxc_ghost9_template_file: >-
   debian-13-ghost9_{{ lxc_ghost9_template_version }}_{{ lxc_ghost9_arch }}.tar.zst
 lxc_ghost9_template: "local:vztmpl/{{ lxc_ghost9_template_file }}"

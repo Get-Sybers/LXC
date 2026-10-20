@@ -129,7 +129,7 @@
 # --- Build the .NET API -----------------------------------------------------
 - name: "bake | Publish the GHOSTS API (.NET {{ lxc_ghost9_dotnet_sdk_package }})"
   ansible.builtin.command:
-    argv: [dotnet, publish, "-c", Release, "-o", "{{ lxc_ghost9_api_root }}"]
+    argv: [dotnet, publish, "-c", Release, "--disable-build-servers", "-o", "{{ lxc_ghost9_api_root }}"]
     chdir: "{{ lxc_ghost9_source_dir }}/src/Ghosts.Api"
     creates: "{{ lxc_ghost9_api_root }}/ghosts.api.dll"
   environment:
@@ -252,6 +252,19 @@
   loop: [postgresql, nginx, grafana-server]
 
 # --- Trim the image ---------------------------------------------------------
+- name: "bake | Shut down transient build servers (so nothing holds the rootfs at seal time)"
+  ansible.builtin.command:
+    argv: [dotnet, build-server, shutdown]
+  environment:
+    DOTNET_CLI_HOME: "{{ lxc_ghost9_stage_dir }}/dotnet"
+    HOME: "{{ lxc_ghost9_stage_dir }}"
+  changed_when: false
+  failed_when: false
+- name: "bake | Stop any gpg agent spawned during the apt-key import"
+  ansible.builtin.command:
+    argv: [gpgconf, --kill, all]
+  changed_when: false
+  failed_when: false
 - name: "bake | Remove the source tree and build caches"
   ansible.builtin.file:
     path: "{{ item }}"
