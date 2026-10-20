@@ -173,19 +173,14 @@
               {{ (ansible_failed_task | default({}))['name'] | default('The mount') }} failed (its own
               error is above); whatever was mounted under {{ lxc_template_workdir }}/rootfs is
               unmounted again.
-    # Optional: bind-mount per-template dependency caches (e.g. NuGet, npm) from
-    # the build host into the rootfs, so an actions/cache in the Templates
-    # workflow can reuse them across bakes. Scoped by the manifest's
-    # lxc_template_build_caches (empty for most templates, so no mount); removed
-    # before sealing, so the cache never lands in the image.
     - name: "Bind-mount the dependency caches into the rootfs (reused across bakes, removed before sealing)"
       when:
-        - (lxc_template_cache_dir | default('')) | length > 0
+        - (lxc_template_depcache_dir | default('')) | length > 0
         - (lxc_template_build_caches | default([])) | length > 0
       block:
         - name: "The dependency cache directories exist on the build host"
           ansible.builtin.file:
-            path: "{{ lxc_template_cache_dir }}/{{ item }}"
+            path: "{{ lxc_template_depcache_dir }}/{{ item }}"
             state: directory
             owner: root
             group: root
@@ -202,7 +197,7 @@
         - name: "Bind-mount each dependency cache into the rootfs"
           ansible.posix.mount:
             path: "{{ lxc_template_workdir }}/rootfs/var/cache/lxc-build/{{ item }}"
-            src: "{{ lxc_template_cache_dir }}/{{ item }}"
+            src: "{{ lxc_template_depcache_dir }}/{{ item }}"
             fstype: none
             opts: "bind,private"
             state: ephemeral
@@ -280,7 +275,7 @@
             path: "{{ lxc_template_workdir }}/rootfs/var/cache/lxc-build/{{ item }}"
             state: unmounted
           loop: "{{ lxc_template_build_caches | default([]) }}"
-          when: (lxc_template_cache_dir | default('')) | length > 0
+          when: (lxc_template_depcache_dir | default('')) | length > 0
           delegate_to: localhost
         - name: "Unmount the kernel filesystems the failed bake leaves behind"
           ansible.posix.mount:
@@ -306,9 +301,7 @@
         path: "{{ lxc_template_workdir }}/rootfs/var/cache/lxc-build/{{ item }}"
         state: unmounted
       loop: "{{ lxc_template_build_caches | default([]) }}"
-      when: (lxc_template_cache_dir | default('')) | length > 0
-    # Remove the cache tree (now unmounted, or filled locally when no cache was
-    # mounted) so the dependency caches never land in the sealed image.
+      when: (lxc_template_depcache_dir | default('')) | length > 0
     - name: "Remove the dependency cache mountpoints before sealing"
       ansible.builtin.file:
         path: "{{ lxc_template_workdir }}/rootfs/var/cache/lxc-build"

@@ -109,10 +109,6 @@
     - { path: "{{ lxc_ghost9_n8n_workflows_dir }}", owner: "{{ lxc_ghost9_n8n_user }}", group: "{{ lxc_ghost9_n8n_user }}", mode: "0750" }
     - { path: "/etc/ghost9", owner: root, group: root, mode: "0755" }
     - { path: "{{ lxc_ghost9_stage_dir }}", owner: root, group: root, mode: "0700" }
-    # Build-dependency caches. The bake points NuGet and npm here; the Templates
-    # workflow bind-mounts a persisted actions/cache over them (manifest
-    # lxc_template_build_caches), and the seal removes the whole tree so it never
-    # ships in the image. Real directories when no cache is mounted (local bake).
     - { path: /var/cache/lxc-build/nuget, owner: root, group: root, mode: "0777" }
     - { path: /var/cache/lxc-build/npm, owner: root, group: root, mode: "0777" }
   loop_control:

@@ -13,9 +13,6 @@ lxc_template_name: ghost9
 lxc_ghost9_version: "9.3.0"
 lxc_ghost9_arch: amd64
 lxc_ghost9_source_sha256: "sha256:5e89e4c4c222ab31316e2e967b023c6e1163c21561dc0fe9a0783bd747daa70d"
-# Dependency caches the bake bind-mounts from the build host (reused across
-# bakes via actions/cache in the Templates workflow): the NuGet packages (API)
-# and the npm cache (UI). Empty for templates that need none.
 lxc_template_build_caches: [nuget, npm]
 lxc_template_version: "0.1.1"
 lxc_template_service_version: "{{ lxc_ghost9_version }}"
