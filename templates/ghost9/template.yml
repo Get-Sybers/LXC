@@ -13,7 +13,8 @@ lxc_template_name: ghost9
 lxc_ghost9_version: "9.3.0"
 lxc_ghost9_arch: amd64
 lxc_ghost9_source_sha256: "sha256:5e89e4c4c222ab31316e2e967b023c6e1163c21561dc0fe9a0783bd747daa70d"
-lxc_template_version: "0.1.0"
+lxc_template_build_caches: [nuget, npm]
+lxc_template_version: "0.1.1"
 lxc_template_service_version: "{{ lxc_ghost9_version }}"
 lxc_template_arch: "{{ lxc_ghost9_arch }}"
 lxc_template_output: "debian-13-{{ lxc_template_name }}_{{ lxc_template_version }}_{{ lxc_template_arch }}.tar.zst"

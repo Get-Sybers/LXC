@@ -39,7 +39,7 @@ provisions n8n and verifies the stack. After deployment it is touched two ways o
 | --- | --- | --- |
 | `lxc_ghost9_node` | `{{ lxc_node }}` | PVE node the CT lives on. |
 | `lxc_ghost9_vmid` | `0` (refused) | CT id; the inventory sets it. |
-| `lxc_ghost9_template_version` | `0.1.0` | This repository's release of the `ghost9` template; `server` refuses a guest baked at another. |
+| `lxc_ghost9_template_version` | `0.1.1` | This repository's release of the `ghost9` template; `server` refuses a guest baked at another. |
 | `lxc_ghost9_template_checksum` | `""` (fetch refused) | The release's `sha256:`, pinned in the inventory. |
 | `lxc_ghost9_rootfs_gb` / `_cores` / `_memory_mb` | `20` / `4` / `6144` | Two source builds and five services. |
 | `lxc_ghost9_features` | `["nesting=1"]` | Debian 13's systemd 257 needs nesting; the CT stays unprivileged. |

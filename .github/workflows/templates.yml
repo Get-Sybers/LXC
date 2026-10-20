@@ -78,13 +78,21 @@ jobs:
           build/venv/bin/ansible-galaxy collection install -r requirements.yml -p build/collections
           mkdir -p build/collections/ansible_collections/get_sybers
           ln -s "$PWD" build/collections/ansible_collections/get_sybers/lxc
+      - name: Restore the NuGet and npm caches for ${{ inputs.template }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/${{ inputs.template }}/depcache
+          key: bake-depcache-${{ inputs.template }}-${{ hashFiles(format('templates/{0}/template.yml', inputs.template)) }}
+          restore-keys: |
+            bake-depcache-${{ inputs.template }}-
       - name: Bake ${{ inputs.template }}
         env:
           TEMPLATE: ${{ inputs.template }}
         run: |
           sudo env "ANSIBLE_COLLECTIONS_PATH=$PWD/build/collections" \
             build/venv/bin/ansible-playbook playbooks/bake-template.yml \
-            -e "lxc_template_dir=$PWD/templates/$TEMPLATE" -e "lxc_template_workdir=$PWD/build/$TEMPLATE"
+            -e "lxc_template_dir=$PWD/templates/$TEMPLATE" -e "lxc_template_workdir=$PWD/build/$TEMPLATE" \
+            -e "lxc_template_depcache_dir=$PWD/build/$TEMPLATE/depcache"
           sudo chown -R "$(id -u):$(id -g)" "build/$TEMPLATE"
           cat build/"$TEMPLATE"/*.sha256
       # The artifact is <base>-<name>_<version>_<arch>.tar.zst; the version in

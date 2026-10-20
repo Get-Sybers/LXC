@@ -8,7 +8,7 @@ URLs, the Grafana datasource, the n8n owner account and the first start happen o
 
 | | |
 | --- | --- |
-| Release tag | `ghost9/v<template release>` (`ghost9/v0.1.0`; the GHOSTS version is in the marker's `service=`) |
+| Release tag | `ghost9/v<template release>` (`ghost9/v0.1.1`; the GHOSTS version is in the marker's `service=`) |
 | Artifact | `debian-13-ghost9_<version>_<arch>.tar.zst` + `.sha256`, cosign bundle, provenance attestation |
 | Base | `debian-13-standard_13.6-1_amd64.tar.zst` from `download.proxmox.com` |
 | Bake steps | `lxc_guest` `baseline`, then `lxc_ghost9` `bake` |
