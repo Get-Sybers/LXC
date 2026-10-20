@@ -96,13 +96,27 @@
   changed_when: false
 - name: "server | Create the ghosts DB role (secret: password)"
   ansible.builtin.command:
-    argv: [runuser, -u, postgres, --, psql, -c, "CREATE ROLE {{ lxc_ghost9_db_user }} LOGIN PASSWORD '{{ lxc_ghost9_db_password }}'"]
+    argv:
+      - runuser
+      - -u
+      - postgres
+      - --
+      - psql
+      - -c
+      - "CREATE ROLE {{ lxc_ghost9_db_user }} LOGIN PASSWORD '{{ lxc_ghost9_db_password | replace(\"'\", \"''\") }}'"
   when: __lxc_ghost9_role.stdout | trim != "1"
   changed_when: true
   no_log: true
 - name: "server | Keep the ghosts role password in sync with the secret"
   ansible.builtin.command:
-    argv: [runuser, -u, postgres, --, psql, -c, "ALTER ROLE {{ lxc_ghost9_db_user }} PASSWORD '{{ lxc_ghost9_db_password }}'"]
+    argv:
+      - runuser
+      - -u
+      - postgres
+      - --
+      - psql
+      - -c
+      - "ALTER ROLE {{ lxc_ghost9_db_user }} PASSWORD '{{ lxc_ghost9_db_password | replace(\"'\", \"''\") }}'"
   changed_when: false
   no_log: true
 - name: "server | Does the ghosts database exist?"

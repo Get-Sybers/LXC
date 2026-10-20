@@ -88,7 +88,6 @@ lxc_ghost9_bake_packages:
 lxc_ghost9_root: /opt/ghost9
 lxc_ghost9_api_root: "{{ lxc_ghost9_root }}/api"
 lxc_ghost9_api_user: ghosts
-lxc_ghost9_api_bin: "/usr/bin/dotnet {{ lxc_ghost9_api_root }}/ghosts.api.dll"
 lxc_ghost9_api_port: 5000
 # The Angular UI: static files served by nginx; runtime URLs come from
 # assets/config.json, written by server to the public hostname.

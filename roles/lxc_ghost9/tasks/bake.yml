@@ -233,11 +233,6 @@
     owner: root
     group: root
     mode: "0755"
-- name: "bake | Resolve each service's unit file"
-  ansible.builtin.stat:
-    path: "/etc/systemd/system/{{ item }}.service"
-  register: __lxc_ghost9_local_units
-  loop: [ghosts-api, ghosts-n8n]
 - name: "bake | Enable the ghost9 units"
   ansible.builtin.file:
     src: "/etc/systemd/system/{{ item }}.service"
