@@ -1,0 +1,48 @@
+---
+# lxc_ghost9_range — the GHOSTS ("ghost9") server of one Ludus range: lxc_ghost9's
+# container, baseline and server entry points placed on the range's VNet. Every
+# input is listed here (standards §5); everything addressable derives from
+# lxc_ghost9_range_number, the range's second octet (the N in 10.N.0.0/16).
+lxc_ghost9_range_number: ""
+lxc_ghost9_range_vlan: 99
+lxc_ghost9_range_last_octet: 51
+lxc_ghost9_range_hostname_suffix: ghost9
+# CT id = vmid base + N: a fixed id would let one range's teardown find another
+# range's container, because lxc_guest's destroy guard keys on it.
+lxc_ghost9_range_vmid_base: 9000
+lxc_ghost9_range_pool: GHOST9
+lxc_ghost9_range_cores: 4
+lxc_ghost9_range_memory_mb: 6144
+lxc_ghost9_range_swap_mb: 2048
+lxc_ghost9_range_rootfs_gb: 20
+lxc_ghost9_range_storage: local-zfs
+# The port the range's GHOSTS clients report to (their ApiRootUrl).
+lxc_ghost9_range_api_port: 5000
+# The published template: this repository's release of it (X.Y.Z; moves with
+# templates/ghost9/template.yml) and the OCI image lxc_guest pulls — a tag, or
+# @sha256:<digest> for an exact image.
+lxc_ghost9_range_template_version: "0.1.1"
+lxc_ghost9_range_template_registry_base: ghcr.io/get-sybers/lxc
+lxc_ghost9_range_template_image: "{{ lxc_ghost9_range_template_registry_base }}/ghost9:v{{ lxc_ghost9_range_template_version }}"
+lxc_ghost9_range_template_release_base: https://github.com/get-sybers/lxc/releases/download
+lxc_ghost9_range_template_cache_dir: /var/lib/vz/template/cache
+lxc_ghost9_range_baseline_marker_path: /etc/get-sybers-lxc-baseline
+lxc_ghost9_range_template_marker_path: /etc/get-sybers-lxc-template
+# A Ludus-managed `<range>-ghosts` VM would answer for the same address; the
+# container entry point refuses unless both are wanted.
+lxc_ghost9_range_allow_ghosts_vm: false
+# The play group the CT is added to (plays 2 and 3 target it).
+lxc_ghost9_range_group: ghost9
+# lxc_preflight admits a node `pvecm nodes` does not list (a single node) when it
+# is a member of this group; the container entry point declares the node in it.
+lxc_ghost9_range_cluster_group: proxmox_nodes
+# --- Derived placement (computed defaults; override only to leave the convention) --
+lxc_ghost9_range_bridge: "r{{ lxc_ghost9_range_number }}"
+lxc_ghost9_range_subnet_prefix: "10.{{ lxc_ghost9_range_number }}.{{ lxc_ghost9_range_vlan }}"
+lxc_ghost9_range_ip: "{{ lxc_ghost9_range_subnet_prefix }}.{{ lxc_ghost9_range_last_octet }}"
+lxc_ghost9_range_cidr: 24
+lxc_ghost9_range_gateway: "{{ lxc_ghost9_range_subnet_prefix }}.254"
+lxc_ghost9_range_vmid: "{{ lxc_ghost9_range_vmid_base | int + (lxc_ghost9_range_number | int) }}"
+lxc_ghost9_range_hostname: "r{{ lxc_ghost9_range_number }}-{{ lxc_ghost9_range_hostname_suffix }}"
+# The marker the server entry point asserts first (premise rule 5).
+lxc_ghost9_range_baseline_marker: "{{ lxc_ghost9_range_baseline_marker_path }}"

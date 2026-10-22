@@ -1,0 +1,198 @@
+---
+# Node side, as root on the Proxmox node that hosts the Ludus server. The node is
+# reached only through the PVE API and lxc_guest (premise rule 4): the range checks
+# read files and the API, the CT is created by lxc_ghost9's container entry point,
+# the postcheck reads the CT config back through the API.
+- name: "container | A PVE API credential is set"
+  ansible.builtin.assert:
+    that:
+      - pve_api_host | length > 0
+      - pve_api_user | length > 0
+      - (pve_api_token_secret | length > 0) or (pve_api_password | length > 0)
+    fail_msg: >-
+      No PVE API credential: set pve_api_host, pve_api_user and pve_api_token_id +
+      pve_api_token_secret (preferred) or pve_api_password — from the PROXMOX_*
+      environment through the inventory, or in the consumer's vars file. A token
+      scoped to the pool (PVEVMAdmin on /pool/{{ lxc_ghost9_range_pool }}),
+      the storage (PVEDatastoreUser) and the SDN zone (PVESDNUser) is enough.
+    quiet: true
+  no_log: true
+- name: "container | The range number is set and numeric"
+  ansible.builtin.assert:
+    that:
+      - lxc_ghost9_range_number | string | length > 0
+      - lxc_ghost9_range_number | string is match('^[0-9]+$')
+      - lxc_ghost9_range_number | int > 0
+      - lxc_ghost9_range_number | int < 255
+    fail_msg: >-
+      lxc_ghost9_range_number is required and must be the range's second octet
+      (got '{{ lxc_ghost9_range_number }}'). The VNet r<N>, the address
+      10.<N>.{{ lxc_ghost9_range_vlan }}.{{ lxc_ghost9_range_last_octet }}, the
+      gateway and the CT id all derive from it; guessing it is how a container
+      lands on a previous deploy's network.
+    quiet: true
+- name: "container | The template release is pinned"
+  ansible.builtin.assert:
+    that: lxc_ghost9_range_template_version is match('^[0-9]+\.[0-9]+\.[0-9]+$')
+    fail_msg: >-
+      lxc_ghost9_range_template_version must be the template release the guest
+      marker carries (X.Y.Z) — got '{{ lxc_ghost9_range_template_version }}'.
+    quiet: true
+- name: "container | Read this node's short name"
+  ansible.builtin.command:
+    argv: [hostname, -s]
+  register: __lxc_ghost9_range_hostname_short
+  changed_when: false
+  check_mode: false
+- name: "container | Read this node's hostname as lxc_preflight reads it"
+  ansible.builtin.command:
+    argv: [hostname]
+  register: __lxc_ghost9_range_hostname_full
+  changed_when: false
+  check_mode: false
+- name: "container | Derive the node name"
+  ansible.builtin.set_fact:
+    __lxc_ghost9_range_node: "{{ __lxc_ghost9_range_hostname_short.stdout | trim }}"
+- name: "container | Declare this node in the cluster group lxc_preflight admits from"
+  ansible.builtin.add_host:
+    name: "{{ __lxc_ghost9_range_hostname_full.stdout | trim }}"
+    groups: "{{ lxc_ghost9_range_cluster_group }}"
+  changed_when: false
+- name: "container | Read the SDN VNet definitions"
+  ansible.builtin.slurp:
+    src: /etc/pve/sdn/vnets.cfg
+  register: __lxc_ghost9_range_vnets_raw
+  failed_when: false
+- name: "container | Stat the range bridge on this node"
+  ansible.builtin.stat:
+    path: "/sys/class/net/{{ lxc_ghost9_range_bridge }}"
+  register: __lxc_ghost9_range_bridge_stat
+  check_mode: false
+- name: "container | Read the range bridge's MTU"
+  ansible.builtin.slurp:
+    src: "/sys/class/net/{{ lxc_ghost9_range_bridge }}/mtu"
+  register: __lxc_ghost9_range_mtu_raw
+  failed_when: false
+- name: "container | Read the virtual machines the cluster knows about (PVE API)"
+  community.proxmox.proxmox_vm_info:
+    type: qemu
+  register: __lxc_ghost9_range_vms
+  check_mode: false
+  failed_when: false
+- name: "container | Parse what the node reported"
+  ansible.builtin.set_fact:
+    __lxc_ghost9_range_vnets: >-
+      {{ (__lxc_ghost9_range_vnets_raw['content'] | default('') | b64decode)
+         | regex_findall('(?m)^vnet:\s+(\S+)\s*$') }}
+    __lxc_ghost9_range_bridge_mtu: >-
+      {{ (__lxc_ghost9_range_mtu_raw['content'] | default('') | b64decode | trim)
+         if ((__lxc_ghost9_range_mtu_raw['content'] | default('') | b64decode | trim) is match('^[0-9]+$'))
+         else '' }}
+    __lxc_ghost9_range_ghosts_guests: >-
+      {{ (__lxc_ghost9_range_vms['proxmox_vms'] | default([]))
+         | selectattr('name', 'defined') | selectattr('name', 'search', '-ghosts$')
+         | map(attribute='name') | list }}
+- name: "container | The range's SDN VNet is declared"
+  ansible.builtin.assert:
+    that: lxc_ghost9_range_bridge in __lxc_ghost9_range_vnets
+    fail_msg: >-
+      VNet '{{ lxc_ghost9_range_bridge }}' is not declared in /etc/pve/sdn/vnets.cfg
+      (declared: {{ __lxc_ghost9_range_vnets | join(', ') or 'none' }}). Either the
+      range number is wrong or the range's VNet has not been created — Ludus does
+      not auto-create SDN VNets in cluster mode.
+    quiet: true
+- name: "container | The VNet's bridge exists on this node"
+  ansible.builtin.assert:
+    that: __lxc_ghost9_range_bridge_stat['stat']['exists']
+    fail_msg: >-
+      VNet '{{ lxc_ghost9_range_bridge }}' is declared but has no interface on
+      {{ __lxc_ghost9_range_node }} — the SDN config has not been applied here. A
+      CT on a nonexistent bridge boots looking healthy with no network at all.
+    quiet: true
+- name: "container | The bridge's MTU was read"
+  ansible.builtin.assert:
+    that:
+      - __lxc_ghost9_range_bridge_mtu | string is match('^[0-9]+$')
+      - __lxc_ghost9_range_bridge_mtu | int > 0
+    fail_msg: >-
+      Could not read the MTU of '{{ lxc_ghost9_range_bridge }}' from
+      /sys/class/net/{{ lxc_ghost9_range_bridge }}/mtu on {{ __lxc_ghost9_range_node }}.
+      net0 pins the CT to the bridge's MTU (SDN VXLAN is 1450 on a cluster; a CT
+      left at 1500 black-holes large packets across the overlay); refusing to guess.
+    quiet: true
+- name: "container | No Ludus-managed GHOSTS VM is competing for the range address"
+  ansible.builtin.assert:
+    that: (__lxc_ghost9_range_ghosts_guests | length == 0) or (lxc_ghost9_range_allow_ghosts_vm | bool)
+    fail_msg: >-
+      The cluster already carries {{ __lxc_ghost9_range_ghosts_guests | join(', ') }}.
+      A `-ghosts` VM takes ip_last_octet {{ lxc_ghost9_range_last_octet }} on VLAN
+      {{ lxc_ghost9_range_vlan }} — the address {{ lxc_ghost9_range_hostname }} would
+      take, so both would answer for {{ lxc_ghost9_range_ip }}. Remove the VM from
+      the range config (this CT replaces it), or set
+      lxc_ghost9_range_allow_ghosts_vm=true if one of them has been moved.
+    quiet: true
+- name: "container | Compose net0 from the range placement and the bridge's MTU"
+  ansible.builtin.set_fact:
+    __lxc_ghost9_range_net0: >-
+      {{ ['name=eth0', 'bridge=' ~ lxc_ghost9_range_bridge, 'tag=' ~ lxc_ghost9_range_vlan,
+          'ip=' ~ lxc_ghost9_range_ip ~ '/' ~ lxc_ghost9_range_cidr,
+          'gw=' ~ lxc_ghost9_range_gateway, 'mtu=' ~ __lxc_ghost9_range_bridge_mtu] | join(',') }}
+- name: "container | Node admission gate"
+  ansible.builtin.include_role:
+    name: get_sybers.lxc.lxc_preflight
+  vars:
+    lxc_preflight_cluster_group: "{{ lxc_ghost9_range_cluster_group }}"
+- name: "container | Ensure the GHOSTS LXC through lxc_ghost9"
+  ansible.builtin.include_role:
+    name: get_sybers.lxc.lxc_ghost9
+    tasks_from: container
+  vars:
+    lxc_ghost9_node: "{{ __lxc_ghost9_range_node }}"
+    lxc_ghost9_vmid: "{{ lxc_ghost9_range_vmid }}"
+    lxc_ghost9_hostname: "{{ lxc_ghost9_range_hostname }}"
+    lxc_ghost9_net0: "{{ __lxc_ghost9_range_net0 }}"
+    lxc_ghost9_nameserver: "{{ lxc_ghost9_range_gateway }}"
+    lxc_ghost9_pool: "{{ lxc_ghost9_range_pool }}"
+    lxc_ghost9_cores: "{{ lxc_ghost9_range_cores }}"
+    lxc_ghost9_memory_mb: "{{ lxc_ghost9_range_memory_mb }}"
+    lxc_ghost9_swap_mb: "{{ lxc_ghost9_range_swap_mb }}"
+    lxc_ghost9_rootfs_gb: "{{ lxc_ghost9_range_rootfs_gb }}"
+    lxc_ghost9_storage: "{{ lxc_ghost9_range_storage }}"
+    lxc_ghost9_template_image: "{{ lxc_ghost9_range_template_image }}"
+    lxc_ghost9_template_url: ""
+    lxc_ghost9_template_checksum: ""
+    lxc_ghost9_template_version: "{{ lxc_ghost9_range_template_version }}"
+    lxc_ghost9_template_registry_base: "{{ lxc_ghost9_range_template_registry_base }}"
+    lxc_ghost9_group: "{{ lxc_ghost9_range_group }}"
+    lxc_ghost9_onboot: true
+    lxc_template_cache_dir: "{{ lxc_ghost9_range_template_cache_dir }}"
+    lxc_template_release_base: "{{ lxc_ghost9_range_template_release_base }}"
+    lxc_template_registry_base: "{{ lxc_ghost9_range_template_registry_base }}"
+    lxc_baseline_marker_path: "{{ lxc_ghost9_range_baseline_marker_path }}"
+    lxc_template_marker_path: "{{ lxc_ghost9_range_template_marker_path }}"
+- name: "container | Re-read the CT config from Proxmox (PVE API)"
+  community.proxmox.proxmox_vm_info:
+    type: lxc
+    vmid: "{{ lxc_ghost9_range_vmid }}"
+    config: current
+  register: __lxc_ghost9_range_post_info
+  check_mode: false
+- name: "container | Keep the config"
+  ansible.builtin.set_fact:
+    __lxc_ghost9_range_post: "{{ (__lxc_ghost9_range_post_info['proxmox_vms'] | first)['config'] | default({}) }}"
+- name: "container | It is attached to the range VNet on the range VLAN, at the range address, at the bridge MTU"
+  ansible.builtin.assert:
+    that:
+      - ('bridge=' ~ lxc_ghost9_range_bridge ~ ',') in (__lxc_ghost9_range_post['net0'] | default('') ~ ',')
+      - ('tag=' ~ lxc_ghost9_range_vlan ~ ',') in (__lxc_ghost9_range_post['net0'] | default('') ~ ',')
+      - ('ip=' ~ lxc_ghost9_range_ip ~ '/' ~ lxc_ghost9_range_cidr ~ ',') in (__lxc_ghost9_range_post['net0'] | default('') ~ ',')
+      - ('gw=' ~ lxc_ghost9_range_gateway ~ ',') in (__lxc_ghost9_range_post['net0'] | default('') ~ ',')
+      - ('mtu=' ~ __lxc_ghost9_range_bridge_mtu ~ ',') in (__lxc_ghost9_range_post['net0'] | default('') ~ ',')
+    fail_msg: >-
+      net0 is not on {{ lxc_ghost9_range_bridge }} tag {{ lxc_ghost9_range_vlan }} at
+      {{ lxc_ghost9_range_ip }}/{{ lxc_ghost9_range_cidr }} gw
+      {{ lxc_ghost9_range_gateway }} mtu {{ __lxc_ghost9_range_bridge_mtu }}. Actual
+      net0: {{ __lxc_ghost9_range_post['net0'] | default('<no net0>') }}. lxc_guest
+      reconciles net0 on every run, so Proxmox did not accept the requested value —
+      check the create task's result and `pct config {{ lxc_ghost9_range_vmid }}`.
+    quiet: true

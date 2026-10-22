@@ -24,7 +24,8 @@ The roles document their own contracts: [`lxc_guest`](../roles/lxc_guest/README.
 [`lxc_onepassword_connect`](../roles/lxc_onepassword_connect/README.md), [`lxc_onepassword_item`](../roles/lxc_onepassword_item/README.md),
 [`lxc_semaphore`](../roles/lxc_semaphore/README.md), [`lxc_distrobuilder`](../roles/lxc_distrobuilder/README.md),
 [`lxc_velociraptor`](../roles/lxc_velociraptor/README.md),
-[`lxc_ghost9`](../roles/lxc_ghost9/README.md).
+[`lxc_ghost9`](../roles/lxc_ghost9/README.md),
+[`lxc_ghost9_range`](../roles/lxc_ghost9_range/README.md).
 The templates document what they carry: [`templates/`](../templates/README.md).
 
 ---

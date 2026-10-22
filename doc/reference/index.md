@@ -13,5 +13,6 @@ Technical information: the rules, the formats, the contracts.
 | [`lxc_semaphore`](../../roles/lxc_semaphore/README.md) | The Semaphore UI build (`bake`) and runtime (`server`) contract. |
 | [`lxc_velociraptor`](../../roles/lxc_velociraptor/README.md) | The Velociraptor DFIR server build (`bake`) and runtime (`server`) contract. |
 | [`lxc_ghost9`](../../roles/lxc_ghost9/README.md) | The GHOSTS (ghost9) server build (`bake`) and runtime (`server`) contract. |
+| [`lxc_ghost9_range`](../../roles/lxc_ghost9_range/README.md) | The GHOSTS server of one Ludus range: `lxc_ghost9` placed on the range's VNet, with the range checks and the placement postcheck. |
 | [`lxc_distrobuilder`](../../roles/lxc_distrobuilder/README.md) | The distrobuilder build-box build (`bake`), runtime (`server`) and interaction (`build`) contract. |
 | [Inventory](../../inventory/README.md) | The single config home: groups, collection variables, placement files, secrets. |

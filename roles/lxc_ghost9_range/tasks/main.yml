@@ -1,0 +1,12 @@
+---
+# A library of entry points driven across plays by playbooks/deploy_ghost9_range.yml:
+# `container` (node side), `baseline` and `server` (inside the CT), `remove` (node
+# side). A bare include is a mistake.
+- name: "Refuse a bare include — use a tasks_from entry point"
+  ansible.builtin.fail:
+    msg: >-
+      lxc_ghost9_range has no default entry point. Drive it with
+      playbooks/deploy_ghost9_range.yml (ansible-playbook
+      get_sybers.lxc.deploy_ghost9_range), or include it with tasks_from:
+      container (on the node), then tasks_from: baseline and tasks_from: server
+      (in the CT); tasks_from: remove tears the CT down.

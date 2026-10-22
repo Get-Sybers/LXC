@@ -1,0 +1,11 @@
+---
+# Inside the CT over proxmox_pct_remote: lxc_guest's hardened baseline, with this
+# role's marker path.
+- name: "baseline | No SSH daemon, no container runtime, baseline marker (lxc_guest)"
+  ansible.builtin.include_role:
+    name: get_sybers.lxc.lxc_guest
+    tasks_from: baseline
+  vars:
+    lxc_guest_baseline_marker: "{{ lxc_ghost9_range_baseline_marker_path }}"
+    lxc_baseline_marker_path: "{{ lxc_ghost9_range_baseline_marker_path }}"
+    lxc_template_marker_path: "{{ lxc_ghost9_range_template_marker_path }}"
