@@ -8,6 +8,12 @@ changed:
     The four ``cp -a`` steps of the ``lxc_ghost9`` bake are argv-form commands
     (no ``cmd`` string), like every other command in the collection.
   - >-
+    The ghost9 template is ``0.1.2``: its bake is one of the files this change
+    rewrites (bracket reads, argv commands; the image it produces is the same),
+    and the Version Gate ships every changed bake as a new, never-published
+    version. The deploy pin (``lxc_ghost9_range_template_version``) stays at
+    the released ``0.1.1`` until ``0.1.2`` is published.
+  - >-
     ``lxc_preflight`` reads the effective uid and the node name from the
     delegate's facts (``setup``, the ``user`` and ``platform`` subsets) instead
     of running ``id -u`` and ``hostname``.
