@@ -14,6 +14,17 @@ changed:
     version. The deploy pin (``lxc_ghost9_range_template_version``) stays at
     the released ``0.1.1`` until ``0.1.2`` is published.
   - >-
+    The Scorecard workflow runs ``ossf/scorecard-action`` v2.5.0, the release
+    the proxmaxxing repository's workflow completes with; this repository's
+    analysis step had been cancelled by its own 15-minute timeout on every run
+    since the repository was created, with the checks themselves finishing in
+    seconds when run against it from outside.
+  - >-
+    ``.github/rulesets/main.json`` requires ``all_green`` (the one CI check,
+    as the other repositories do) together with ``lxc-template-pin``; the
+    applied ruleset had required the template gate alone, so a red CI run did
+    not block a merge.
+  - >-
     ``lxc_preflight`` reads the effective uid and the node name from the
     delegate's facts (``setup``, the ``user`` and ``platform`` subsets) instead
     of running ``id -u`` and ``hostname``.
