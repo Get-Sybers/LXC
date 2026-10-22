@@ -15,3 +15,7 @@ fixed:
   - >-
     The ``lxc_onepassword_connect`` staging rootfs directory declares its owner
     and group as well as its mode.
+  - >-
+    The project-local collections cache that ansible-lint installs the pinned
+    requirements into (``.ansible/``) is excluded from ansible-lint and
+    markdownlint, so a local hook run no longer lints the dependencies.
