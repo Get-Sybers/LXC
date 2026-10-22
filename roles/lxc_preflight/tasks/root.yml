@@ -1,16 +1,15 @@
 ---
-- name: "root | Read the effective uid"
-  ansible.builtin.command:
-    argv: [id, -u]
-  register: __lpf_uid
-  changed_when: false
-  check_mode: false
+- name: "root | Read the effective user"
+  ansible.builtin.setup:
+    gather_subset: ["!all", "!min", "user"]
+  register: __lpf_user
   delegate_to: "{{ lxc_preflight_delegate_to }}"
+  delegate_facts: true
 - name: "root | Assert running as root"
   ansible.builtin.assert:
-    that: (__lpf_uid.stdout | trim) == '0'
+    that: __lpf_user['ansible_facts']['ansible_user_uid'] | int == 0
     fail_msg: >-
       The LXC plays run as root on the Proxmox node (uid here:
-      {{ __lpf_uid.stdout | trim }}): pct is root-only and there is no
+      {{ __lpf_user['ansible_facts']['ansible_user_uid'] }}): pct is root-only and there is no
       sudo/become path. Re-run as root.
     quiet: true

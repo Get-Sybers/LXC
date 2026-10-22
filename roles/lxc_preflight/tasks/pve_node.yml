@@ -28,12 +28,11 @@
       reached through pct, so this host cannot run the LXC plays.
     quiet: true
 - name: "pve_node | Read the execution host's name"
-  ansible.builtin.command:
-    argv: [hostname]
-  register: __lpf_hostname
-  changed_when: false
-  check_mode: false
+  ansible.builtin.setup:
+    gather_subset: ["!all", "!min", "platform"]
+  register: __lpf_platform
   delegate_to: "{{ lxc_preflight_delegate_to }}"
+  delegate_facts: true
 - name: "pve_node | Read cluster membership"
   ansible.builtin.command:
     argv: [pvecm, nodes]
@@ -46,10 +45,10 @@
   ansible.builtin.assert:
     that: >-
       (__lpf_pvecm.rc == 0
-       and (__lpf_hostname.stdout | trim) in __lpf_pvecm.stdout.split())
-      or ((__lpf_hostname.stdout | trim) in (groups[lxc_preflight_cluster_group] | default([])))
+       and __lpf_platform['ansible_facts']['ansible_nodename'] in __lpf_pvecm.stdout.split())
+      or (__lpf_platform['ansible_facts']['ansible_nodename'] in (groups[lxc_preflight_cluster_group] | default([])))
     fail_msg: >-
-      Host '{{ __lpf_hostname.stdout | trim }}' is not in `pvecm nodes`
+      Host '{{ __lpf_platform['ansible_facts']['ansible_nodename'] }}' is not in `pvecm nodes`
       (rc={{ __lpf_pvecm.rc }}) and not in inventory group
       {{ lxc_preflight_cluster_group }}. The LXC plays run only on a node this
       inventory declares.

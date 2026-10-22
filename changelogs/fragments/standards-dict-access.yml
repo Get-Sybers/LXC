@@ -7,6 +7,10 @@ changed:
   - >-
     The four ``cp -a`` steps of the ``lxc_ghost9`` bake are argv-form commands
     (no ``cmd`` string), like every other command in the collection.
+  - >-
+    ``lxc_preflight`` reads the effective uid and the node name from the
+    delegate's facts (``setup``, the ``user`` and ``platform`` subsets) instead
+    of running ``id -u`` and ``hostname``.
 fixed:
   - >-
     The ``lxc_onepassword_connect`` staging rootfs directory declares its owner
