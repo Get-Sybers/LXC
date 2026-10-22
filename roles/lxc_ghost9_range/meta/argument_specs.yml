@@ -1,0 +1,159 @@
+---
+argument_specs:
+  container:
+    short_description: "Create the range's GHOSTS LXC on this node, placed on the range VNet, through lxc_preflight and lxc_ghost9."
+    description:
+      - >-
+        Runs on the Proxmox node that hosts the Ludus server (hosts: localhost,
+        connection: local, as root). Checks what lxc_guest does not (the VNet is
+        declared, its bridge exists, its MTU is readable, no Ludus-managed
+        *-ghosts VM competes for the address), runs lxc_preflight, hands the
+        range placement to lxc_ghost9's container entry point, then reads the
+        CT config back through the PVE API and asserts bridge, VLAN tag,
+        address, gateway and MTU.
+    options:
+      lxc_ghost9_range_number:
+        type: str
+        required: true
+        description: "The range's second octet (the N in 10.N.0.0/16, from `ludus range list`); every address, the VNet and the CT id derive from it."
+      lxc_ghost9_range_vlan:
+        type: int
+        default: 99
+        description: "The range VLAN the CT attaches to (the VLAN tag on net0 and the third octet of the address)."
+      lxc_ghost9_range_last_octet:
+        type: int
+        default: 51
+        description: "The last octet of the CT's address; the range's GHOSTS clients carry it in their ApiRootUrl."
+      lxc_ghost9_range_hostname_suffix:
+        type: str
+        default: ghost9
+        description: "Hostname suffix; the CT is named r<N>-<suffix>."
+      lxc_ghost9_range_vmid_base:
+        type: int
+        default: 9000
+        description: "The CT id is this base plus the range number."
+      lxc_ghost9_range_pool:
+        type: str
+        default: GHOST9
+        description: "The PVE pool the CT joins (the pool a scoped deploy token is granted on)."
+      lxc_ghost9_range_cores:
+        type: int
+        default: 4
+      lxc_ghost9_range_memory_mb:
+        type: int
+        default: 6144
+      lxc_ghost9_range_swap_mb:
+        type: int
+        default: 2048
+      lxc_ghost9_range_rootfs_gb:
+        type: int
+        default: 20
+      lxc_ghost9_range_storage:
+        type: str
+        default: local-zfs
+        description: "The storage the rootfs is created on."
+      lxc_ghost9_range_api_port:
+        type: int
+        default: 5000
+        description: "The GHOSTS API port the range's clients report to."
+      lxc_ghost9_range_template_version:
+        type: str
+        default: "0.1.1"
+        description: "This repository's release of the ghost9 template (X.Y.Z) the guest marker must carry."
+      lxc_ghost9_range_template_registry_base:
+        type: str
+        default: ghcr.io/get-sybers/lxc
+        description: "The OCI registry prefix the default image is composed from (point it at a mirror)."
+      lxc_ghost9_range_template_image:
+        type: str
+        default: "<registry base>/ghost9:v<template version>"
+        description: "The OCI image lxc_guest pulls into local:vztmpl/ghost9.tar; pin @sha256:<digest> for an exact image."
+      lxc_ghost9_range_template_release_base:
+        type: str
+        default: https://github.com/get-sybers/lxc/releases/download
+        description: "The release-URL base lxc_guest's URL fetch path would use; the OCI image is the fetch path here."
+      lxc_ghost9_range_template_cache_dir:
+        type: str
+        default: /var/lib/vz/template/cache
+        description: "The node's template cache (where local:vztmpl lives)."
+      lxc_ghost9_range_baseline_marker_path:
+        type: str
+        default: /etc/get-sybers-lxc-baseline
+        description: "The in-guest marker lxc_guest's baseline writes."
+      lxc_ghost9_range_template_marker_path:
+        type: str
+        default: /etc/get-sybers-lxc-template
+        description: "The in-guest marker the released template carries."
+      lxc_ghost9_range_allow_ghosts_vm:
+        type: bool
+        default: false
+        description: >-
+          Allow a Ludus-managed *-ghosts VM to coexist on the cluster; by default the
+          entry point refuses, because both would answer for the same address.
+      lxc_ghost9_range_group:
+        type: str
+        default: ghost9
+        description: "The play group the CT is added to; the baseline and server plays target it."
+      lxc_ghost9_range_cluster_group:
+        type: str
+        default: proxmox_nodes
+        description: "The group lxc_preflight admits a node from when `pvecm nodes` does not list it (a single node)."
+  baseline:
+    short_description: "Run lxc_guest's hardened baseline inside the range's CT with this role's marker path."
+    description:
+      - "Runs inside the CT (hosts: the range group) over proxmox_pct_remote; no SSH daemon, no container runtime, the baseline marker."
+    options:
+      lxc_ghost9_range_baseline_marker_path:
+        type: str
+        default: /etc/get-sybers-lxc-baseline
+        description: "The in-guest marker lxc_guest's baseline writes."
+  server:
+    short_description: "Configure and verify the GHOSTS stack inside the range's CT through lxc_ghost9's server entry point."
+    description:
+      - >-
+        Runs inside the CT. Refuses a guest that has not been through the
+        baseline (premise rule 5), then hands lxc_ghost9 the range address as
+        the public hostname, the API port and the template release. The
+        service secrets are lxc_ghost9's own inputs (lxc_ghost9_db_password,
+        lxc_ghost9_n8n_owner_email, lxc_ghost9_n8n_owner_password).
+    options:
+      lxc_ghost9_range_number:
+        type: str
+        required: true
+        description: "The range's second octet."
+      lxc_ghost9_range_vlan:
+        type: int
+        default: 99
+      lxc_ghost9_range_last_octet:
+        type: int
+        default: 51
+      lxc_ghost9_range_api_port:
+        type: int
+        default: 5000
+      lxc_ghost9_range_template_version:
+        type: str
+        default: "0.1.1"
+      lxc_ghost9_range_baseline_marker_path:
+        type: str
+        default: /etc/get-sybers-lxc-baseline
+      lxc_ghost9_range_template_marker_path:
+        type: str
+        default: /etc/get-sybers-lxc-template
+  remove:
+    short_description: "Destroy the range's GHOSTS CT through lxc_ghost9's remove entry point (opt-in)."
+    description:
+      - "Runs on the node. Needs -e lxc_guest_confirm_destroy=true; lxc_guest refuses a CT that is not the one this role describes."
+    options:
+      lxc_ghost9_range_number:
+        type: str
+        required: true
+        description: "The range's second octet; the CT id and hostname derive from it."
+      lxc_ghost9_range_vmid_base:
+        type: int
+        default: 9000
+      lxc_ghost9_range_hostname_suffix:
+        type: str
+        default: ghost9
+      lxc_ghost9_range_cluster_group:
+        type: str
+        default: proxmox_nodes

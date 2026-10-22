@@ -1,0 +1,32 @@
+---
+# Inside the CT over proxmox_pct_remote. The service configuration is lxc_ghost9's;
+# this entry point hands it the range address and the release, after the premise's
+# rule-5 check that the guest has been through the baseline.
+- name: "server | Stat the lxc_guest baseline marker"
+  ansible.builtin.stat:
+    path: "{{ lxc_ghost9_range_baseline_marker }}"
+  register: __lxc_ghost9_range_baseline
+- name: "server | Refuse a guest that has not been through the hardened baseline"
+  ansible.builtin.assert:
+    that: __lxc_ghost9_range_baseline['stat']['exists']
+    fail_msg: >-
+      {{ lxc_ghost9_range_baseline_marker }} is absent, so this guest has not been
+      through get_sybers.lxc.lxc_guest's baseline (no SSH daemon, no container
+      runtime). The released ghost9 template carries it; a guest created from
+      anything else is not configured by this role.
+    quiet: true
+- name: "server | Firewall, Postgres, site config, start all services, provision n8n, verify (lxc_ghost9)"
+  ansible.builtin.include_role:
+    name: get_sybers.lxc.lxc_ghost9
+    tasks_from: server
+  vars:
+    lxc_ghost9_public_hostname: "{{ lxc_ghost9_range_ip }}"
+    lxc_ghost9_api_port: "{{ lxc_ghost9_range_api_port }}"
+    lxc_ghost9_template_version: "{{ lxc_ghost9_range_template_version }}"
+    lxc_baseline_marker_path: "{{ lxc_ghost9_range_baseline_marker_path }}"
+    lxc_template_marker_path: "{{ lxc_ghost9_range_template_marker_path }}"
+- name: "server | Where the range's GHOSTS clients point"
+  ansible.builtin.debug:
+    msg: >-
+      GHOSTS clients of range {{ lxc_ghost9_range_number }} use
+      ApiRootUrl = http://{{ lxc_ghost9_range_ip }}:{{ lxc_ghost9_range_api_port }}/api.

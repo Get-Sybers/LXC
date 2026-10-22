@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: lxc_ghost9_range
+  namespace: get_sybers
+  author: Get-Sybers
+  description: >-
+    The GHOSTS (ghost9) server of one Ludus range: lxc_ghost9's container,
+    baseline and server entry points placed on the range's VNet (r<N>, the VLAN
+    tag, 10.<N>.<vlan>.<octet>/24, the bridge's MTU), after the range checks
+    lxc_guest does not make and before a placement postcheck. The node is
+    reached only through the PVE API and lxc_guest.
+  company: Get-Sybers
+  license: AGPL-3.0-only
+  min_ansible_version: "2.19.0"
+  platforms:
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [ghosts, ghost9, ludus, range, proxmox, lxc]
+dependencies: []

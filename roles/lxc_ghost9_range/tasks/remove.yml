@@ -1,0 +1,51 @@
+---
+# Node side, opt-in (-e lxc_guest_confirm_destroy=true): lxc_ghost9's remove entry
+# point on the CT this role describes; lxc_guest refuses any other.
+- name: "remove | The range number is set and numeric"
+  ansible.builtin.assert:
+    that:
+      - lxc_ghost9_range_number | string is match('^[0-9]+$')
+      - lxc_ghost9_range_number | int > 0
+      - lxc_ghost9_range_number | int < 255
+    fail_msg: >-
+      lxc_ghost9_range_number is required (got '{{ lxc_ghost9_range_number }}'): the
+      CT id and the hostname lxc_guest refuses to destroy anything else derive
+      from it.
+    quiet: true
+- name: "remove | Read this node's short name"
+  ansible.builtin.command:
+    argv: [hostname, -s]
+  register: __lxc_ghost9_range_hostname_short
+  changed_when: false
+  check_mode: false
+- name: "remove | Read this node's hostname as lxc_preflight reads it"
+  ansible.builtin.command:
+    argv: [hostname]
+  register: __lxc_ghost9_range_hostname_full
+  changed_when: false
+  check_mode: false
+- name: "remove | Derive the node name"
+  ansible.builtin.set_fact:
+    __lxc_ghost9_range_node: "{{ __lxc_ghost9_range_hostname_short.stdout | trim }}"
+- name: "remove | Declare this node in the cluster group lxc_preflight admits from"
+  ansible.builtin.add_host:
+    name: "{{ __lxc_ghost9_range_hostname_full.stdout | trim }}"
+    groups: "{{ lxc_ghost9_range_cluster_group }}"
+  changed_when: false
+- name: "remove | Node admission gate"
+  ansible.builtin.include_role:
+    name: get_sybers.lxc.lxc_preflight
+  vars:
+    lxc_preflight_cluster_group: "{{ lxc_ghost9_range_cluster_group }}"
+- name: "remove | Destroy the range's GHOSTS CT through lxc_ghost9 (lxc_guest refuses the wrong CT)"
+  ansible.builtin.include_role:
+    name: get_sybers.lxc.lxc_ghost9
+    tasks_from: remove
+  vars:
+    lxc_ghost9_node: "{{ __lxc_ghost9_range_node }}"
+    lxc_ghost9_vmid: "{{ lxc_ghost9_range_vmid }}"
+    lxc_ghost9_hostname: "{{ lxc_ghost9_range_hostname }}"
+    lxc_ghost9_net0: "name=eth0,bridge={{ lxc_ghost9_range_bridge }}"
+    lxc_template_cache_dir: "{{ lxc_ghost9_range_template_cache_dir }}"
+    lxc_baseline_marker_path: "{{ lxc_ghost9_range_baseline_marker_path }}"
+    lxc_template_marker_path: "{{ lxc_ghost9_range_template_marker_path }}"
