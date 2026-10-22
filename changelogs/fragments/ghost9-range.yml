@@ -1,11 +1,12 @@
 ---
 added:
   - >-
-    ``deploy_ghost9_range.yml`` - deploy the GHOSTS server of one Ludus range: the
-    ``lxc_preflight`` → ``lxc_ghost9`` ``container`` → ``lxc_guest`` ``baseline`` →
-    ``lxc_ghost9`` ``server`` chain placed on the range's VNet (``r<N>``, the VLAN tag,
-    ``10.<N>.<vlan>.<octet>/24``, the bridge's MTU) after the range checks ``lxc_guest``
-    does not make and before a placement postcheck. Every input is an
-    ``lxc_ghost9_range_*`` play variable, so a consumer runs it by its collection-qualified
-    name (``ansible-playbook get_sybers.lxc.deploy_ghost9_range -e @<vars file>``) with no
-    inventory; ``-t destroy -e lxc_guest_confirm_destroy=true`` tears the CT down.
+    ``lxc_ghost9_range`` and ``deploy_ghost9_range.yml`` - the GHOSTS server of one
+    Ludus range: ``lxc_ghost9``'s ``container``, ``baseline`` and ``server`` entry
+    points placed on the range's VNet (``r<N>``, the VLAN tag,
+    ``10.<N>.<vlan>.<octet>/24``, the bridge's MTU) after the range checks
+    ``lxc_guest`` does not make and before a placement postcheck through the PVE
+    API. Every input is a role default (``lxc_ghost9_range_*``), the play carries no
+    variables, and a consumer runs it by its collection-qualified name
+    (``ansible-playbook get_sybers.lxc.deploy_ghost9_range -e @<vars file>``);
+    ``-t destroy -e lxc_guest_confirm_destroy=true`` tears the CT down.
