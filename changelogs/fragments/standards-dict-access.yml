@@ -1,0 +1,13 @@
+---
+changed:
+  - >-
+    Loop items are read with bracket notation (``item['key']``, never
+    ``item['key']``), as the standard requires: dot access breaks on hyphenated
+    keys and collides with the dict methods.
+  - >-
+    The four ``cp -a`` steps of the ``lxc_ghost9`` bake are argv-form commands
+    (no ``cmd`` string), like every other command in the collection.
+fixed:
+  - >-
+    The ``lxc_onepassword_connect`` staging rootfs directory declares its owner
+    and group as well as its mode.

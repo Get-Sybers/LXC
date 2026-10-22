@@ -87,7 +87,7 @@
   ansible.builtin.copy:
     content: |
       {% for r in __lxc_distrobuilder_tarballs.results %}
-      {{ r.stat.checksum }}  {{ r.item | basename }}
+      {{ r['stat']['checksum'] }}  {{ r['item'] | basename }}
       {% endfor %}
     dest: "{{ __lxc_distrobuilder_out }}/SHA256SUMS"
     owner: root

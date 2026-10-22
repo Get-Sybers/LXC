@@ -64,6 +64,8 @@
       ansible.builtin.file:
         path: "{{ __lxc_onepassword_connect_root }}/rootfs"
         state: directory
+        owner: root
+        group: root
         mode: "0700"
     - name: "extract_binary | Download and unpack each layer into the staging rootfs"
       ansible.builtin.include_tasks: fetch_layer.yml

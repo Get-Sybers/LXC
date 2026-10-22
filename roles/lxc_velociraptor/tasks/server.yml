@@ -76,16 +76,16 @@
   no_log: true
 - name: "server | The configuration and datastore directories"
   ansible.builtin.file:
-    path: "{{ item.path }}"
+    path: "{{ item['path'] }}"
     state: directory
-    owner: "{{ item.owner }}"
+    owner: "{{ item['owner'] }}"
     group: "{{ lxc_velociraptor_user }}"
-    mode: "{{ item.mode }}"
+    mode: "{{ item['mode'] }}"
   loop:
     - { path: "{{ lxc_velociraptor_config_dir }}", owner: root, mode: "0750" }
     - { path: "{{ lxc_velociraptor_datastore }}", owner: "{{ lxc_velociraptor_user }}", mode: "0750" }
   loop_control:
-    label: "{{ item.path }}"
+    label: "{{ item['path'] }}"
 - name: "server | Is the server configuration already present?"
   ansible.builtin.stat:
     path: "{{ lxc_velociraptor_config_file }}"

@@ -32,14 +32,14 @@
     mode: "0755"
 - name: "bake | Fetch each repository signing key (armoured)"
   ansible.builtin.get_url:
-    url: "{{ item.value.key_url }}"
-    dest: "/etc/apt/keyrings/ghost9-{{ item.key }}.asc"
+    url: "{{ item['value']['key_url'] }}"
+    dest: "/etc/apt/keyrings/ghost9-{{ item['key'] }}.asc"
     owner: root
     group: root
     mode: "0644"
   loop: "{{ lxc_ghost9_apt_repos | dict2items }}"
   loop_control:
-    label: "{{ item.key }}"
+    label: "{{ item['key'] }}"
 - name: "bake | Dearmour each key"
   ansible.builtin.command:
     argv:
@@ -47,25 +47,25 @@
       - --dearmor
       - --yes
       - "-o"
-      - "/etc/apt/keyrings/ghost9-{{ item.key }}.gpg"
-      - "/etc/apt/keyrings/ghost9-{{ item.key }}.asc"
-    creates: "/etc/apt/keyrings/ghost9-{{ item.key }}.gpg"
+      - "/etc/apt/keyrings/ghost9-{{ item['key'] }}.gpg"
+      - "/etc/apt/keyrings/ghost9-{{ item['key'] }}.asc"
+    creates: "/etc/apt/keyrings/ghost9-{{ item['key'] }}.gpg"
   loop: "{{ lxc_ghost9_apt_repos | dict2items }}"
   loop_control:
-    label: "{{ item.key }}"
+    label: "{{ item['key'] }}"
 - name: "bake | Declare each repository (signed-by)"
   ansible.builtin.copy:
     content: >-
-      deb [arch=amd64 signed-by=/etc/apt/keyrings/ghost9-{{ item.key }}.gpg]
-      {{ item.value.uri }} {{ item.value.suite }} {{ item.value.components }}
+      deb [arch=amd64 signed-by=/etc/apt/keyrings/ghost9-{{ item['key'] }}.gpg]
+      {{ item['value']['uri'] }} {{ item['value']['suite'] }} {{ item['value']['components'] }}
 
-    dest: "/etc/apt/sources.list.d/ghost9-{{ item.key }}.list"
+    dest: "/etc/apt/sources.list.d/ghost9-{{ item['key'] }}.list"
     owner: root
     group: root
     mode: "0644"
   loop: "{{ lxc_ghost9_apt_repos | dict2items }}"
   loop_control:
-    label: "{{ item.key }}"
+    label: "{{ item['key'] }}"
 
 # --- Packages: distro base + Node 22 + .NET 10 SDK + Grafana ----------------
 - name: "bake | Install the base packages, Node.js, the .NET SDK and Grafana"
@@ -97,11 +97,11 @@
     shell: /usr/sbin/nologin
 - name: "bake | Application and data directories"
   ansible.builtin.file:
-    path: "{{ item.path }}"
+    path: "{{ item['path'] }}"
     state: directory
-    owner: "{{ item.owner }}"
-    group: "{{ item.group }}"
-    mode: "{{ item.mode }}"
+    owner: "{{ item['owner'] }}"
+    group: "{{ item['group'] }}"
+    mode: "{{ item['mode'] }}"
   loop:
     - { path: "{{ lxc_ghost9_root }}", owner: root, group: root, mode: "0755" }
     - { path: "{{ lxc_ghost9_api_root }}", owner: root, group: root, mode: "0755" }
@@ -112,7 +112,7 @@
     - { path: /var/cache/lxc-build/nuget, owner: root, group: root, mode: "0777" }
     - { path: /var/cache/lxc-build/npm, owner: root, group: root, mode: "0777" }
   loop_control:
-    label: "{{ item.path }}"
+    label: "{{ item['path'] }}"
 
 # --- GHOSTS source (checksum-pinned) ----------------------------------------
 - name: "bake | Download the GHOSTS source tarball and verify it against the pinned checksum"
@@ -146,7 +146,7 @@
     NUGET_PACKAGES: /var/cache/lxc-build/nuget
 - name: "bake | Copy the full API config tree over the published one (publish omits most of it)"
   ansible.builtin.command:
-    cmd: "cp -a {{ lxc_ghost9_source_dir }}/src/Ghosts.Api/config/. {{ lxc_ghost9_api_root }}/config/"
+    argv: [cp, -a, "{{ lxc_ghost9_source_dir }}/src/Ghosts.Api/config/.", "{{ lxc_ghost9_api_root }}/config/"]
     creates: "{{ lxc_ghost9_api_root }}/config/SeedData/seed.json"
 - name: "bake | The API log directory (the service user writes NLog here, relative to CWD)"
   ansible.builtin.file:
@@ -173,17 +173,17 @@
     npm_config_cache: /var/cache/lxc-build/npm
 - name: "bake | Deploy the built UI to the web root"
   ansible.builtin.command:
-    cmd: "cp -a {{ lxc_ghost9_source_dir }}/src/Ghosts.Frontend/dist/Ghosts.Frontend/browser/. {{ lxc_ghost9_ui_root }}/"
+    argv: [cp, -a, "{{ lxc_ghost9_source_dir }}/src/Ghosts.Frontend/dist/Ghosts.Frontend/browser/.", "{{ lxc_ghost9_ui_root }}/"]
     creates: "{{ lxc_ghost9_ui_root }}/index.html"
 
 # --- n8n workflows + Grafana dashboards (site-independent content) ----------
 - name: "bake | Stage the GHOSTS n8n workflows for the provisioner"
   ansible.builtin.command:
-    cmd: "cp -a {{ lxc_ghost9_source_dir }}/configuration/n8n-workflows/. {{ lxc_ghost9_n8n_workflows_dir }}/"
+    argv: [cp, -a, "{{ lxc_ghost9_source_dir }}/configuration/n8n-workflows/.", "{{ lxc_ghost9_n8n_workflows_dir }}/"]
     creates: "{{ lxc_ghost9_n8n_workflows_dir }}/README.md"
 - name: "bake | Install the Grafana dashboards provisioning"
   ansible.builtin.command:
-    cmd: "cp -a {{ lxc_ghost9_source_dir }}/configuration/grafana/dashboards/. /etc/grafana/provisioning/dashboards/"
+    argv: [cp, -a, "{{ lxc_ghost9_source_dir }}/configuration/grafana/dashboards/.", /etc/grafana/provisioning/dashboards/]
     creates: /etc/grafana/provisioning/dashboards/dashboards.yml
 
 # --- systemd units + nginx site (templated; site values come from server) ---
