@@ -93,3 +93,37 @@ The database, the n8n workflows and the Grafana state go with the container; bac
   write them, and the n8n owner creation, are `no_log`. The passwords live only in the vaulted `ghost9.yml`.
 - **Upgrade.** Raise `lxc_ghost9_version` and `lxc_ghost9_source_sha256` in `templates/ghost9/template.yml` and `lxc_template_version`,
   publish it with the Templates workflow (`ghost9/v<new>`), pin the new template checksum, and recreate the CT from the new release.
+
+## On a Ludus range
+
+[`playbooks/deploy_ghost9_range.yml`](../../playbooks/deploy_ghost9_range.yml) deploys the same stack as the container of one
+Ludus range: the CT attaches to the range's VNet `r<N>` with the range's VLAN tag, takes `10.<N>.<vlan>.<octet>/24` with the
+range router (`.254`) as gateway and nameserver, carries the bridge's MTU (SDN VXLAN at 1450 on a cluster, 1500 on a single
+node), is numbered `<vmid base> + N` and named `r<N>-<suffix>`, and lands in the `GHOST9` pool. Before the chain the play checks
+what `lxc_guest` does not: the VNet is declared in `/etc/pve/sdn/vnets.cfg`, its bridge exists on this node, the MTU is readable,
+and no Ludus-managed `*-ghosts` VM competes for the address; after it a postcheck reads the CT config back and asserts bridge,
+tag, address, gateway and MTU.
+
+The file carries underscores so a consumer runs it by its collection-qualified name, with every input in one extra-vars file:
+
+```sh
+ansible-playbook get_sybers.lxc.deploy_ghost9_range -e @/root/.ghost9-range.yml
+```
+
+The inputs are play variables, every one named `lxc_ghost9_range_*`, with the defaults in the play: `lxc_ghost9_range_number`
+(the range's second octet, required), `_vlan` (99), `_last_octet` (51), `_hostname_suffix` (`ghost9`), `_vmid_base` (9000),
+`_pool` (`GHOST9`), `_cores` (4), `_memory_mb` (6144), `_swap_mb` (2048), `_rootfs_gb` (20), `_storage` (`local-zfs`),
+`_template_image` and `_template_version` (empty = the role's defaults: `ghcr.io/get-sybers/lxc/ghost9:v<version>`; pin
+`...@sha256:<digest>` for an exact image), `_template_registry_base`, `_template_cache_dir`, `_template_release_base`, the two
+marker paths and `_allow_ghosts_vm` (false). The collection-level `lxc_*` values the roles read are derived from these, so the
+play needs no inventory. The PVE API credential is the `pve_api_*` set the other plays use (`pve_api_host`, `pve_api_user`,
+`pve_api_token_id` + `pve_api_token_secret`, or `pve_api_password`; a token scoped to the pool, the storage and the SDN zone
+is enough), and the service secrets are the role's own `lxc_ghost9_db_password`, `lxc_ghost9_n8n_owner_email` and
+`lxc_ghost9_n8n_owner_password`. Clients of the range reach the API at `http://10.<N>.<vlan>.<octet>:5000/api`.
+
+The CT is not a Ludus range object: `ludus range rm` does not remove it and `ludus testing` neither snapshots nor seals it.
+Remove it with the same vars file:
+
+```sh
+ansible-playbook get_sybers.lxc.deploy_ghost9_range -e @/root/.ghost9-range.yml -t destroy -e lxc_guest_confirm_destroy=true
+```
