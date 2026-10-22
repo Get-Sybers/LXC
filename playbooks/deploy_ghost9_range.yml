@@ -10,7 +10,8 @@
 # checks lxc_guest does not make: the VNet is declared in /etc/pve/sdn/vnets.cfg,
 # its bridge exists on this node, the MTU is readable, and no Ludus-managed
 # `*-ghosts` VM competes for the address. After it, a placement postcheck reads the
-# CT config back and asserts bridge, tag, address, gateway and MTU.
+# CT config back through the PVE API and asserts bridge, tag, address, gateway and MTU.
+# The play touches the node only through the API and lxc_guest (the premise's rule 4).
 #
 # Runs ON the Proxmox node that hosts the Ludus server, as root (pct, /etc/pve and
 # the OCI pull are node-local). The file carries underscores so a consumer can run it
@@ -178,11 +179,10 @@
       changed_when: false
       check_mode: false
       failed_when: false
-    - name: "Read the guests the cluster knows about"
-      ansible.builtin.command:
-        argv: [pvesh, get, /cluster/resources, --type, vm, --output-format, json]
-      register: __g9r_resources_raw
-      changed_when: false
+    - name: "Read the virtual machines the cluster knows about (PVE API)"
+      community.proxmox.proxmox_vm_info:
+        type: qemu
+      register: __g9r_vms
       check_mode: false
       failed_when: false
     - name: "Parse what the node reported"
@@ -194,10 +194,7 @@
                  and (__g9r_mtu_raw.stdout | default('') | trim) is match('^[0-9]+$'))
              else '' }}
         __g9r_ghosts_guests: >-
-          {{ ((__g9r_resources_raw.stdout | from_json)
-              if ((__g9r_resources_raw.rc | default(1)) == 0
-                  and (__g9r_resources_raw.stdout | default('') | trim).startswith('['))
-              else [])
+          {{ (__g9r_vms.proxmox_vms | default([]))
              | selectattr('name', 'defined') | selectattr('name', 'search', '-ghosts$')
              | map(attribute='name') | list }}
     - name: "The range's SDN VNet is declared"
@@ -276,20 +273,16 @@
              else lxc_ghost9_template_version }}
         lxc_ghost9_group: "{{ lxc_ghost9_range_group }}"
         lxc_ghost9_onboot: true
-    - name: "Re-read the CT config from Proxmox"
-      ansible.builtin.command:
-        argv:
-          - pvesh
-          - get
-          - "/nodes/{{ __g9r_node }}/lxc/{{ lxc_ghost9_range_vmid }}/config"
-          - --output-format
-          - json
-      register: __g9r_post_config
-      changed_when: false
+    - name: "Re-read the CT config from Proxmox (PVE API)"
+      community.proxmox.proxmox_vm_info:
+        type: lxc
+        vmid: "{{ lxc_ghost9_range_vmid }}"
+        config: current
+      register: __g9r_post_info
       check_mode: false
-    - name: "Parse the config"
+    - name: "Keep the config"
       ansible.builtin.set_fact:
-        __g9r_post: "{{ __g9r_post_config.stdout | from_json }}"
+        __g9r_post: "{{ (__g9r_post_info.proxmox_vms | first).config | default({}) }}"
     - name: "It is attached to the range VNet on the range VLAN, at the range address, at the bridge MTU"
       ansible.builtin.assert:
         that:
