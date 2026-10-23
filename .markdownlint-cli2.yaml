@@ -20,5 +20,6 @@ globs:
   - "**/*.md"
 ignores:
   - ".cache"
+  - ".ansible" # the project-local cache ansible-lint installs the pinned collections into
   - ".tox"
   - ".venv"

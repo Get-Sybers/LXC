@@ -113,24 +113,24 @@
     quiet: true
 - name: "server | Place the definitions copied from the node"
   ansible.builtin.copy:
-    src: "{{ __lxc_distrobuilder_def.src }}"
-    dest: "{{ lxc_distrobuilder_definitions_dir }}/{{ __lxc_distrobuilder_def.name }}"
+    src: "{{ __lxc_distrobuilder_def['src'] }}"
+    dest: "{{ lxc_distrobuilder_definitions_dir }}/{{ __lxc_distrobuilder_def['name'] }}"
     owner: root
     group: root
     mode: "0644"
   loop: "{{ lxc_distrobuilder_definitions | selectattr('src', 'defined') | list }}"
   loop_control:
     loop_var: __lxc_distrobuilder_def
-    label: "{{ __lxc_distrobuilder_def.name }}"
+    label: "{{ __lxc_distrobuilder_def['name'] }}"
 - name: "server | Fetch the definitions pinned by URL and checksum"
   ansible.builtin.get_url:
-    url: "{{ __lxc_distrobuilder_def.url }}"
-    dest: "{{ lxc_distrobuilder_definitions_dir }}/{{ __lxc_distrobuilder_def.name }}"
-    checksum: "{{ __lxc_distrobuilder_def.checksum }}"
+    url: "{{ __lxc_distrobuilder_def['url'] }}"
+    dest: "{{ lxc_distrobuilder_definitions_dir }}/{{ __lxc_distrobuilder_def['name'] }}"
+    checksum: "{{ __lxc_distrobuilder_def['checksum'] }}"
     owner: root
     group: root
     mode: "0644"
   loop: "{{ lxc_distrobuilder_definitions | selectattr('url', 'defined') | list }}"
   loop_control:
     loop_var: __lxc_distrobuilder_def
-    label: "{{ __lxc_distrobuilder_def.name }}"
+    label: "{{ __lxc_distrobuilder_def['name'] }}"

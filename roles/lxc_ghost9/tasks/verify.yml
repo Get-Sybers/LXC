@@ -16,7 +16,7 @@
   failed_when: false
 - name: "verify | Probe the supporting services"
   ansible.builtin.uri:
-    url: "{{ item.url }}"
+    url: "{{ item['url'] }}"
     method: GET
     status_code: [200]
   register: __lxc_ghost9_svc_probe
@@ -31,7 +31,7 @@
     - { name: n8n, url: "http://127.0.0.1:{{ lxc_ghost9_n8n_port }}/healthz" }
     - { name: grafana, url: "http://127.0.0.1:{{ lxc_ghost9_grafana_port }}/api/health" }
   loop_control:
-    label: "{{ item.name }}"
+    label: "{{ item['name'] }}"
 - name: "verify | Assert the GHOSTS stack is healthy"
   ansible.builtin.assert:
     that:
@@ -40,7 +40,7 @@
     fail_msg: >-
       The GHOSTS stack is not fully healthy. API /test
       = {{ __lxc_ghost9_api_probe.status | default('n/a') }};
-      {% for r in __lxc_ghost9_svc_probe.results %}{{ r.item.name }}={{ r.status | default('n/a') }} {% endfor %}.
+      {% for r in __lxc_ghost9_svc_probe.results %}{{ r['item']['name'] }}={{ r['status'] | default('n/a') }} {% endfor %}.
       Inspect `journalctl -u ghosts-api -u ghosts-n8n -u grafana-server -u nginx` inside the CT.
     success_msg: "GHOSTS is healthy — API/DB, UI, n8n and Grafana all answer."
     quiet: true
