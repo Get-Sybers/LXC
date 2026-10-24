@@ -1,0 +1,14 @@
+---
+changed:
+  - >-
+    The Links workflow installs lychee from its release tarball, verified
+    against the SHA-256 pinned in the workflow, instead of running
+    ``lycheeverse/lychee-action``; the Update pins workflow commits and opens
+    its pull request with git and ``gh`` instead of running
+    ``peter-evans/create-pull-request``. The repository's Actions policy admits
+    actions by Get-Sybers, GitHub and Marketplace-verified creators only, and
+    neither publisher is verified, so both workflows had failed at startup on
+    every scheduled run (the Links run nightly since 2026-10-19) without a job
+    ever starting. Every other action the workflows use is GitHub's own or from
+    a verified creator (``ossf``, ``sigstore``), and every pin resolves to the
+    upstream tag it names.

@@ -3,6 +3,12 @@
 # .pre-commit-config.yaml) and the collection pins (scripts/upgrade_pins.py ->
 # requirements.yml), then open or refresh a single pull request. The bot App
 # token is what lets that PR trigger CI.
+#
+# The pull request is committed and opened with git and the runner's gh (both
+# GitHub's own), not peter-evans/create-pull-request: the repository's Actions
+# policy admits actions by Get-Sybers, GitHub and Marketplace-verified creators
+# only, and that action is none of those. The automation/update-pins branch is
+# rebuilt from the current main on every run that finds something to raise.
 name: Update pins
 on:
   schedule:
@@ -41,19 +47,38 @@ jobs:
       - name: Raise the requirements.yml pins
         run: python3 scripts/upgrade_pins.py
       - name: Open or refresh the pull request
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
-        with:
-          token: ${{ steps.token.outputs.token }}
-          add-paths: |
-            .pre-commit-config.yaml
-            requirements.yml
-          branch: automation/update-pins
-          commit-message: "build(deps): raise pinned linters and collection versions"
-          title: "build(deps): raise pinned linters and collection versions"
-          body: |
-            Automated weekly dependency bump:
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          APP_SLUG: ${{ steps.token.outputs.app-slug }}
+          BASE: ${{ github.ref_name }}
+          BRANCH: automation/update-pins
+          TITLE: "build(deps): raise pinned linters and collection versions"
+        run: |
+          git add -- .pre-commit-config.yaml requirements.yml
+          if git diff --cached --quiet; then
+            echo "every pin is current; nothing to open"
+            exit 0
+          fi
+          bot="${APP_SLUG}[bot]"
+          bot_id="$(gh api "users/$bot" --jq .id)"
+          git config user.name "$bot"
+          git config user.email "$bot_id+$bot@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git commit --quiet --message "$TITLE"
+          gh auth setup-git
+          git push --force origin "$BRANCH"
+          cat > "$RUNNER_TEMP/body.md" <<'BODY'
+          Automated weekly dependency bump:
 
-            - `prek update` — pre-commit hook `rev:` pins in `.pre-commit-config.yaml`
-            - `scripts/upgrade_pins.py` — Galaxy/git collection pins in `requirements.yml`
+          - `prek update` — pre-commit hook `rev:` pins in `.pre-commit-config.yaml`
+          - `scripts/upgrade_pins.py` — Galaxy/git collection pins in `requirements.yml`
 
-            Run `make conform` before merging.
+          Run `make conform` before merging.
+          BODY
+          number="$(gh pr list --head "$BRANCH" --base "$BASE" --state open \
+            --json number --jq '.[0].number // empty')"
+          if [ -n "$number" ]; then
+            gh pr edit "$number" --title "$TITLE" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh pr create --head "$BRANCH" --base "$BASE" --title "$TITLE" --body-file "$RUNNER_TEMP/body.md"
+          fi
