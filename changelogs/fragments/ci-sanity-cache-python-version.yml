@@ -1,0 +1,12 @@
+---
+trivial:
+  - >-
+    The CI ``ansible`` job keys its ansible-test cache (``~/.ansible/test`` and
+    ``.tox``) on the exact Python release setup-python installed, not on the
+    3.13 line alone. The sanity venv under ``~/.ansible/test`` links the
+    interpreter it was created from by absolute path, so a runner that ships
+    the next patch release restores a venv pointing at a path that no longer
+    exists and ``ansible-test`` fails with ``Required program .../bin/python
+    not found``; get-sybers/proxmaxxing, which shares this workflow, failed
+    that way on 2026-10-27 when its runner moved from 3.13.16 to 3.13.17. A
+    new patch release now misses the cache and rebuilds the venv instead.
