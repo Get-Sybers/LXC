@@ -77,7 +77,17 @@ argument_specs:
       lxc_guest_net0:
         type: str
         required: false
-        description: "Full Proxmox net0 spec. Computed default: DHCP on the collection variable lxc_bridge. Must carry bridge=<name>."
+        description: >-
+          Full Proxmox net0 spec. Computed default: DHCP on the collection variable lxc_bridge. Must carry
+          bridge=<name>. A hwaddr= in it is kept; otherwise the guest gets the MAC lxc_guest_hwaddr names,
+          or one derived from its CT id.
+      lxc_guest_hwaddr:
+        type: str
+        required: false
+        default: ""
+        description: >-
+          The guest's MAC, what the DHCP server leases the address to. Empty: derived from the CT id under
+          the collection's locally administered prefix (02:4C:58:<id>), so a recreated guest keeps its lease.
       lxc_guest_nameserver:
         type: str
         required: false

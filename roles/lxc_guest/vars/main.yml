@@ -11,6 +11,10 @@ lxc_guest_description_marker: "Ansible-managed: get_sybers.lxc.lxc_guest"
 # (an extra-var can override a vars/ constant, which is exactly the override
 # preflight exists to refuse).
 lxc_guest_unprivileged: true
+# The prefix of the MAC a guest is given when net0 names none: locally
+# administered (02:…, "LX"), so a derived address can never collide with the
+# BC:24:11 space Proxmox draws random MACs from. The rest is the CT id.
+lxc_guest_mac_prefix: "02:4C:58"
 # Bumped when the baseline changes what it enforces; the marker records it.
 lxc_guest_baseline_version: 2
 # The guest is reached only through `pct exec` from the node: no SSH daemon.

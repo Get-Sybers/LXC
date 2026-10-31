@@ -7,7 +7,8 @@ lxc_semaphore_node: "{{ lxc_node }}"
 # A free CT id, cluster-wide (`pvesh get /cluster/resources --type vm` lists
 # the taken ones). lxc_guest refuses 0.
 lxc_semaphore_vmid: 0
-# The guest's net0. DHCP on the management bridge by default; for a fixed
+# The guest's net0. DHCP on the management bridge by default, on a MAC derived
+# from the CT id (lxc_guest), so a recreated guest keeps its lease. For a fixed
 # address: "name=eth0,bridge={{ lxc_bridge }},ip=192.0.2.160/24,gw=192.0.2.1".
 lxc_semaphore_net0: "name=eth0,bridge={{ lxc_bridge }},ip=dhcp"
 # The URL users reach the UI at when it sits behind a reverse proxy

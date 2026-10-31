@@ -23,7 +23,7 @@ The one lifecycle every container in this collection goes through, and the singl
 | `preflight` | node | no | every precondition below; refuses a privileged request outright |
 | `create` | node | **yes** | `community.proxmox.proxmox` create-or-reconcile (`update: true`), `pct start`, then `connect` |
 | `connect` | node | no | asserts the CT is running, waits for its init and boot, `add_host`s it into `lxc_guest_group` over `proxmox_pct_remote` |
-| `postcheck` | node | no | re-reads the config through `pvesh` and asserts ownership, hostname, unprivileged, bridge, features, onboot |
+| `postcheck` | node | no | re-reads the config through `pvesh` and asserts ownership, hostname, unprivileged, bridge, the MAC, features, onboot |
 | `baseline` | **guest** | yes | purges `openssh-server`, refuses an SSH daemon or container runtime, writes the baseline marker |
 | `remove` | node | **yes** | opt-in destroy: refuses without `lxc_guest_confirm_destroy`, refuses a CT without our marker or with another hostname |
 
@@ -54,7 +54,8 @@ never match. A container created before this collection existed carries neither 
 | `lxc_guest_template_url` | `{{ lxc_template_url }}` | Where to fetch it when it is not in the cache (empty: never fetch). |
 | `lxc_guest_template_checksum` | `{{ lxc_template_checksum }}` | The release's `sha256:`; a fetch is refused without it. |
 | `lxc_guest_storage` | `{{ lxc_storage }}` | Rootfs storage (the shared Ceph pool for HA). |
-| `lxc_guest_net0` | DHCP on `{{ lxc_bridge }}` | Full Proxmox `net0`; must carry `bridge=`. |
+| `lxc_guest_net0` | DHCP on `{{ lxc_bridge }}` | Full Proxmox `net0`; must carry `bridge=`. A `hwaddr=` in it is kept. |
+| `lxc_guest_hwaddr` | `""` | The guest's MAC, what the DHCP server leases the address to. Empty: derived from the CT id under the collection's locally administered prefix (`02:4C:58:<id>`), so a recreated guest keeps its lease without anyone recording a value; `postcheck` asserts it from Proxmox. |
 | `lxc_guest_features` | `[]` | e.g. `["nesting=1"]` — Debian 13's systemd 257 needs it; the CT stays unprivileged. |
 | `lxc_guest_group` | `lxc_guests` | Play-inventory group `connect` adds the CT to. |
 | `lxc_guest_baseline_marker` | `{{ lxc_baseline_marker_path }}` | Marker path inside the guest; service roles assert it. |
