@@ -48,5 +48,6 @@
               + __preflight_todo.stdout_lines)
              + (['every placement file names its CT id'] if __preflight_vmids.rc == 1 else
                 [(__preflight_vmids.stdout_lines | length | string)
-                 ~ ' placement file(s) still at CT id 0 (pick a free id; the record lists the ids in use and the next free one):']
+                 ~ ' placement file(s) at CT id 0: pass -e lxc_<service>_vmid=<id> to the deploy play, or set it there'
+                 ~ ' (the record lists the ids in use and the next free one):']
                 + __preflight_vmids.stdout_lines) }}

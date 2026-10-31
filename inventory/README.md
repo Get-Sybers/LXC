@@ -31,10 +31,11 @@ inventory/
 ```sh
 make config                                # copies example/ into place without overwriting what is already there
 ansible-playbook playbooks/preflight.yml   # on the node: gate, read its facts, fill group_vars/all/default.yml, list what is left
-$EDITOR inventory/group_vars/all/onepassword.yml   # the CT id of each container you deploy (preflight prints the ids in use and the next free one)
+ansible-playbook playbooks/deploy-<service>.yml -e lxc_<service>_vmid=<a free CT id>   # the CT id is a run-time input
 ```
 
-The preflight play fills the node's own values; what is left is each container's `CHANGE-ME` (its CT id), which the play lists. Run it
+The preflight play fills the node's own values and prints the ids in use and the next free one; a container's CT id is given at
+run time with `-e`, or set in its placement file to make it this site's default. Run the preflight play
 again after a node change (a new storage, a new bridge, a new cluster member); a second run is `changed=0`. `ansible.cfg` ignores
 `example/`, `discovered/` and `secrets/` as inventory sources, so the template and a proposal are never loaded by mistake.
 
