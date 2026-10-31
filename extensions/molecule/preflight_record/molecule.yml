@@ -1,0 +1,7 @@
+---
+# lxc_preflight record — the As-Is record rendered from a committed fixture
+# (files/facts.yml, RFC 5737 addresses) into a scratch inventory inside the
+# substrate; no live node needed. converge writes it, the idempotence step
+# proves a second run is changed=0, verify reads it back. Everything else
+# comes from ../config.yml.
+{}

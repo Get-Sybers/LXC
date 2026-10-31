@@ -6,3 +6,25 @@ lxc_preflight_delegate_to: "{{ inventory_hostname }}"
 # nodes` — a single node, or one joining — is still admitted when it is a
 # member of this group).
 lxc_preflight_cluster_group: proxmox_nodes
+# --- facts and record (playbooks/preflight.yml) -----------------------------
+# Where the inventory lives (the directory ansible.cfg points -i at); record
+# writes group_vars/all/default.yml under it.
+lxc_preflight_inventory_dir: "{{ inventory_dir }}"
+# in_place: write group_vars/all/default.yml itself. The record carries no hand
+#   annotations and git never sees it (the live inventory is untracked), so
+#   this is the default.
+# additional: write a proposal under <inventory_dir>/discovered/, which Ansible
+#   never loads; diff it, copy it in, or re-run with in_place.
+lxc_preflight_write: in_place
+# The host holding the inventory checkout the record is written to.
+lxc_preflight_record_delegate_to: localhost
+# The identity the record carries. Empty: the user running Ansible on
+# lxc_preflight_record_delegate_to (read from its user facts).
+lxc_preflight_record_owner: ""
+lxc_preflight_record_group: ""
+# Keep a timestamped backup beside a record rewritten in place.
+lxc_preflight_record_backup: false
+# The rootfs storage the record proposes as the default when the node holds
+# more than one that takes containers: the first of these present wins, else
+# the first local (non-shared) one, else the first. lxc.yml may name another.
+lxc_preflight_storage_preference: [local-zfs, local-lvm, local]

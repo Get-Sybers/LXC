@@ -11,6 +11,7 @@ vault_password*
 /inventory/hosts.yml
 /inventory/group_vars/
 /inventory/host_vars/
+/inventory/discovered/
 # --- editors / OS ---
 .DS_Store
 Thumbs.db

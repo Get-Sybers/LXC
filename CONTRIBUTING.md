@@ -31,6 +31,14 @@ touches a plugin needs a fragment under `changelogs/fragments/`; a change to
 behaviour or an interface updates the documentation under `doc/` and the
 role's `README.md`.
 
+## A pull request is proven on a live node first
+
+`make conform` is necessary, not sufficient: the Molecule substrate is a Debian container, never a Proxmox node. Before a pull request
+is opened, the change is run on a live node **from scratch**: the container it touches is destroyed
+(`ansible-playbook playbooks/deploy-<service>.yml --tags destroy -e lxc_guest_confirm_destroy=true`), the deploy play is run again
+from a configuration produced by `make config` and `playbooks/preflight.yml`, and then run a second time, which must report `changed=0`
+on the node and in the guest. The pull request says so, and what the live run proved that the gate could not.
+
 ## Site configuration stays out of the repository
 
 The repository carries only `inventory/example/`, the template of the site configuration; `make config` copies it into `inventory/`,

@@ -1,0 +1,163 @@
+---
+# Read-only. Everything the desired-state files need to know about this node:
+# its name and cluster, the management network, the bridges, the storages that
+# hold container rootfs and templates, what the template cache holds, and the
+# CT ids in use cluster-wide. Sets lxc_preflight_facts; record.yml writes it to
+# the inventory as group_vars/all/default.yml (the As-Is record).
+- name: "facts | The admission gate must have run first"
+  ansible.builtin.assert:
+    that: __lpf_platform is defined
+    fail_msg: >-
+      Include get_sybers.lxc.lxc_preflight (its main entry point, the admission
+      gate) before tasks_from: facts.
+    quiet: true
+- name: "facts | Name the node the gate admitted"
+  ansible.builtin.set_fact:
+    __lpf_node: "{{ __lpf_platform['ansible_facts']['ansible_nodename'] }}"
+- name: "facts | Read the network and resolver facts"
+  ansible.builtin.setup:
+    gather_subset: ["!all", "!min", "network", "dns"]
+  register: __lpf_net
+  delegate_to: "{{ lxc_preflight_delegate_to }}"
+  delegate_facts: true
+- name: "facts | Read the PVE version"
+  ansible.builtin.command:
+    argv: [pvesh, get, /version, --output-format, json]
+  register: __lpf_version
+  changed_when: false
+  check_mode: false
+  delegate_to: "{{ lxc_preflight_delegate_to }}"
+- name: "facts | Read the cluster status (a standalone node reports itself only)"
+  ansible.builtin.command:
+    argv: [pvesh, get, /cluster/status, --output-format, json]
+  register: __lpf_cluster_raw
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  delegate_to: "{{ lxc_preflight_delegate_to }}"
+- name: "facts | Read the enabled storages that hold container rootfs on this node"
+  ansible.builtin.command:
+    argv: [pvesh, get, "/nodes/{{ __lpf_node }}/storage", --content, rootdir, --enabled, "1", --output-format, json]
+  register: __lpf_rootdir_raw
+  changed_when: false
+  check_mode: false
+  delegate_to: "{{ lxc_preflight_delegate_to }}"
+- name: "facts | Read the enabled storages that hold templates on this node"
+  ansible.builtin.command:
+    argv: [pvesh, get, "/nodes/{{ __lpf_node }}/storage", --content, vztmpl, --enabled, "1", --output-format, json]
+  register: __lpf_vztmpl_raw
+  changed_when: false
+  check_mode: false
+  delegate_to: "{{ lxc_preflight_delegate_to }}"
+- name: "facts | Parse the storages"
+  ansible.builtin.set_fact:
+    __lpf_rootdir: "{{ __lpf_rootdir_raw.stdout | from_json | sort(attribute='storage') }}"
+    __lpf_vztmpl: "{{ __lpf_vztmpl_raw.stdout | from_json | sort(attribute='storage') }}"
+- name: "facts | List the templates each template storage holds"
+  ansible.builtin.command:
+    argv:
+      - pvesh
+      - get
+      - "/nodes/{{ __lpf_node }}/storage/{{ item['storage'] }}/content"
+      - --content
+      - vztmpl
+      - --output-format
+      - json
+  register: __lpf_cache_raw
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  loop: "{{ __lpf_vztmpl }}"
+  loop_control:
+    label: "{{ item['storage'] }}"
+  delegate_to: "{{ lxc_preflight_delegate_to }}"
+- name: "facts | Read the bridges"
+  ansible.builtin.command:
+    argv: [ip, -j, link, show, type, bridge]
+  register: __lpf_bridges_raw
+  changed_when: false
+  check_mode: false
+  delegate_to: "{{ lxc_preflight_delegate_to }}"
+- name: "facts | Read the guests the cluster knows about"
+  ansible.builtin.command:
+    argv: [pvesh, get, /cluster/resources, --type, vm, --output-format, json]
+  register: __lpf_resources_raw
+  changed_when: false
+  check_mode: false
+  delegate_to: "{{ lxc_preflight_delegate_to }}"
+- name: "facts | Read the next free guest id"
+  ansible.builtin.command:
+    argv: [pvesh, get, /cluster/nextid]
+  register: __lpf_nextid
+  changed_when: false
+  check_mode: false
+  delegate_to: "{{ lxc_preflight_delegate_to }}"
+- name: "facts | Parse what the node reported"
+  ansible.builtin.set_fact:
+    __lpf_cluster: >-
+      {{ (__lpf_cluster_raw.stdout | from_json)
+         if (__lpf_cluster_raw.rc == 0 and (__lpf_cluster_raw.stdout | trim).startswith('['))
+         else [] }}
+    __lpf_ipv4: "{{ __lpf_net['ansible_facts']['ansible_default_ipv4'] | default({}) }}"
+    __lpf_dns: "{{ __lpf_net['ansible_facts']['ansible_dns'] | default({}) }}"
+    # fwbr*: the firewall bridges Proxmox creates per running guest NIC; they
+    # come and go with the guests and no guest is placed on one.
+    __lpf_bridges: "{{ (__lpf_bridges_raw.stdout | from_json) | map(attribute='ifname') | reject('match', '^fwbr') | sort }}"
+    __lpf_cached: >-
+      {{ __lpf_cache_raw.results | selectattr('rc', 'equalto', 0) | map(attribute='stdout')
+         | map('from_json') | flatten | map(attribute='volid') | sort }}
+    __lpf_vmids: >-
+      {{ (__lpf_resources_raw.stdout | from_json) | selectattr('vmid', 'defined')
+         | map(attribute='vmid') | map('int') | sort }}
+- name: "facts | Choose the default rootfs storage (the preference list, else the first local one, else the first)"
+  ansible.builtin.set_fact:
+    __lpf_rootdir_default: >-
+      {{ ((lxc_preflight_storage_preference | select('in', __lpf_rootdir | map(attribute='storage') | list) | list)
+          + (__lpf_rootdir | rejectattr('shared') | map(attribute='storage') | list)
+          + (__lpf_rootdir | map(attribute='storage') | list)
+          + ['']) | first }}
+- name: "facts | Assemble the record"
+  ansible.builtin.set_fact:
+    lxc_preflight_facts:
+      node: "{{ __lpf_node }}"
+      pve_version: "{{ (__lpf_version.stdout | from_json)['version'] | default('') }}"
+      cluster:
+        name: "{{ (__lpf_cluster | selectattr('type', 'equalto', 'cluster') | map(attribute='name') | list + [none]) | first }}"
+        nodes: "{{ __lpf_cluster | selectattr('type', 'equalto', 'node') | map(attribute='name') | sort }}"
+      management:
+        interface: "{{ __lpf_ipv4['interface'] | default('') }}"
+        address: "{{ __lpf_ipv4['address'] | default('') }}"
+        prefix: "{{ __lpf_ipv4['prefix'] | default('') }}"
+        cidr: "{{ (__lpf_ipv4['network'] ~ '/' ~ __lpf_ipv4['prefix']) if (__lpf_ipv4['prefix'] is defined) else '' }}"
+        gateway: "{{ __lpf_ipv4['gateway'] | default('') }}"
+        nameservers: "{{ __lpf_dns['nameservers'] | default([]) }}"
+        search: "{{ __lpf_dns['search'] | default([]) }}"
+      bridges: "{{ __lpf_bridges }}"
+      storage:
+        # name, type and shared only: free space moves every second and the
+        # record must settle (a second run writes nothing).
+        rootdir: >-
+          {{ __lpf_rootdir | map('dict2items') | map('selectattr', 'key', 'in', ['storage', 'type', 'shared'])
+             | map('items2dict') | list }}
+        rootdir_default: "{{ __lpf_rootdir_default }}"
+        vztmpl: "{{ __lpf_vztmpl | map(attribute='storage') | sort }}"
+        templates_cached: "{{ __lpf_cached }}"
+      vmids:
+        in_use: "{{ __lpf_vmids }}"
+        next_free: "{{ __lpf_nextid.stdout | trim | int }}"
+- name: "facts | What the node reported"
+  ansible.builtin.debug:
+    msg: >-
+      LXC NODE FACTS — node={{ lxc_preflight_facts['node'] }} pve={{ lxc_preflight_facts['pve_version'] }}
+      cluster={{ lxc_preflight_facts['cluster']['name'] or '<standalone>' }}
+      nodes={{ lxc_preflight_facts['cluster']['nodes'] | join(',') }}
+      mgmt={{ lxc_preflight_facts['management']['interface'] }}
+      {{ lxc_preflight_facts['management']['address'] }}/{{ lxc_preflight_facts['management']['prefix'] }}
+      gw={{ lxc_preflight_facts['management']['gateway'] }}
+      dns={{ lxc_preflight_facts['management']['nameservers'] | join(',') }}
+      bridges={{ lxc_preflight_facts['bridges'] | join(',') }}
+      rootdir={{ lxc_preflight_facts['storage']['rootdir'] | map(attribute='storage') | join(',') }}
+      (default {{ lxc_preflight_facts['storage']['rootdir_default'] or '<none>' }})
+      vztmpl={{ lxc_preflight_facts['storage']['vztmpl'] | join(',') }}
+      cached={{ lxc_preflight_facts['storage']['templates_cached'] | length }} template(s)
+      vmids_in_use={{ lxc_preflight_facts['vmids']['in_use'] | length }} next_free={{ lxc_preflight_facts['vmids']['next_free'] }}

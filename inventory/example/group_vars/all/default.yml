@@ -1,0 +1,38 @@
+---
+# inventory/group_vars/all/default.yml — this node's As-Is record (standards:
+# As-Is is a fact, To-Be is a variable). This is the SKELETON `make config`
+# copies into place; `ansible-playbook playbooks/preflight.yml` FILLS it from
+# the live node (in place by default). The desired-state files (lxc.yml, the
+# <service>.yml placement files) point at these values, so after the preflight
+# play a fresh checkout deploys with only the per-container ids left to choose.
+# Never edit the filled record by hand: override a choice in lxc.yml instead.
+lxc_site:
+  # The node the plays run on (pct is node-local). Filled by preflight.
+  node: CHANGE-ME
+  pve_version: ""
+  cluster:
+    name: null
+    nodes: []
+  # The interface carrying the node's default route: the management bridge a
+  # guest's net0 sits on, and the LAN a static guest address belongs to.
+  management:
+    interface: vmbr0
+    address: 192.0.2.10
+    prefix: 24
+    cidr: 192.0.2.0/24
+    gateway: 192.0.2.1
+    nameservers: [192.0.2.1]
+    search: []
+  bridges: [vmbr0]
+  storage:
+    # Enabled storages that hold a container rootfs, and the one every guest
+    # uses unless lxc.yml says otherwise. Filled by preflight.
+    rootdir: []
+    rootdir_default: CHANGE-ME
+    vztmpl: [local]
+    templates_cached: []
+  # Guest ids in use anywhere in the cluster and the next free one: what a
+  # placement file's CT id is picked from. Filled by preflight.
+  vmids:
+    in_use: []
+    next_free: 0

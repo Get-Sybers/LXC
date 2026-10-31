@@ -3,9 +3,10 @@
 # defined once here, overridable per guest through that role's own inputs.
 # Copied into place by `make config`; the copy is untracked.
 
-# The node a container is created on unless its role says otherwise. Membership
-# of lxc_hosts in hosts.yml IS the declaration; no other file encodes it.
-lxc_node: "{{ groups['lxc_hosts'] | first }}"
+# The node a container is created on unless its role says otherwise: the node
+# playbooks/preflight.yml ran on, from the As-Is record (default.yml). pct is
+# node-local, so the deploy plays run on it.
+lxc_node: "{{ lxc_site['node'] }}"
 # The template a guest is created from when its role names none. Every service
 # role names its own released template (templates/<name>), so this is the
 # fallback only; it is fetched into the cache by lxc_guest when a URL and a
@@ -21,12 +22,15 @@ lxc_template_cache_dir: /var/lib/vz/template/cache
 lxc_template_release_base: https://github.com/get-sybers/lxc/releases/download
 # Registry the template OCI images are pulled from; point at a mirror if needed.
 lxc_template_registry_base: ghcr.io/get-sybers/lxc
-# Rootfs storage for every guest: `pvesm status` lists yours (the shared
-# Ceph pool for HA, a local ZFS or LVM-thin pool otherwise).
-lxc_storage: CHANGE-ME
-# The management bridge a guest's net0 sits on by default (vmbr0 on a stock
-# Proxmox install).
-lxc_bridge: vmbr0
+# Rootfs storage for every guest. Default: the one preflight recorded
+# (default.yml lists every storage that holds containers; the shared Ceph
+# pool for HA, a local ZFS or LVM-thin pool otherwise). Name another to
+# override the choice.
+lxc_storage: "{{ lxc_site['storage']['rootdir_default'] }}"
+# The management bridge a guest's net0 sits on by default: the interface that
+# carries the node's default route, as preflight recorded it (vmbr0 on a
+# stock Proxmox install).
+lxc_bridge: "{{ lxc_site['management']['interface'] }}"
 # The marker lxc_guest's baseline writes inside a guest and every service role
 # asserts before configuring anything.
 lxc_baseline_marker_path: /etc/get-sybers-lxc-baseline

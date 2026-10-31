@@ -41,9 +41,9 @@ This gives you three things:
 
 ## Prerequisites (node side)
 
-- The site configuration in place: `make config`, then replace every `CHANGE-ME` in `inventory/hosts.yml`,
-  `inventory/group_vars/all/lxc.yml` and `inventory/group_vars/all/onepassword.yml` (node names, rootfs storage, the CT id). The
-  repository carries only the template, `inventory/example/`; your copies are untracked.
+- The site configuration in place: `make config`, then `ansible-playbook playbooks/preflight.yml` on the node (it gates the node,
+  records its storages, bridges, LAN and guest ids in `inventory/group_vars/all/default.yml`, and lists what is left), then the CT id in
+  `inventory/group_vars/all/onepassword.yml`. The repository carries only the template, `inventory/example/`; your copies are untracked.
 
 - The template is pulled from `ghcr.io/get-sybers/lxc/op-connect` by the play (Proxmox's OCI support). The package must be **public**, or the node logged in to GHCR (`skopeo login ghcr.io`). To pin an exact image instead of the moving `:v<version>` tag, set `lxc_onepassword_connect_template_image` to `…@sha256:<digest>` in your inventory. Verify the release first if you want to: [build-a-template.md §5](build-a-template.md#5-verifying-a-release-by-hand).
 - The node can reach `github.com` to fetch the release asset once (or place the file in `/var/lib/vz/template/cache/` yourself).

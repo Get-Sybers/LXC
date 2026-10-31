@@ -1,0 +1,27 @@
+---
+added:
+  - >-
+    ``playbooks/preflight.yml`` and the ``facts`` and ``record`` entry points
+    of ``lxc_preflight``: after the admission gate the play reads the node
+    (name and cluster, the management network, the bridges, the storages that
+    hold container rootfs and templates, the cached templates, the guest ids
+    in use and the next free one) and writes the inventory's As-Is record,
+    ``group_vars/all/default.yml`` (``lxc_site``), in place by default or as a
+    proposal under ``inventory/discovered/`` with
+    ``-e lxc_preflight_write=additional``; it then lists every ``CHANGE-ME``
+    left in the desired-state files. A second run is ``changed=0``. New
+    Molecule scenarios ``preflight_facts_negative`` and ``preflight_record``.
+changed:
+  - >-
+    The example inventory points its desired-state defaults at the record:
+    ``lxc_node`` is the node the preflight play ran on, ``lxc_storage`` the
+    rootfs storage it recorded (``lxc_preflight_storage_preference``, else the
+    first local one) and ``lxc_bridge`` the interface carrying the node's
+    default route, so a fresh checkout deploys after ``make config`` and the
+    preflight play with only each container's id left to choose. ``hosts.yml``
+    no longer declares ``lxc_hosts`` and lists no node names; a standalone node
+    (absent from ``pvecm nodes``) still goes in ``proxmox_nodes``. An existing
+    untracked inventory keeps working with its own values; to adopt the record,
+    copy ``inventory/example/group_vars/all/default.yml`` in and run the
+    preflight play. ``inventory/discovered/`` is gitignored and never an
+    inventory source.

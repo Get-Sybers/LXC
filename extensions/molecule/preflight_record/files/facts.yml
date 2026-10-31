@@ -1,0 +1,28 @@
+---
+# The node facts fixture: what lxc_preflight's facts entry point gathers on a
+# live node, as a committed example (documentation addresses only).
+lxc_preflight_facts:
+  node: pve-example
+  pve_version: "9.0.0"
+  cluster:
+    name: example-cluster
+    nodes: [pve-example, pve-example-2]
+  management:
+    interface: vmbr0
+    address: 192.0.2.10
+    prefix: 24
+    cidr: 192.0.2.0/24
+    gateway: 192.0.2.1
+    nameservers: [192.0.2.1]
+    search: [example.test]
+  bridges: [vmbr0, vmbr1]
+  storage:
+    rootdir:
+      - { storage: local-zfs, type: zfspool, shared: 0 }
+      - { storage: shared-ceph, type: rbd, shared: 1 }
+    rootdir_default: local-zfs
+    vztmpl: [local]
+    templates_cached: [local:vztmpl/debian-13-standard_13.6-1_amd64.tar.zst]
+  vmids:
+    in_use: [100, 101]
+    next_free: 102

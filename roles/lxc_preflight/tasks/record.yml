@@ -1,0 +1,57 @@
+---
+# Write the As-Is record the facts entry point gathered to the inventory:
+# group_vars/all/default.yml, in place by default (the record carries no hand
+# annotations and git never sees it), or as a proposal under discovered/ that
+# Ansible never loads. The only write is the inventory file on the delegate.
+- name: "record | The facts must have been gathered first"
+  ansible.builtin.assert:
+    that:
+      - lxc_preflight_facts is defined
+      - lxc_preflight_write in ['in_place', 'additional']
+    fail_msg: >-
+      record needs lxc_preflight_facts (tasks_from: facts, after the admission
+      gate) and lxc_preflight_write set to in_place or additional
+      (got '{{ lxc_preflight_write }}').
+    quiet: true
+- name: "record | Resolve where the record is written"
+  ansible.builtin.set_fact:
+    __lpf_record_dest: >-
+      {{ lxc_preflight_inventory_dir }}{{ '/discovered' if lxc_preflight_write == 'additional' else '' }}/group_vars/all/default.yml
+- name: "record | Read the identity of the user who writes the record"
+  ansible.builtin.setup:
+    gather_subset: ["!all", "!min", "user"]
+  register: __lpf_record_user
+  delegate_to: "{{ lxc_preflight_record_delegate_to }}"
+  delegate_facts: true
+- name: "record | Resolve the identity the record carries (the inputs, else that user)"
+  ansible.builtin.set_fact:
+    __lpf_record_owner: >-
+      {{ lxc_preflight_record_owner if (lxc_preflight_record_owner | string | length > 0)
+         else __lpf_record_user['ansible_facts']['ansible_user_id'] }}
+    __lpf_record_group: >-
+      {{ lxc_preflight_record_group if (lxc_preflight_record_group | string | length > 0)
+         else __lpf_record_user['ansible_facts']['ansible_user_gid'] }}
+- name: "record | Ensure the record directory exists"
+  ansible.builtin.file:
+    path: "{{ __lpf_record_dest | dirname }}"
+    state: directory
+    owner: "{{ __lpf_record_owner }}"
+    group: "{{ __lpf_record_group }}"
+    mode: "0755"
+  delegate_to: "{{ lxc_preflight_record_delegate_to }}"
+- name: "record | Write the node's As-Is record"
+  ansible.builtin.template:
+    src: default.yml.j2
+    dest: "{{ __lpf_record_dest }}"
+    owner: "{{ __lpf_record_owner }}"
+    group: "{{ __lpf_record_group }}"
+    mode: "0644"
+    backup: "{{ lxc_preflight_record_backup | bool }}"
+  register: __lpf_record_written
+  delegate_to: "{{ lxc_preflight_record_delegate_to }}"
+- name: "record | Where it went"
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'written' if __lpf_record_written is changed else 'unchanged' }}: {{ __lpf_record_dest }}
+      ({{ 'the live record; the desired-state files read it' if lxc_preflight_write == 'in_place'
+          else 'a proposal Ansible never loads; diff it, copy it in, or re-run with -e lxc_preflight_write=in_place' }})
