@@ -25,7 +25,7 @@ role) and this role over `pct exec`.
 | --- | --- | --- |
 | `bake` | the build rootfs (chroot) | ca-certs, service user, extract the binaries from the pinned images, units + `multi-user.target.wants` links; no credentials, no start |
 | `container` | node (`localhost`/`local`) | `lxc_guest` ensure path with this role's placement, template URL and checksum; the CT joins the `onepassword_connect` group |
-| `server` | inside the CT | assert the baseline and template markers and the baked binaries, credentials, enable + start the units, verify |
+| `server` | inside the CT | assert the baseline and template markers and the baked binaries, open and prove the service ports in the in-guest firewall, the sync port drop-in, credentials, enable + start the units, verify (the `/health` answer must come from `connect-api`) |
 | `remove` | node | `lxc_guest` `remove` with this role's placement (needs `-e lxc_guest_confirm_destroy=true`) |
 
 ## Inputs (selected — full list in `meta/argument_specs.yml`)
@@ -43,6 +43,7 @@ role) and this role over `pct exec`.
 | `lxc_onepassword_connect_version` | `1.8.3` | Connect release the image carries; `server` refuses a template whose marker says another. Set in `templates/op-connect/template.yml` for the bake. |
 | `lxc_onepassword_connect_arch` | `amd64` | Image arch to extract (`arm64` on a Pi). |
 | `lxc_onepassword_connect_credentials_src` | `""` | Path on the node to `1password-credentials.json` (**required**, secret). |
+| `lxc_onepassword_connect_sync_port` | `8081` | Port `connect-sync`'s own HTTP endpoint listens on (`OP_HTTP_PORT`); the API keeps `lxc_onepassword_connect_api_port`. Both binaries default to 8080 and share the container's network namespace, so `server` installs a drop-in moving sync. |
 
 ## Dependencies
 
