@@ -1,0 +1,42 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Read the record back
+      ansible.builtin.slurp:
+        src: /var/tmp/lxc-inventory/group_vars/all/default.yml
+      register: __lpf_test_record
+    - name: Parse it
+      ansible.builtin.set_fact:
+        __lpf_test_text: "{{ __lpf_test_record.content | b64decode }}"
+        __lpf_test_site: "{{ (__lpf_test_record.content | b64decode | from_yaml)['lxc_site'] }}"
+    - name: The record carries the node, the LAN, the storages and the ids the fixture gave
+      ansible.builtin.assert:
+        that:
+          - __lpf_test_site['node'] == 'pve-example'
+          - __lpf_test_site['cluster']['name'] == 'example-cluster'
+          - __lpf_test_site['cluster']['nodes'] | length == 2
+          - __lpf_test_site['management']['interface'] == 'vmbr0'
+          - __lpf_test_site['management']['cidr'] == '192.0.2.0/24'
+          - __lpf_test_site['management']['gateway'] == '192.0.2.1'
+          - __lpf_test_site['bridges'] == ['vmbr0', 'vmbr1']
+          - __lpf_test_site['storage']['rootdir'] | length == 2
+          - __lpf_test_site['storage']['rootdir'][1]['shared'] | bool
+          - __lpf_test_site['storage']['rootdir_default'] == 'local-zfs'
+          - __lpf_test_site['storage']['templates_cached'] | length == 1
+          - __lpf_test_site['vmids']['in_use'] == [100, 101]
+          - __lpf_test_site['vmids']['next_free'] | int == 102
+          - "'WRITTEN BY' in __lpf_test_text"
+        fail_msg: "the rendered record does not match the fixture: {{ __lpf_test_site }}"
+        quiet: true
+    - name: The record is owned by the writer and world-readable, not writable
+      ansible.builtin.stat:
+        path: /var/tmp/lxc-inventory/group_vars/all/default.yml
+      register: __lpf_test_stat
+    - name: Its mode is 0644
+      ansible.builtin.assert:
+        that: __lpf_test_stat.stat.mode == '0644'
+        fail_msg: "record mode is {{ __lpf_test_stat.stat.mode }}, expected 0644"
+        quiet: true

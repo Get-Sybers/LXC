@@ -38,7 +38,7 @@ This collection's own runtime dependencies are pinned in
 
 | Role | Tier | Purpose |
 | --- | --- | --- |
-| `lxc_preflight` | node | Admission gate every node-side play includes first: running as root, on a Proxmox VE node, with `pct` present. |
+| `lxc_preflight` | node | Admission gate every node-side play includes first: running as root, on a Proxmox VE node, with `pct` present. Its `facts` and `record` entry points read the node (name, cluster, management LAN, bridges, storages, cached templates, guest ids) and write the inventory's As-Is record, `group_vars/all/default.yml`, that the desired-state files point at. |
 | `lxc_guest` | node + guest | The one lifecycle: facts, preflight (refuses a privileged request, a foreign CT id, a missing template or bridge), create via `community.proxmox.proxmox`, connect over `proxmox_pct_remote`, post-check from Proxmox; `baseline` inside the guest (purge `sshd`, refuse container runtimes, write the marker); opt-in `remove`. |
 | `lxc_onepassword_connect` | build | `bake` puts the `connect-api`/`connect-sync` binaries, units and service user into the template (extracted from the pinned official images; no Docker/OCI); `container` hands the placement and the released template to `lxc_guest`; `server` installs the credentials and starts the units, refusing a guest without the baseline and template markers. |
 | `lxc_onepassword_item` | API client | Upsert one item into the Connect vault via `onepassword.connect.generic_item`, under `no_log` — the credential-mirror primitive. |
@@ -73,6 +73,7 @@ On the node, `lxc_guest` fetches the release by the checksum the inventory pins.
 
 | Play | Runs on | Does |
 | --- | --- | --- |
+| [`preflight.yml`](playbooks/preflight.yml) | the node (`localhost`) | `lxc_preflight` gate → read the node's facts → write `inventory/group_vars/all/default.yml` (in place; `-e lxc_preflight_write=additional` for a proposal under `inventory/discovered/`) → list every `CHANGE-ME` left. Run first on a fresh checkout and after a node change; a second run is `changed=0`. |
 | [`deploy-onepassword-connect.yml`](playbooks/deploy-onepassword-connect.yml) | the node (`localhost`) | `lxc_preflight` → ensure the CT → `lxc_guest` baseline inside it → install and verify Connect; `--tags destroy -e lxc_guest_confirm_destroy=true` tears it down. |
 | [`deploy-semaphore.yml`](playbooks/deploy-semaphore.yml) | the node (`localhost`) | `lxc_preflight` → ensure the CT → `lxc_guest` baseline inside it → configure, migrate, create the administrator, start and verify Semaphore; `--tags destroy -e lxc_guest_confirm_destroy=true` tears it down. |
 | [`deploy-distrobuilder.yml`](playbooks/deploy-distrobuilder.yml) | the node (`localhost`) | `lxc_preflight` → ensure the CT → `lxc_guest` baseline inside it → assert the baked tools and place the image definitions; `--tags destroy -e lxc_guest_confirm_destroy=true` tears it down. |
@@ -86,7 +87,9 @@ On the node, `lxc_guest` fetches the release by the checksum the inventory pins.
 The plays carry no configuration of their own: every site-specific value — the node, storage, bridge, CT ids, addresses, the released
 template checksums — lives in [`inventory/`](inventory), which `ansible.cfg` points at so no `-i` is needed. The repository carries only
 the template of that configuration, [`inventory/example/`](inventory/example); `make config` copies it into place and the copies are
-untracked, so no node name, subnet or CT id is ever committed. The node-side plays run **on**
+untracked, so no node name, subnet or CT id is ever committed. [`playbooks/preflight.yml`](playbooks/preflight.yml) fills the node's own
+values (the node, its storages, bridges and management LAN, the guest ids in use) into the untracked As-Is record
+`inventory/group_vars/all/default.yml`, which `lxc.yml` points at, so what is left to type is each container's id. The node-side plays run **on**
 the Proxmox node as root (`pct` is node-local); PVE API auth comes from the `PROXMOX_*` environment variables
 ([`inventory/group_vars/all/proxmox_api.yml`](inventory/example/group_vars/all/proxmox_api.yml)).
 
@@ -103,7 +106,7 @@ manifest, the roles).
 ├── doc/                  # documentation: index.md, howto/, reference/
 ├── templates/            # one directory per LXC template: the manifest and its README
 ├── roles/                # lxc_preflight, lxc_guest, lxc_onepassword_connect, lxc_onepassword_item, lxc_semaphore, lxc_distrobuilder, lxc_ghost9_range, lxc_velociraptor, lxc_ghost9
-├── playbooks/            # deploy-*, build-*, reflect-*, bake-template
+├── playbooks/            # preflight, deploy-*, build-*, reflect-*, bake-template
 ├── inventory/            # the single config home (hosts, group_vars, secrets examples)
 ├── extensions/molecule/  # the test scenarios and their Debian substrate
 ├── scripts/              # check_lxc_boundary, check_pins, upgrade_pins, molecule_lanes, base_template_checksum
@@ -117,8 +120,9 @@ manifest, the roles).
 ## Development
 
 ```sh
-make config      # copy the configuration template into inventory/ (untracked), then replace every CHANGE-ME
 make deps        # install pinned collections + test tooling
+make config      # copy the configuration template into inventory/ (untracked)
+ansible-playbook playbooks/preflight.yml   # gate the node, record its facts in inventory/group_vars/all/default.yml, list what is left
 prek install     # git hooks (lint, secrets, commit-msg)
 make conform     # the full local gate: lint, pins, boundary, sanity, molecule, changelog, build
 make upgrade     # raise every pin to its galaxy.yml ceiling, then re-run conform
@@ -132,6 +136,8 @@ only its own playbooks. The container is disposable test scaffolding — it is n
 
 - **`default`** (positive): `lxc_guest`'s `baseline` against a substrate that `prepare` gave an SSH server — converge removes it, verify
   proves it, idempotence proves a second run is `changed=0`.
+- **`preflight_record`** (positive): `lxc_preflight`'s `record` renders the As-Is record from a committed fixture into a scratch inventory;
+  verify reads it back, idempotence proves a second run is `changed=0`. `preflight_facts_negative` proves `facts` refuses to run before the gate.
 - **A negative scenario for every role** (`*_negative`): run without the role's live dependency, each role must stop at its own labelled
   assertion — never crash or silently proceed. `onepassword_connect_negative`, `semaphore_negative`, `distrobuilder_negative`, `velociraptor_negative` and `ghost9_negative` are the premise's rule 5 in action:
   `server` refuses a guest without the baseline marker.

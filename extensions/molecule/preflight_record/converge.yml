@@ -1,0 +1,16 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Load the committed node facts fixture
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/files/facts.yml"
+    - name: Write the As-Is record from the fixture into a scratch inventory
+      ansible.builtin.include_role:
+        name: get_sybers.lxc.lxc_preflight
+        tasks_from: record
+      vars:
+        lxc_preflight_inventory_dir: /var/tmp/lxc-inventory
+        lxc_preflight_record_delegate_to: "{{ inventory_hostname }}"

@@ -1,0 +1,30 @@
+---
+- name: Converge (expect a controlled failure)
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: The fact-finder must refuse to run before the admission gate
+      block:
+        - name: Run lxc_preflight facts without the gate
+          ansible.builtin.include_role:
+            name: get_sybers.lxc.lxc_preflight
+            tasks_from: facts
+      rescue:
+        - name: The role stopped at its own assertion
+          ansible.builtin.assert:
+            that:
+              - ansible_failed_result is defined
+              - "'before tasks_from: facts' in (ansible_failed_result.msg | default(''))"
+            fail_msg: >-
+              failed, but not at the gate assertion:
+              {{ ansible_failed_result | default({}) }}
+            quiet: true
+        - name: Record the controlled failure
+          ansible.builtin.set_fact:
+            __lpf_facts_failed_cleanly: true
+    - name: The failure path was taken
+      ansible.builtin.assert:
+        that: __lpf_facts_failed_cleanly | default(false)
+        fail_msg: "lxc_preflight facts ran without the admission gate"
+        quiet: true

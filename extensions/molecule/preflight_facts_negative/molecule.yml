@@ -1,0 +1,11 @@
+---
+# lxc_preflight facts negative — the fact-finder must refuse to run before the
+# admission gate, stopping at its own labelled assertion rather than reading a
+# node it has not admitted. No prepare; converge drives the controlled failure.
+scenario:
+  test_sequence:
+    - dependency
+    - syntax
+    - create
+    - converge
+    - destroy

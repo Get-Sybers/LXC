@@ -18,3 +18,68 @@ argument_specs:
         required: false
         default: proxmox_nodes
         description: "Inventory group of the Proxmox nodes; membership admits a host that `pvecm nodes` does not list."
+  facts:
+    short_description: "Gather the node facts the desired-state files point at (read-only); sets lxc_preflight_facts."
+    description:
+      - >-
+        Runs after the admission gate (include the role's main entry point
+        first). Reads, through pvesh and the network facts, the node's name and
+        cluster, its management network (the interface carrying the default
+        route, its address, prefix, gateway and resolvers), the bridges, the
+        enabled storages that hold container rootfs and templates, the cached
+        templates, the guest ids in use cluster-wide and the next free one.
+        Changes nothing; sets lxc_preflight_facts for record.
+    options:
+      lxc_preflight_delegate_to:
+        type: str
+        required: false
+        description: "The host the reads execute on. Computed default: {{ inventory_hostname }}."
+      lxc_preflight_storage_preference:
+        type: list
+        elements: str
+        required: false
+        default: [local-zfs, local-lvm, local]
+        description: "Storage names preferred, in order, as the default rootfs storage when the node holds more than one that takes containers."
+  record:
+    short_description: "Write lxc_preflight_facts to the inventory as group_vars/all/default.yml, in place or as a proposal under discovered/."
+    description:
+      - >-
+        Renders the As-Is record the desired-state files (lxc.yml, the
+        <service>.yml placement files) point at. In place by default; with
+        lxc_preflight_write=additional under <inventory_dir>/discovered/, which
+        ansible.cfg never loads. Idempotent: unchanged facts write nothing.
+    options:
+      lxc_preflight_facts:
+        type: dict
+        required: true
+        description: "The facts gathered by tasks_from: facts (node, pve_version, cluster, management, bridges, storage, vmids)."
+      lxc_preflight_inventory_dir:
+        type: str
+        required: false
+        description: "Inventory directory the record is written under. Computed default: inventory_dir."
+      lxc_preflight_write:
+        type: str
+        required: false
+        default: in_place
+        choices: [in_place, additional]
+        description: "in_place writes group_vars/all/default.yml; additional writes the proposal discovered/group_vars/all/default.yml."
+      lxc_preflight_record_delegate_to:
+        type: str
+        required: false
+        default: localhost
+        description: "The host holding the inventory checkout."
+      lxc_preflight_record_owner:
+        type: str
+        required: false
+        default: ""
+        description: "Owner of the record; empty means the user running Ansible on the delegate, read from its user facts."
+      lxc_preflight_record_group:
+        type: str
+        required: false
+        default: ""
+        description: "Group of the record; empty means that user's primary group id."
+      lxc_preflight_record_backup:
+        type: bool
+        required: false
+        default: false
+        description: "Keep a timestamped backup beside a record rewritten in place."

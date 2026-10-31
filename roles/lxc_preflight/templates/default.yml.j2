@@ -1,0 +1,99 @@
+---
+# {{ ansible_managed }}
+# inventory/group_vars/all/default.yml — this node's As-Is record, WRITTEN BY
+# playbooks/preflight.yml (get_sybers.lxc.lxc_preflight, record) from the live
+# node. Re-run the play rather than editing it. The desired-state files
+# (lxc.yml, the <service>.yml placement files) point at these values by default;
+# a choice is overridden there, never here (As-Is is a fact, To-Be is a variable).
+{% set f = lxc_preflight_facts %}
+lxc_site:
+  # The node the plays run on: pct is node-local, so every container lands here.
+  node: {{ f['node'] }}
+  pve_version: "{{ f['pve_version'] }}"
+  cluster:
+    name: {{ f['cluster']['name'] if f['cluster']['name'] else 'null' }}
+{% if f['cluster']['nodes'] | length > 0 %}
+    nodes:
+{% for n in f['cluster']['nodes'] %}
+      - {{ n }}
+{% endfor %}
+{% else %}
+    nodes: []
+{% endif %}
+  # The interface that carries the node's default route: the management bridge
+  # a guest's net0 sits on, and the LAN a static guest address belongs to.
+  management:
+    interface: {{ f['management']['interface'] }}
+    address: {{ f['management']['address'] }}
+    prefix: {{ f['management']['prefix'] }}
+    cidr: {{ f['management']['cidr'] }}
+    gateway: {{ f['management']['gateway'] }}
+{% if f['management']['nameservers'] | length > 0 %}
+    nameservers:
+{% for n in f['management']['nameservers'] %}
+      - {{ n }}
+{% endfor %}
+{% else %}
+    nameservers: []
+{% endif %}
+{% if f['management']['search'] | length > 0 %}
+    search:
+{% for s in f['management']['search'] %}
+      - {{ s }}
+{% endfor %}
+{% else %}
+    search: []
+{% endif %}
+{% if f['bridges'] | length > 0 %}
+  bridges:
+{% for b in f['bridges'] %}
+    - {{ b }}
+{% endfor %}
+{% else %}
+  bridges: []
+{% endif %}
+  storage:
+    # Enabled storages that hold a container rootfs on this node (pvesh get
+    # /nodes/<node>/storage --content rootdir), by name.
+{% if f['storage']['rootdir'] | length > 0 %}
+    rootdir:
+{% for s in f['storage']['rootdir'] %}
+      - name: {{ s['storage'] }}
+        type: {{ s['type'] }}
+        shared: {{ 'true' if s['shared'] | default(0) | int == 1 else 'false' }}
+{% endfor %}
+{% else %}
+    rootdir: []
+{% endif %}
+    # The rootfs storage every guest uses unless lxc.yml says otherwise: the
+    # first of lxc_preflight_storage_preference present, else the first local
+    # one, else the first. Empty when the node holds no rootdir storage.
+    rootdir_default: {{ f['storage']['rootdir_default'] if f['storage']['rootdir_default'] else '""' }}
+{% if f['storage']['vztmpl'] | length > 0 %}
+    vztmpl:
+{% for s in f['storage']['vztmpl'] %}
+      - {{ s }}
+{% endfor %}
+{% else %}
+    vztmpl: []
+{% endif %}
+{% if f['storage']['templates_cached'] | length > 0 %}
+    templates_cached:
+{% for t in f['storage']['templates_cached'] %}
+      - {{ t }}
+{% endfor %}
+{% else %}
+    templates_cached: []
+{% endif %}
+  # Guest ids in use anywhere in the cluster, and the next one Proxmox would
+  # hand out. A placement file pins its CT id; this is what to pick it from.
+  vmids:
+{% if f['vmids']['in_use'] | length > 0 %}
+    in_use:
+{% for v in f['vmids']['in_use'] %}
+      - {{ v }}
+{% endfor %}
+{% else %}
+    in_use: []
+{% endif %}
+    next_free: {{ f['vmids']['next_free'] }}

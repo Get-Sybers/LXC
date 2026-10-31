@@ -1,0 +1,52 @@
+---
+# Prepare and prove a node before any container play, and keep the inventory
+# honest about it. Play 1 runs the admission gate (root, a Proxmox VE node,
+# pct present), gathers the node facts the desired-state files point at (the
+# node, its cluster, the management network, bridges, storages, the template
+# cache, the CT ids in use) and writes them to the inventory's As-Is record,
+# inventory/group_vars/all/default.yml, in place by default. Then it lists
+# every CHANGE-ME still left in the desired-state files, which is the whole
+# remaining to-do before a deploy play. Run ON the node, as root (hosts:
+# localhost, connection: local). Re-runnable: a second run is changed=0 until
+# the node changes. -e lxc_preflight_write=additional writes a proposal under
+# inventory/discovered/ (never loaded) instead; --check --diff shows the change.
+- name: "Preflight the node and record its facts in the inventory"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: "Node admission gate"
+      ansible.builtin.include_role:
+        name: get_sybers.lxc.lxc_preflight
+    - name: "Gather the node facts"
+      ansible.builtin.include_role:
+        name: get_sybers.lxc.lxc_preflight
+        tasks_from: facts
+    - name: "Write the inventory's As-Is record"
+      ansible.builtin.include_role:
+        name: get_sybers.lxc.lxc_preflight
+        tasks_from: record
+    - name: "Find the desired-state values still to set"
+      ansible.builtin.command:
+        argv: [grep, -rnE, --include=*.yml, -e, "^[^#]*CHANGE-ME", "{{ inventory_dir }}/hosts.yml", "{{ inventory_dir }}/group_vars"]
+      register: __preflight_todo
+      changed_when: false
+      check_mode: false
+      failed_when: __preflight_todo.rc not in [0, 1]
+    - name: "Find the placement files whose CT id is still unset"
+      ansible.builtin.command:
+        argv: [grep, -rnE, --include=*.yml, -e, "_vmid: 0$", "{{ inventory_dir }}/group_vars"]
+      register: __preflight_vmids
+      changed_when: false
+      check_mode: false
+      failed_when: __preflight_vmids.rc not in [0, 1]
+    - name: "What is left before a deploy play"
+      ansible.builtin.debug:
+        msg: >-
+          {{ (['every desired-state value is set'] if __preflight_todo.rc == 1 else
+              [(__preflight_todo.stdout_lines | length | string) ~ ' value(s) still to set (CHANGE-ME):']
+              + __preflight_todo.stdout_lines)
+             + (['every placement file names its CT id'] if __preflight_vmids.rc == 1 else
+                [(__preflight_vmids.stdout_lines | length | string)
+                 ~ ' placement file(s) still at CT id 0 (pick a free id; the record lists the ids in use and the next free one):']
+                + __preflight_vmids.stdout_lines) }}
