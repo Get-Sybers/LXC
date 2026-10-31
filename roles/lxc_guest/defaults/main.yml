@@ -32,6 +32,11 @@ lxc_guest_swap_mb: 0
 # Full Proxmox net0 string. DHCP on the management bridge by default; for a
 # fixed address use e.g. "name=eth0,bridge=vmbr0,ip=192.0.2.150/24,gw=192.0.2.1".
 lxc_guest_net0: "name=eth0,bridge={{ lxc_bridge }},ip=dhcp"
+# The guest's MAC, which is what a DHCP server leases the address to. Empty:
+# derived from the CT id under lxc_guest_mac_prefix, so a recreated guest
+# keeps its lease without anyone recording a value. A hwaddr= inside net0
+# wins over both.
+lxc_guest_hwaddr: ""
 lxc_guest_nameserver: ""
 # Extra container features, e.g. ["nesting=1"] where the guest's systemd needs
 # nested namespaces (Debian 13 / systemd 257 does). The container stays
