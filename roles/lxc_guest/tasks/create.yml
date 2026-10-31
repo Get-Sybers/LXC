@@ -17,7 +17,12 @@
     vmid: "{{ lxc_guest_vmid }}"
     hostname: "{{ lxc_guest_hostname }}"
     ostemplate: "{{ lxc_guest_template }}"
-    description: >-
+    # Folded with `>` (one trailing newline), not `>-`: PVE stores and returns
+    # the description with a trailing newline, and community.proxmox compares
+    # the strings as sent. Without it every run saw a diff, re-sent the whole
+    # config (net0 without its hwaddr included) and PVE re-plugged the NIC with
+    # a new MAC, dropping the guest's DHCP lease.
+    description: >
       {{ lxc_guest_description_marker }}{{ (' | ' ~ lxc_guest_purpose) if lxc_guest_purpose | length > 0 else '' }}.
       Reached only through pct exec from the node. Do not edit by hand.
     unprivileged: "{{ lxc_guest_unprivileged | bool }}"

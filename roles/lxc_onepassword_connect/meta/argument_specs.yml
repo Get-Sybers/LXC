@@ -153,6 +153,11 @@ argument_specs:
         type: int
         required: false
         default: 8080
+      lxc_onepassword_connect_sync_port:
+        type: int
+        required: false
+        default: 8081
+        description: "Port connect-sync's own HTTP endpoint listens on (OP_HTTP_PORT); it shares the namespace with connect-api on api_port."
       lxc_onepassword_connect_stage_dir:
         type: str
         required: false
@@ -215,6 +220,11 @@ argument_specs:
         type: int
         required: false
         default: 8080
+      lxc_onepassword_connect_sync_port:
+        type: int
+        required: false
+        default: 8081
+        description: "Port connect-sync's own HTTP endpoint listens on (OP_HTTP_PORT); it shares the namespace with connect-api on api_port."
       lxc_onepassword_connect_stage_dir:
         type: str
         required: false

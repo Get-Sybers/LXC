@@ -4,6 +4,7 @@
     url: "http://127.0.0.1:{{ lxc_onepassword_connect_api_port }}/health"
     method: GET
     status_code: [200]
+    return_content: true
   register: __lxc_onepassword_connect_verify
   until: (__lxc_onepassword_connect_verify.status | default(-1)) == 200
   retries: 15
@@ -15,9 +16,17 @@
   ansible.builtin.assert:
     that:
       - (__lxc_onepassword_connect_verify.status | default(-1)) == 200
+      - (__lxc_onepassword_connect_verify.json.name | default('')) == '1Password Connect API'
     fail_msg: >-
       op-connect-api did not become healthy at
-      http://127.0.0.1:{{ lxc_onepassword_connect_api_port }}/health. Inspect
-      `journalctl -u op-connect-api -u op-connect-sync` inside the container.
-    success_msg: "op-connect-api is healthy (HTTP 200 at /health)."
+      http://127.0.0.1:{{ lxc_onepassword_connect_api_port }}/health
+      (status {{ __lxc_onepassword_connect_verify.status | default(-1) }},
+      answered by '{{ __lxc_onepassword_connect_verify.json.name | default('nothing') }}').
+      connect-sync serves /health too, so a 200 alone proves nothing: if sync
+      answered, it holds the API port. Inspect `journalctl -u op-connect-api
+      -u op-connect-sync` inside the container.
+    success_msg: >-
+      op-connect-api {{ __lxc_onepassword_connect_verify.json.version | default('?') }} is healthy
+      (HTTP 200 at /health, dependencies:
+      {{ __lxc_onepassword_connect_verify.json.dependencies | default([]) | map(attribute='status') | list | join(', ') }}).
     quiet: true

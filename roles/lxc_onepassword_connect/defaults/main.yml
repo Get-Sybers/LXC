@@ -61,6 +61,10 @@ lxc_onepassword_connect_home: /home/opuser
 lxc_onepassword_connect_data_dir: "{{ lxc_onepassword_connect_home }}/.op/data"
 lxc_onepassword_connect_bin_dir: /usr/local/bin
 lxc_onepassword_connect_api_port: 8080
+# connect-sync serves its own HTTP endpoint and, like connect-api, defaults to
+# 8080. Both run in this one network namespace, so sync moves, as 1Password's
+# single-pod deployment does (OP_HTTP_PORT=8081); server installs the drop-in.
+lxc_onepassword_connect_sync_port: 8081
 # Inbound ports the per-guest firewall opens (default-deny otherwise).
 lxc_onepassword_connect_firewall_allow:
   - { proto: tcp, port: "{{ lxc_onepassword_connect_api_port }}", comment: "Connect API" }

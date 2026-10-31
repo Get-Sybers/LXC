@@ -1,0 +1,26 @@
+---
+fixed:
+  - >-
+    ``lxc_onepassword_connect`` ``server`` keeps ``connect-sync`` off the API
+    port: both binaries default to 8080 and share the container's network
+    namespace, so sync won the bind and ``connect-api`` crash-looped on every
+    start while the health probe, answered by sync's own ``/health``, reported
+    green. A systemd drop-in sets ``OP_HTTP_PORT`` to the new
+    ``lxc_onepassword_connect_sync_port`` (8081, as 1Password's single-pod
+    deployment does), and ``verify`` now requires the answer to come from
+    ``1Password Connect API``.
+  - >-
+    ``lxc_guest`` ``create`` is idempotent on an existing CT again. PVE stores
+    the container description with a trailing newline and community.proxmox
+    compares the strings as sent, so the role's newline-less description
+    differed on every run; the module then re-sent the whole config, ``net0``
+    without its ``hwaddr`` included, and Proxmox re-plugged the NIC with a new
+    MAC each time, dropping the guest's DHCP lease. The description is now
+    folded with one trailing newline and a settled CT reports ``changed=0``.
+  - >-
+    ``lxc_onepassword_connect`` ``server`` proves the service ports are open in
+    the live in-guest firewall and reloads nftables when they are not. The
+    drop-in's reload handler was lost whenever a run failed later in the same
+    play (handlers never ran) and the next run saw the file unchanged, so the
+    API stayed unreachable from the network while ``/health`` answered on
+    loopback. The pending reload is also flushed right after the drop-in lands.
