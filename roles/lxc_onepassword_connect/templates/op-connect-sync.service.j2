@@ -10,6 +10,10 @@ Type=simple
 User={{ lxc_onepassword_connect_user }}
 WorkingDirectory={{ lxc_onepassword_connect_home }}
 Environment=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+# connect-sync and connect-api both default to port 8080 and share this
+# container's network namespace; sync moves, as 1Password's single-pod
+# deployment sets it.
+Environment=OP_HTTP_PORT={{ lxc_onepassword_connect_sync_port }}
 ExecStart={{ lxc_onepassword_connect_bin_dir }}/connect-sync
 Restart=always
 RestartSec=5

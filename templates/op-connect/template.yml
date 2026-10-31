@@ -9,7 +9,7 @@ lxc_template_name: op-connect
 # refuses the PR otherwise); a released version is immutable.
 lxc_onepassword_connect_version: "1.8.3"
 lxc_onepassword_connect_arch: amd64
-lxc_template_version: "0.1.2"
+lxc_template_version: "0.1.3"
 lxc_template_service_version: "{{ lxc_onepassword_connect_version }}"
 lxc_template_arch: "{{ lxc_onepassword_connect_arch }}"
 lxc_template_output: "debian-13-{{ lxc_template_name }}_{{ lxc_template_version }}_{{ lxc_template_arch }}.tar.zst"

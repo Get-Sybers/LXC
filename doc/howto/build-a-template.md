@@ -74,10 +74,10 @@ pvesh get /nodes/<node>/query-oci-repo-tags --reference ghcr.io/<owner>/lxc/<nam
 
 # pull a version into the `local` storage's template cache (uses skopeo; no checksum to paste)
 pvesh create /nodes/<node>/storage/local/oci-registry-pull \
-  --reference ghcr.io/<owner>/lxc/<name>:v<version> --filename <name>
+  --reference ghcr.io/<owner>/lxc/<name>:v<version> --filename <name>_<version>
 
 # create the container from it — pct detects the OCI image and maps its config
-pct create <vmid> local:vztmpl/<name>.tar --hostname <name> --rootfs <storage>:<gb> \
+pct create <vmid> local:vztmpl/<name>_<version>.tar --hostname <name> --rootfs <storage>:<gb> \
   --unprivileged 1 --features nesting=1 --memory <mb> --cores <n> --net0 name=eth0,bridge=<bridge>,ip=dhcp
 ```
 

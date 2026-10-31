@@ -51,7 +51,9 @@ argument_specs:
       lxc_velociraptor_template:
         type: str
         required: false
-        description: "storage:vztmpl/<file> of the released velociraptor template. Computed default: local:vztmpl/<template_file>."
+        description: >-
+          storage:vztmpl/<file> of the released velociraptor template: the OCI import's cache file,
+          named per release. Computed default: local:vztmpl/<template_name>_<template_version>.tar.
       lxc_velociraptor_template_url:
         type: str
         required: false

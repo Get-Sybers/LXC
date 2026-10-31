@@ -1,0 +1,15 @@
+---
+changed:
+  - >-
+    The ``op-connect`` template is ``0.1.3``: ``connect-sync``'s unit carries
+    ``OP_HTTP_PORT`` (``lxc_onepassword_connect_sync_port``, 8081) itself, so a
+    guest created from it starts both Connect binaries without the runtime
+    drop-in ``server`` keeps installing for older images.
+    ``lxc_onepassword_connect_template_version`` follows.
+  - >-
+    Every service role names the OCI import's cache file per release
+    (``local:vztmpl/<name>_<release>.tar``, was ``<name>.tar``): ``lxc_guest``
+    pulls an image only when that file is absent, so a raised release was
+    silently satisfied by the cached previous image. The stale version-less
+    file may be removed from the node's template cache by hand. The argument
+    specs' documented release defaults now match the roles' defaults.
