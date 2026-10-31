@@ -20,7 +20,10 @@ lxc_semaphore_template_version: "0.1.2"
 lxc_semaphore_template_name: "semaphore"
 lxc_semaphore_template_file: >-
   debian-13-semaphore_{{ lxc_semaphore_template_version }}_{{ lxc_semaphore_arch }}.tar.zst
-lxc_semaphore_template: "local:vztmpl/{{ lxc_semaphore_template_name }}.tar"
+# The OCI import's file in the template cache, named per release: lxc_guest
+# pulls the image only when this file is absent, so a raised release must not
+# resolve to the previous release's file.
+lxc_semaphore_template: "local:vztmpl/{{ lxc_semaphore_template_name }}_{{ lxc_semaphore_template_version }}.tar"
 lxc_semaphore_template_registry_base: "{{ lxc_template_registry_base | default('ghcr.io/get-sybers/lxc') }}"
 lxc_semaphore_template_image: >-
   {{ lxc_semaphore_template_registry_base }}/{{ lxc_semaphore_template_name }}:v{{ lxc_semaphore_template_version }}

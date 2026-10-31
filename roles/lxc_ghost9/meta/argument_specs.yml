@@ -48,7 +48,9 @@ argument_specs:
       lxc_ghost9_template:
         type: str
         required: false
-        description: "storage:vztmpl/<file> of the released ghost9 template. Computed default: local:vztmpl/<template_file>."
+        description: >-
+          storage:vztmpl/<file> of the released ghost9 template: the OCI import's cache file,
+          named per release. Computed default: local:vztmpl/<template_name>_<template_version>.tar.
       lxc_ghost9_template_url:
         type: str
         required: false

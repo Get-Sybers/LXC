@@ -17,7 +17,10 @@ lxc_velociraptor_template_version: "0.1.0"
 lxc_velociraptor_template_name: "velociraptor"
 lxc_velociraptor_template_file: >-
   debian-13-velociraptor_{{ lxc_velociraptor_template_version }}_{{ lxc_velociraptor_arch }}.tar.zst
-lxc_velociraptor_template: "local:vztmpl/{{ lxc_velociraptor_template_name }}.tar"
+# The OCI import's file in the template cache, named per release: lxc_guest
+# pulls the image only when this file is absent, so a raised release must not
+# resolve to the previous release's file.
+lxc_velociraptor_template: "local:vztmpl/{{ lxc_velociraptor_template_name }}_{{ lxc_velociraptor_template_version }}.tar"
 lxc_velociraptor_template_registry_base: "{{ lxc_template_registry_base | default('ghcr.io/get-sybers/lxc') }}"
 lxc_velociraptor_template_image: >-
   {{ lxc_velociraptor_template_registry_base }}/{{ lxc_velociraptor_template_name }}:v{{ lxc_velociraptor_template_version }}

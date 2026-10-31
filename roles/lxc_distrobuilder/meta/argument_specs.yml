@@ -26,7 +26,7 @@ argument_specs:
       lxc_distrobuilder_template_version:
         type: str
         required: false
-        default: "0.1.2"
+        default: "0.1.3"
         description: >-
           This repository's release of the distrobuilder template (the manifest's lxc_template_version, X.Y.Z):
           names the artifact and the tag; server refuses a guest baked at another.
@@ -51,7 +51,9 @@ argument_specs:
       lxc_distrobuilder_template:
         type: str
         required: false
-        description: "storage:vztmpl/<file> of the released distrobuilder template. Computed default: local:vztmpl/<template_file>."
+        description: >-
+          storage:vztmpl/<file> of the released distrobuilder template: the OCI import's cache file,
+          named per release. Computed default: local:vztmpl/<template_name>_<template_version>.tar.
       lxc_distrobuilder_template_url:
         type: str
         required: false
@@ -247,7 +249,7 @@ argument_specs:
       lxc_distrobuilder_template_version:
         type: str
         required: false
-        default: "0.1.2"
+        default: "0.1.3"
         description: >-
           This repository's release of the distrobuilder template (the manifest's lxc_template_version, X.Y.Z):
           names the artifact and the tag; server refuses a guest baked at another.
