@@ -15,6 +15,18 @@
     __lxc_guest_nodename: "{{ __lxc_guest_hostname_raw.stdout | trim }}"
     __lxc_guest_template_storage: "{{ (lxc_guest_template | string).split(':', 1) | first }}"
     __lxc_guest_bridge: "{{ (lxc_guest_net0 | string) | regex_search('(?:^|,)bridge=([^,]+)', '\\1') | default([''], true) | first }}"
+- name: "facts | Give the guest a MAC that survives a recreate"
+  ansible.builtin.set_fact:
+    __lxc_guest_hwaddr: >-
+      {{ ((lxc_guest_net0 | string) | regex_search('(?:^|,)hwaddr=([0-9A-Fa-f:]+)', '\1') | default([''], true) | first)
+         or (lxc_guest_hwaddr | string)
+         or (lxc_guest_mac_prefix ~ ':' ~ ('%02X:%02X:%02X' | format(
+              ((lxc_guest_vmid | int) // 65536) % 256, ((lxc_guest_vmid | int) // 256) % 256, (lxc_guest_vmid | int) % 256))) }}
+- name: "facts | Carry it in net0 unless net0 names one already"
+  ansible.builtin.set_fact:
+    __lxc_guest_net0: >-
+      {{ (lxc_guest_net0 | string) if ('hwaddr=' in (lxc_guest_net0 | string))
+         else ((lxc_guest_net0 | string) ~ ',hwaddr=' ~ __lxc_guest_hwaddr) }}
 - name: "facts | List the templates the template storage holds"
   ansible.builtin.command:
     argv:
@@ -103,5 +115,6 @@
       template={{ lxc_guest_template }} listed={{ __lxc_guest_templates_listed }}
       present={{ lxc_guest_template in __lxc_guest_templates }}
       bridge={{ __lxc_guest_bridge or '<none>' }} present={{ __lxc_guest_bridge_present }}
+      hwaddr={{ __lxc_guest_hwaddr }}
       ct{{ lxc_guest_vmid }}_exists={{ __lxc_guest_ct_exists }} ours={{ __lxc_guest_ct_is_ours }}
       id_elsewhere={{ __lxc_guest_id_elsewhere | join(',') or '<none>' }}

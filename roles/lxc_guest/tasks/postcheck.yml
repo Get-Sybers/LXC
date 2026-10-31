@@ -49,6 +49,16 @@
       net0 on every run, so Proxmox did not accept the requested value — check
       the create task's result and `pct config {{ lxc_guest_vmid }}`.
     quiet: true
+- name: "postcheck | It carries the MAC the role gave it"
+  ansible.builtin.assert:
+    that: ('HWADDR=' ~ (__lxc_guest_hwaddr | upper) ~ ',') in ((__lxc_guest_post['net0'] | default('') | upper) ~ ',')
+    fail_msg: >-
+      net0 does not carry hwaddr={{ __lxc_guest_hwaddr }}. Actual net0:
+      {{ __lxc_guest_post['net0'] | default('<no net0>') }}. The MAC is what the
+      DHCP server leases the address to, so without it a recreated guest changes
+      address. create reconciles net0 on every run — check the create task's
+      result and `pct config {{ lxc_guest_vmid }}`.
+    quiet: true
 - name: "postcheck | Extra capabilities are dropped"
   when: lxc_guest_cap_drop | length > 0
   block:
@@ -92,7 +102,7 @@
   ansible.builtin.debug:
     msg: >-
       LXC GUEST {{ lxc_guest_vmid }} ({{ lxc_guest_hostname }}) running on
-      {{ lxc_guest_node }}, bridge {{ __lxc_guest_bridge }}, unprivileged,
+      {{ lxc_guest_node }}, bridge {{ __lxc_guest_bridge }}, hwaddr {{ __lxc_guest_hwaddr }}, unprivileged,
       features={{ __lxc_guest_post['features'] | default('') or '<none>' }},
       onboot={{ __lxc_guest_post['onboot'] | default(0) }}. Service
       configuration is the service role's job, after the baseline.

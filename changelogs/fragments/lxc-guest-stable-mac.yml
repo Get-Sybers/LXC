@@ -1,0 +1,13 @@
+---
+changed:
+  - >-
+    ``lxc_guest`` gives every guest a MAC that survives a recreate. Unless
+    ``net0`` names a ``hwaddr`` (or ``lxc_guest_hwaddr`` does), the MAC is
+    derived from the CT id under the collection's locally administered prefix
+    (``02:4C:58:<id>``, outside the ``BC:24:11`` space Proxmox draws random
+    addresses from), passed to Proxmox in ``net0`` at create and reconcile, and
+    asserted by ``postcheck``. A destroyed and recreated guest therefore comes
+    back on the same DHCP lease, with no address recorded anywhere. A guest
+    created before this change is re-plugged once onto its derived MAC on the
+    next run and takes a new lease that time only; name its current MAC in
+    ``net0`` to keep it instead.

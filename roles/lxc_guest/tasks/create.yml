@@ -34,7 +34,9 @@
     pool: "{{ lxc_guest_pool if lxc_guest_pool | length > 0 else omit }}"
     disk: "{{ lxc_guest_storage }}:{{ lxc_guest_rootfs_gb }}"
     netif:
-      net0: "{{ lxc_guest_net0 }}"
+      # net0 as given, carrying the guest's stable MAC (facts.yml) so a
+      # recreated guest keeps its DHCP lease.
+      net0: "{{ __lxc_guest_net0 }}"
     nameserver: "{{ lxc_guest_nameserver if lxc_guest_nameserver | length > 0 else omit }}"
     state: present
     update: true
