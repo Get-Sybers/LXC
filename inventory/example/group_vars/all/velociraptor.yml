@@ -6,6 +6,8 @@
 lxc_velociraptor_node: "{{ lxc_node }}"
 # A free CT id, cluster-wide (`pvesh get /cluster/resources --type vm` lists
 # the taken ones). lxc_guest refuses 0.
+# A run-time input: -e lxc_velociraptor_vmid=<id> on the deploy play overrides this; set it
+# here to make an id this site's default. 0 is refused.
 lxc_velociraptor_vmid: 0
 # The guest's net0. DHCP on the management bridge by default, on a MAC derived
 # from the CT id (lxc_guest), so a recreated guest keeps its lease. For a fixed

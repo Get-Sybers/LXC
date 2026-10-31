@@ -1,0 +1,7 @@
+---
+trivial:
+  - >-
+    The docs, the placement examples and the preflight report say what was
+    already true of the variable system: a container's CT id is a run-time
+    input (``-e lxc_<service>_vmid=<id>`` on the deploy play), and a value in
+    the placement file is this site's default, not a requirement.

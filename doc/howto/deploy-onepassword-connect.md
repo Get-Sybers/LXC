@@ -53,18 +53,20 @@ This gives you three things:
 
 ## Step 1 — Deploy the Connect server LXC
 
-The placement — node, CT id, `net0` — is your `inventory/group_vars/all/onepassword.yml`; the only input left for the command line is
-the path of the credentials file. The CT lands on the `lxc_hosts` node running Connect `1.8.3` (`amd64`).
+The node, its storage and bridge come from the As-Is record the preflight play wrote; the CT id and the credentials file are
+run-time inputs, given with `-e` (set `lxc_onepassword_connect_vmid` in `inventory/group_vars/all/onepassword.yml` instead to make an
+id the default for this site). The CT lands on that node running Connect `1.8.3` (`amd64`).
 
 Run it **on the node** that will host the CT:
 
 ```bash
 export PROXMOX_TOKEN_ID='root@pam!ansible' PROXMOX_TOKEN_SECRET='…'
 ansible-playbook playbooks/deploy-onepassword-connect.yml \
+  -e lxc_onepassword_connect_vmid=<a free CT id> \
   -e lxc_onepassword_connect_credentials_src=/root/1password-credentials.json
 ```
 
-The play fetches the released template into the cache if it is not there, creates the LXC from it, re-asserts the baseline, installs the
+The preflight play reports the ids in use and the next free one. The play fetches the released template into the cache if it is not there, creates the LXC from it, re-asserts the baseline, installs the
 credentials file, starts the two baked `systemd` units, and verifies `http://127.0.0.1:8080/health` inside the CT.
 
 ### A container the cluster collection created

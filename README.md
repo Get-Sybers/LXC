@@ -89,7 +89,8 @@ template checksums — lives in [`inventory/`](inventory), which `ansible.cfg` p
 the template of that configuration, [`inventory/example/`](inventory/example); `make config` copies it into place and the copies are
 untracked, so no node name, subnet or CT id is ever committed. [`playbooks/preflight.yml`](playbooks/preflight.yml) fills the node's own
 values (the node, its storages, bridges and management LAN, the guest ids in use) into the untracked As-Is record
-`inventory/group_vars/all/default.yml`, which `lxc.yml` points at, so what is left to type is each container's id. The node-side plays run **on**
+`inventory/group_vars/all/default.yml`, which `lxc.yml` points at; a container's CT id is a run-time input (`-e lxc_<service>_vmid=<id>`),
+or a default set in its placement file. The node-side plays run **on**
 the Proxmox node as root (`pct` is node-local); PVE API auth comes from the `PROXMOX_*` environment variables
 ([`inventory/group_vars/all/proxmox_api.yml`](inventory/example/group_vars/all/proxmox_api.yml)).
 
