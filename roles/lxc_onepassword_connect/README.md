@@ -42,7 +42,7 @@ role) and this role over `pct exec`.
 | `lxc_onepassword_connect_features` | `["nesting=1"]` | Debian 13's systemd 257 needs nesting; the CT stays unprivileged. |
 | `lxc_onepassword_connect_version` | `1.8.3` | Connect release the image carries; `server` refuses a template whose marker says another. Set in `templates/op-connect/template.yml` for the bake. |
 | `lxc_onepassword_connect_arch` | `amd64` | Image arch to extract (`arm64` on a Pi). |
-| `lxc_onepassword_connect_credentials_src` | `""` | Path on the node to `1password-credentials.json` (**required**, secret). |
+| `lxc_onepassword_connect_credentials_src` | `{{ inventory_dir }}/secrets/1password-credentials.json` | Path to the `1password-credentials.json` (**secret**). Defaults to the collection's gitignored `inventory/secrets/` so the deploy needs nothing on the command line for it. |
 | `lxc_onepassword_connect_sync_port` | `8081` | Port `connect-sync`'s own HTTP endpoint listens on (`OP_HTTP_PORT`); the API keeps `lxc_onepassword_connect_api_port`. Both binaries default to 8080 and share the container's network namespace, so `server` installs a drop-in moving sync. |
 
 ## Dependencies

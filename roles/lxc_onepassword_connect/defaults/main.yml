@@ -77,5 +77,10 @@ lxc_onepassword_connect_stage_dir: /var/tmp/op-connect-extract
 lxc_onepassword_connect_baseline_marker: "{{ lxc_baseline_marker_path }}"
 lxc_onepassword_connect_template_marker: "{{ lxc_template_marker_path }}"
 
-# --- The 1password-credentials.json (SECRET): path on the node ---
-lxc_onepassword_connect_credentials_src: ""
+# --- The 1password-credentials.json (SECRET) -------------------------------
+# The file 1Password gives you when you create the Connect server. It lives in
+# the collection's gitignored secrets directory (inventory/secrets/), so the
+# deploy reads it from there with nothing on the command line; server copies it
+# into the guest. Point this elsewhere to use a file at another path.
+lxc_onepassword_connect_credentials_src: >-
+  {{ (hostvars['localhost']['inventory_dir'] | default(inventory_dir | default(''), true)) }}/secrets/1password-credentials.json

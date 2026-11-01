@@ -32,8 +32,8 @@ op connect token create reflect --server "<server name>" --vault "<vault>"
 
 This gives you three things:
 
-- **`1password-credentials.json`** — the server's credentials file. Copy it to the PVE node that will host the LXC (e.g.
-  `/root/1password-credentials.json`, mode `0400`).
+- **`1password-credentials.json`** — the server's credentials file. Put it in the collection's gitignored secrets directory as
+  `inventory/secrets/1password-credentials.json`; the deploy reads it from there by default.
 - **An access token** — a long string the reflect play uses to write items. Goes into the vaulted secrets file.
 - **The vault's ID** — `op vault get "<vault>" --format json | jq -r .id`. Goes into the vaulted secrets file.
 
@@ -53,17 +53,17 @@ This gives you three things:
 
 ## Step 1 — Deploy the Connect server LXC
 
-The node, its storage and bridge come from the As-Is record the preflight play wrote; the CT id and the credentials file are
-run-time inputs, given with `-e` (set `lxc_onepassword_connect_vmid` in `inventory/group_vars/all/onepassword.yml` instead to make an
-id the default for this site). The CT lands on that node running Connect `1.8.3` (`amd64`).
+The node, its storage and bridge come from the As-Is record the preflight play wrote; the credentials file comes from
+`inventory/secrets/1password-credentials.json`; the CT id is the one run-time input, given with `-e` (set
+`lxc_onepassword_connect_vmid` in `inventory/group_vars/all/onepassword.yml` instead to make an id the default for this site). The CT
+lands on that node running Connect `1.8.3` (`amd64`).
 
 Run it **on the node** that will host the CT:
 
 ```bash
 export PROXMOX_TOKEN_ID='root@pam!ansible' PROXMOX_TOKEN_SECRET='…'
 ansible-playbook playbooks/deploy-onepassword-connect.yml \
-  -e lxc_onepassword_connect_vmid=<a free CT id> \
-  -e lxc_onepassword_connect_credentials_src=/root/1password-credentials.json
+  -e lxc_onepassword_connect_vmid=<a free CT id>
 ```
 
 The preflight play reports the ids in use and the next free one. The play fetches the released template into the cache if it is not there, creates the LXC from it, re-asserts the baseline, installs the
