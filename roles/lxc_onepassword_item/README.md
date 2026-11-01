@@ -46,5 +46,8 @@ vaulted `inventory/secrets/onepassword.yml`.
 ## Behaviour
 
 Asserts the inputs, probes `{{ host }}{{ health_path }}` with `failed_when: false` and asserts a healthy `200` (an unreachable server becomes a
-labelled diagnostic, never a raw `uri` crash), then calls `generic_item`. Every secret-bearing task is `no_log`; the final debug reports only the
-item title and field **count**, never any value.
+labelled diagnostic, never a raw `uri` crash), reads the vault with the token (which also starts a fresh server's sync; a 401, 403 or 404
+becomes a diagnostic naming what the token lacks), waits for the server's sync to report `ACTIVE`, then calls `generic_item`. A refused
+upsert is explained from Connect's own activity log: a `DENY` means the token was issued without write access to the vault, which Connect
+fixes at issue time, so the fix is a new token. Every secret-bearing task is `no_log`; the final debug reports only the item title and
+field **count**, never any value.
