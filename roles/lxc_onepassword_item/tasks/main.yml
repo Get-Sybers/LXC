@@ -45,17 +45,107 @@
       and network reachability, then re-run.
     success_msg: "1Password Connect is reachable and healthy (HTTP 200)."
     quiet: true
-- name: "Upsert the 1Password item — {{ lxc_onepassword_item_title }}"
-  onepassword.connect.generic_item:
-    hostname: "{{ lxc_onepassword_item_host }}"
-    token: "{{ lxc_onepassword_item_token }}"
-    vault_id: "{{ lxc_onepassword_item_vault_id }}"
-    title: "{{ lxc_onepassword_item_title }}"
-    category: "{{ lxc_onepassword_item_category }}"
-    state: "{{ lxc_onepassword_item_state }}"
-    fields: "{{ lxc_onepassword_item_fields }}"
-  register: __lxc_onepassword_item_result
+- name: "Read the vault with the token (a fresh server starts its sync on this first authenticated request)"
+  ansible.builtin.uri:
+    url: "{{ lxc_onepassword_item_host }}/v1/vaults/{{ lxc_onepassword_item_vault_id }}"
+    headers:
+      Authorization: "Bearer {{ lxc_onepassword_item_token }}"
+    validate_certs: "{{ lxc_onepassword_item_validate_certs }}"
+    return_content: true
+    status_code: [200, 401, 403, 404]
+  register: __lxc_onepassword_item_vault
+  check_mode: false
+  changed_when: false
+  failed_when: false
   no_log: true
+- name: "Keep the read's status where the assertion can name it"
+  ansible.builtin.set_fact:
+    __lxc_onepassword_item_vault_status: "{{ __lxc_onepassword_item_vault.status | default(-1) | int }}"
+- name: "The token reads the vault"
+  ansible.builtin.assert:
+    that: __lxc_onepassword_item_vault_status | int == 200
+    fail_msg: >-
+      Connect answered {{ __lxc_onepassword_item_vault_status }} to a read of vault
+      {{ lxc_onepassword_item_vault_id }} with this token:
+      {{ {'401': 'the token is not valid for this server (expired, revoked, or issued for another server)',
+          '403': 'the token has no read access to this vault',
+          '404': 'no such vault is visible to this token (wrong id, or the vault is not granted to the server)'}
+         [__lxc_onepassword_item_vault_status | string] | default('no answer') }}.
+    quiet: true
+- name: "Wait for the server's sync to report ACTIVE"
+  ansible.builtin.uri:
+    url: "{{ lxc_onepassword_item_host }}{{ lxc_onepassword_item_health_path }}"
+    validate_certs: "{{ lxc_onepassword_item_validate_certs }}"
+    return_content: true
+    status_code: [200]
+  register: __lxc_onepassword_item_sync
+  until: >-
+    (((__lxc_onepassword_item_sync.json | default({})).dependencies | default([]))
+     | selectattr('service', 'equalto', 'sync') | map(attribute='status') | list + ['']) | first == 'ACTIVE'
+  retries: 20
+  delay: 3
+  check_mode: false
+  changed_when: false
+  failed_when: false
+- name: "Sync is ACTIVE"
+  ansible.builtin.assert:
+    that: >-
+      (((__lxc_onepassword_item_sync.json | default({})).dependencies | default([]))
+       | selectattr('service', 'equalto', 'sync') | map(attribute='status') | list + ['']) | first == 'ACTIVE'
+    fail_msg: >-
+      Connect's sync is not ACTIVE one minute after an authenticated read
+      (dependencies: {{ (__lxc_onepassword_item_sync.json | default({})).dependencies | default([]) }}).
+      The server cannot reach 1Password, or its credentials file is wrong; inspect
+      `journalctl -u op-connect-sync` inside the container.
+    quiet: true
+- name: "Upsert, and explain a refusal with what Connect itself recorded"
+  block:
+    - name: "Upsert the 1Password item — {{ lxc_onepassword_item_title }}"
+      onepassword.connect.generic_item:
+        hostname: "{{ lxc_onepassword_item_host }}"
+        token: "{{ lxc_onepassword_item_token }}"
+        vault_id: "{{ lxc_onepassword_item_vault_id }}"
+        title: "{{ lxc_onepassword_item_title }}"
+        category: "{{ lxc_onepassword_item_category }}"
+        state: "{{ lxc_onepassword_item_state }}"
+        fields: "{{ lxc_onepassword_item_fields }}"
+      register: __lxc_onepassword_item_result
+      no_log: true
+  rescue:
+    - name: "Read what Connect logged for the latest writes"
+      ansible.builtin.uri:
+        url: "{{ lxc_onepassword_item_host }}/v1/activity?limit=10"
+        headers:
+          Authorization: "Bearer {{ lxc_onepassword_item_token }}"
+        validate_certs: "{{ lxc_onepassword_item_validate_certs }}"
+        return_content: true
+        status_code: [200]
+      register: __lxc_onepassword_item_activity
+      check_mode: false
+      changed_when: false
+      failed_when: false
+      no_log: true
+    - name: "The latest write Connect recorded"
+      ansible.builtin.set_fact:
+        __lxc_onepassword_item_last_write: >-
+          {{ ((__lxc_onepassword_item_activity.json | default([])) | selectattr('action', 'in', ['CREATE', 'UPDATE', 'DELETE'])
+             | list + [{}]) | first }}
+    - name: "Report why the upsert failed"
+      ansible.builtin.fail:
+        msg: >-
+          Upserting '{{ lxc_onepassword_item_title }}' failed.
+          {% if (__lxc_onepassword_item_last_write['result'] | default('')) == 'DENY' %}
+          Connect logged {{ __lxc_onepassword_item_last_write['action'] }} result=DENY for this token:
+          the access token was issued without write access to vault {{ lxc_onepassword_item_vault_id }}.
+          Connect fixes a token's vault access when the token is issued, so a grant changed afterwards
+          never reaches an existing token: issue a new token with Write on this vault (Developer →
+          Secrets Automation → the Connect server → Access Tokens) and replace onepassword_token in the
+          vaulted secrets file.
+          {% else %}
+          Connect's latest recorded write is '{{ __lxc_onepassword_item_last_write['result'] | default('none') }}',
+          so the item itself was refused: check the category and fields against the Connect API (CUSTOM
+          and DOCUMENT items cannot be created) and `journalctl -u op-connect-api` inside the container.
+          {% endif %}
 - name: "Report SHAPE only (title + field count, never values)"
   ansible.builtin.debug:
     msg: >-

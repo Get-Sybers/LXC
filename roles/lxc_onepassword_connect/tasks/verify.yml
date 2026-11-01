@@ -30,3 +30,33 @@
       (HTTP 200 at /health, dependencies:
       {{ __lxc_onepassword_connect_verify.json.dependencies | default([]) | map(attribute='status') | list | join(', ') }}).
     quiet: true
+- name: "verify | Read the guest's address on its net0 interface"
+  ansible.builtin.command:
+    argv:
+      - ip
+      - -4
+      - -o
+      - addr
+      - show
+      - dev
+      - "{{ (lxc_onepassword_connect_net0 | string) | regex_search('(?:^|,)name=([^,]+)', '\\1') | default(['eth0'], true) | first }}"
+  register: __lxc_onepassword_connect_addr
+  changed_when: false
+  check_mode: false
+  failed_when: false
+- name: "verify | Remember where Connect answers on the network"
+  ansible.builtin.set_fact:
+    lxc_onepassword_connect_url: >-
+      {{ 'http://' ~ ((__lxc_onepassword_connect_addr.stdout | default('')) | regex_search('inet ([0-9.]+)/', '\1')
+                      | default([''], true) | first) ~ ':' ~ lxc_onepassword_connect_api_port }}
+- name: "verify | The guest has an address on net0"
+  ansible.builtin.assert:
+    that: lxc_onepassword_connect_url is not match('^http://:')
+    fail_msg: >-
+      net0 has no IPv4 address inside the guest
+      ({{ __lxc_onepassword_connect_addr.stdout | default('nothing reported') | trim }}):
+      DHCP or the static address did not come up, so nothing outside the guest can
+      reach Connect. The deploy play proves the network path next; fix the guest's
+      network first.
+    success_msg: "Connect answers inside the guest; on the network it is {{ lxc_onepassword_connect_url }} (proven by the deploy play's last play)."
+    quiet: true

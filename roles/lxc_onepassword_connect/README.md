@@ -25,7 +25,7 @@ role) and this role over `pct exec`.
 | --- | --- | --- |
 | `bake` | the build rootfs (chroot) | ca-certs, service user, extract the binaries from the pinned images, units + `multi-user.target.wants` links; no credentials, no start |
 | `container` | node (`localhost`/`local`) | `lxc_guest` ensure path with this role's placement, template URL and checksum; the CT joins the `onepassword_connect` group |
-| `server` | inside the CT | assert the baseline and template markers and the baked binaries, open and prove the service ports in the in-guest firewall, the sync port drop-in, credentials, enable + start the units, verify (the `/health` answer must come from `connect-api`) |
+| `server` | inside the CT | assert the baseline and template markers and the baked binaries, open and prove the service ports in the in-guest firewall, the sync port drop-in, credentials, enable + start the units, verify (the `/health` answer must come from `connect-api`), then read the guest's address and set `lxc_onepassword_connect_url`, which the deploy play's last play probes from the node |
 | `remove` | node | `lxc_guest` `remove` with this role's placement (needs `-e lxc_guest_confirm_destroy=true`) |
 
 ## Inputs (selected — full list in `meta/argument_specs.yml`)

@@ -1,0 +1,17 @@
+---
+changed:
+  - >-
+    ``deploy-onepassword-connect.yml`` ends by proving Connect from the node
+    over the network: ``server`` reads the guest's address on its ``net0``
+    interface and sets ``lxc_onepassword_connect_url``, and a last play probes
+    ``/health`` there from the node (through the guest firewall) and prints the
+    ``onepassword_host`` the mirror play needs. A guest that answered on
+    loopback but not on the network, as a lost firewall reload once left it,
+    now fails the deploy instead of passing it.
+  - >-
+    ``lxc_onepassword_item`` reads the vault with the token before writing
+    (which starts a fresh server's sync, and turns a 401, 403 or 404 into a
+    diagnostic naming what the token lacks), waits for the server's sync to
+    report ``ACTIVE``, and explains a refused upsert from Connect's own
+    activity log: a ``DENY`` means the token was issued without write access to
+    the vault, which Connect fixes at issue time, so the fix is a new token.

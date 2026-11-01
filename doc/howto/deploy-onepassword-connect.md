@@ -67,7 +67,8 @@ ansible-playbook playbooks/deploy-onepassword-connect.yml \
 ```
 
 The preflight play reports the ids in use and the next free one. The play fetches the released template into the cache if it is not there, creates the LXC from it, re-asserts the baseline, installs the
-credentials file, starts the two baked `systemd` units, and verifies `http://127.0.0.1:8080/health` inside the CT.
+credentials file, starts the two baked `systemd` units, verifies `http://127.0.0.1:8080/health` inside the CT, and then proves the API
+from the node over the network, through the guest firewall, printing the URL to set as `onepassword_host` in the vaulted secrets file.
 
 ### A container the cluster collection created
 
