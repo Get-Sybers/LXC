@@ -264,8 +264,9 @@ argument_specs:
       lxc_onepassword_connect_credentials_src:
         type: str
         required: false
-        default: ""
-        description: "Path on the node to the 1password-credentials.json (SECRET; required for server)."
+        description: >-
+          Path on the controller to the 1password-credentials.json (SECRET). Computed default: the controller's
+          inventory secrets directory, <inventory_dir>/secrets/1password-credentials.json (the collection's gitignored secrets dir).
   remove:
     short_description: "Tear the Connect LXC down through lxc_guest (opt-in: lxc_guest_confirm_destroy=true)."
     description:

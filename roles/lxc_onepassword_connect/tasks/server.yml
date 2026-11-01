@@ -83,12 +83,18 @@
       {{ __lxc_onepassword_connect_bins.results | rejectattr('stat.exists') | map(attribute='item') | list }}.
       The template marker matched but the image is incomplete — rebuild and re-release it.
     quiet: true
-- name: "server | A credentials file must have been provided"
+- name: "server | Locate the Connect credentials file on the controller"
+  ansible.builtin.stat:
+    path: "{{ lxc_onepassword_connect_credentials_src }}"
+  register: __lxc_onepassword_connect_cred_src
+  delegate_to: localhost
+- name: "server | The credentials file is present in the secrets dir"
   ansible.builtin.assert:
-    that: lxc_onepassword_connect_credentials_src | length > 0
+    that: __lxc_onepassword_connect_cred_src.stat.exists
     fail_msg: >-
-      lxc_onepassword_connect_credentials_src is empty — set it to the path of
-      the 1password-credentials.json you downloaded when creating the Connect server.
+      {{ lxc_onepassword_connect_credentials_src }} is not there. Put the
+      1password-credentials.json 1Password gave you into inventory/secrets/
+      (it is gitignored), or set lxc_onepassword_connect_credentials_src to its path.
     quiet: true
 - name: "server | Install the 1password-credentials.json (secret)"
   ansible.builtin.copy:

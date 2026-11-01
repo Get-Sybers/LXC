@@ -14,11 +14,11 @@ creates the CT from it and does nothing but drop in the credentials and start th
 
 | Piece | What it is |
 | --- | --- |
-| `templates/op-connect` + `.github/workflows/templates.yml` | The released template: Debian 13 with the Connect binaries, units, service user and the baseline baked in; published as the `op-connect/v<version>` GitHub Release ([build-a-template.md](build-a-template.md)). |
-| `lxc_guest` role | Fetches the released template into the node's cache by its pinned checksum, creates the CT from it (unprivileged, ownership-marked), reaches it over `pct exec`, re-asserts the baseline inside it. |
+| `templates/op-connect` + `.github/workflows/templates.yml` | The released template: Debian 13 with the Connect binaries, units, service user and the baseline baked in; published as the signed, attested OCI image `ghcr.io/<owner>/lxc/op-connect:v<version>` in GHCR, and tagged `op-connect/v<version>` in git ([build-a-template.md](build-a-template.md)). No GitHub Release is created. |
+| `lxc_guest` role | Pulls the `op-connect` image from GHCR into the node's `local` template cache with Proxmox's OCI support (the image digest is its identity; a checksum-pinned release tarball is the fallback), creates the CT from it (unprivileged, ownership-marked), reaches it over `pct exec`, re-asserts the baseline inside it. |
 | `lxc_onepassword_connect` role + `deploy-onepassword-connect.yml` | `bake` is what the template carries; `container` hands the placement to `lxc_guest`; `server` installs the credentials and starts the baked `op-connect-api` / `op-connect-sync` units inside the CT. |
 | `lxc_onepassword_item` role + `reflect-onepassword-credentials.yml` | Upsert one credential per entry into 1Password via the Connect API (`onepassword.connect.generic_item`). |
-| `inventory/secrets/onepassword.yml` (vaulted) | The single source: Connect host/vault-id/token plus the list of items to mirror. |
+| `inventory/secrets/` | The Connect server's `1password-credentials.json` (read by the deploy) and the vaulted `onepassword.yml` (Connect host/vault-id/token plus the list of items to mirror). |
 
 ## Prerequisites (1Password side)
 
@@ -32,8 +32,8 @@ op connect token create reflect --server "<server name>" --vault "<vault>"
 
 This gives you three things:
 
-- **`1password-credentials.json`** — the server's credentials file. Copy it to the PVE node that will host the LXC (e.g.
-  `/root/1password-credentials.json`, mode `0400`).
+- **`1password-credentials.json`** — the server's credentials file. Put it in the collection's gitignored secrets directory as
+  `inventory/secrets/1password-credentials.json`; the deploy reads it from there by default.
 - **An access token** — a long string the reflect play uses to write items. Goes into the vaulted secrets file.
 - **The vault's ID** — `op vault get "<vault>" --format json | jq -r .id`. Goes into the vaulted secrets file.
 
@@ -46,27 +46,27 @@ This gives you three things:
   `inventory/group_vars/all/onepassword.yml`. The repository carries only the template, `inventory/example/`; your copies are untracked.
 
 - The template is pulled from `ghcr.io/get-sybers/lxc/op-connect` by the play (Proxmox's OCI support). The package must be **public**, or the node logged in to GHCR (`skopeo login ghcr.io`). To pin an exact image instead of the moving `:v<version>` tag, set `lxc_onepassword_connect_template_image` to `…@sha256:<digest>` in your inventory. Verify the release first if you want to: [build-a-template.md §5](build-a-template.md#5-verifying-a-release-by-hand).
-- The node can reach `github.com` to fetch the release asset once (or place the file in `/var/lib/vz/template/cache/` yourself).
+- The node can reach `ghcr.io` to pull the image once (or place the template in its `local` cache, `/var/lib/vz/template/cache/`, yourself).
 - An admin PVE API credential in the environment (`PROXMOX_TOKEN_ID` + `PROXMOX_TOKEN_SECRET`, or `PROXMOX_PASSWORD`).
 - The collection installed where the play runs: `ansible-galaxy collection install -r requirements.yml` (the play runs **on the node**, as
   root).
 
 ## Step 1 — Deploy the Connect server LXC
 
-The node, its storage and bridge come from the As-Is record the preflight play wrote; the CT id and the credentials file are
-run-time inputs, given with `-e` (set `lxc_onepassword_connect_vmid` in `inventory/group_vars/all/onepassword.yml` instead to make an
-id the default for this site). The CT lands on that node running Connect `1.8.3` (`amd64`).
+The node, its storage and bridge come from the As-Is record the preflight play wrote; the credentials file comes from
+`inventory/secrets/1password-credentials.json`; the CT id is the one run-time input, given with `-e` (set
+`lxc_onepassword_connect_vmid` in `inventory/group_vars/all/onepassword.yml` instead to make an id the default for this site). The CT
+lands on that node running Connect `1.8.3` (`amd64`).
 
 Run it **on the node** that will host the CT:
 
 ```bash
 export PROXMOX_TOKEN_ID='root@pam!ansible' PROXMOX_TOKEN_SECRET='…'
 ansible-playbook playbooks/deploy-onepassword-connect.yml \
-  -e lxc_onepassword_connect_vmid=<a free CT id> \
-  -e lxc_onepassword_connect_credentials_src=/root/1password-credentials.json
+  -e lxc_onepassword_connect_vmid=<a free CT id>
 ```
 
-The preflight play reports the ids in use and the next free one. The play fetches the released template into the cache if it is not there, creates the LXC from it, re-asserts the baseline, installs the
+The preflight play reports the ids in use and the next free one. The play pulls the `op-connect` image from GHCR into the cache if it is not there, creates the LXC from it, re-asserts the baseline, installs the
 credentials file, starts the two baked `systemd` units, verifies `http://127.0.0.1:8080/health` inside the CT, and then proves the API
 from the node over the network, through the guest firewall, printing the URL to set as `onepassword_host` in the vaulted secrets file.
 
@@ -82,8 +82,8 @@ which creates it fresh from the released template. The Connect data directory is
 ```bash
 cd inventory/secrets
 cp onepassword.yml.example onepassword.yml
-# edit: set onepassword_host (http://<lxc-ip>:8080), onepassword_vault_id,
-#       onepassword_token, and the onepassword_mirror_items list
+# edit: set onepassword_host (the http://<lxc-ip>:8080 the deploy printed),
+#       onepassword_vault_id, onepassword_token, and the onepassword_mirror_items list
 ansible-vault encrypt onepassword.yml
 ```
 
@@ -119,9 +119,10 @@ ansible-playbook playbooks/deploy-onepassword-connect.yml --tags destroy -e lxc_
 - **Native, not containerised.** At bake time the role reads each image's config, pulls its layers from the registry, unpacks them, and
   installs `/usr/local/bin/connect-api` and `connect-sync` into the template. Each runs under `systemd` as the unprivileged `opuser`, with
   `SSL_CERT_FILE` pointing at the system CA bundle and the credentials/data under `~/.op` — the same contract the image declares. To
-  upgrade: raise `lxc_onepassword_connect_version` in `templates/op-connect/template.yml`, publish it with the Templates workflow
-  (`op-connect/v<new>`), pin the new
-  checksum, and recreate the CT from the new release (`--tags destroy -e lxc_guest_confirm_destroy=true`, then the play).
+  upgrade: raise `lxc_onepassword_connect_version` (the Connect release) and `lxc_template_version` in `templates/op-connect/template.yml`,
+  publish it with the Templates workflow (it pushes `ghcr.io/<owner>/lxc/op-connect:v<new>` and tags `op-connect/v<new>`), raise
+  `lxc_onepassword_connect_template_version` to match in the role defaults or inventory, and recreate the CT
+  (`--tags destroy -e lxc_guest_confirm_destroy=true`, then the play). There is no checksum to pin: the image digest is the identity.
 - **Secrets hygiene.** The `1password-credentials.json` is installed `0600` owned by `opuser`; the Connect token lives only in the vaulted
   `onepassword.yml`. Every secret-bearing task is `no_log`, and the roles report shape only (sizes, counts), never values.
 - **Unofficial topology.** 1Password officially supports Docker-Compose and Kubernetes. Running the binaries bare is equivalent (same

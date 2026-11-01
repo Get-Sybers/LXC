@@ -3,6 +3,13 @@
 Gitignored, `ansible-vault`-encrypted `-e` files. Nothing here is committed except this README, the `.gitignore`, and `*.example` templates
 (standards §7, the split vars/vault pattern). `ansible.cfg` excludes this directory from inventory parsing.
 
+## `1password-credentials.json`
+
+The credentials file 1Password issues when you create the Connect server (Developer -> Infrastructure Secrets Management -> 1Password
+Connect). Drop it in this directory as `1password-credentials.json` (see `1password-credentials.json.example` for its shape); it is gitignored, and `playbooks/deploy-onepassword-connect.yml`
+reads it from here by default (`lxc_onepassword_connect_credentials_src`) and `server` copies it into the guest. No cleartext credential
+is placed anywhere else on the node.
+
 ## `onepassword.yml`
 
 Drives `playbooks/reflect-onepassword-credentials.yml` — the connection to the 1Password Connect server plus the list of credentials to mirror.
