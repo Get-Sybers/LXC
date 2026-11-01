@@ -14,8 +14,8 @@ ports in the in-guest firewall, generate the configuration, create the administr
 
 | Piece | What it is |
 | --- | --- |
-| `templates/velociraptor` + `.github/workflows/templates.yml` | The released template: Debian 13 with the binary, the service user, the unit and the baseline baked in; published as the `velociraptor/v<version>` GitHub Release ([build-a-template.md](build-a-template.md)). |
-| `lxc_guest` role | Fetches the released template into the node's cache by its pinned checksum, creates the CT from it (unprivileged, ownership-marked), reaches it over `pct exec`, re-asserts the baseline inside it. |
+| `templates/velociraptor` + `.github/workflows/templates.yml` | The released template: Debian 13 with the binary, the service user, the unit and the baseline baked in; published as the signed OCI image `ghcr.io/<owner>/lxc/velociraptor:v<version>` in GHCR, tagged `velociraptor/v<version>` in git ([build-a-template.md](build-a-template.md)). No GitHub Release is created. |
+| `lxc_guest` role | Pulls the image from GHCR into the node's cache with Proxmox's OCI support (the image digest is its identity; a checksum-pinned release tarball is the fallback), creates the CT from it (unprivileged, ownership-marked), reaches it over `pct exec`, re-asserts the baseline inside it. |
 | `lxc_velociraptor` role + `deploy-velociraptor.yml` | `bake` is what the template carries; `container` hands the placement to `lxc_guest`; `server` opens the firewall, generates `server.config.yaml`, creates the administrator and starts the baked `velociraptor` unit inside the CT. |
 | `inventory/group_vars/all/velociraptor.yml` | The placement: node, CT id, `net0`, the public hostname, the released template's checksum. |
 | `inventory/secrets/velociraptor.yml` (vaulted) | The GUI administrator's initial password. |
@@ -26,7 +26,7 @@ ports in the in-guest firewall, generate the configuration, create the administr
   `inventory/group_vars/all/lxc.yml` and `inventory/group_vars/all/velociraptor.yml` (node names, rootfs storage, the CT id, the public
   hostname). The repository carries only the template, `inventory/example/`; your copies are untracked.
 - The template is pulled from `ghcr.io/get-sybers/lxc/velociraptor` by the play (Proxmox's OCI support). The package must be **public**, or the node logged in to GHCR (`skopeo login ghcr.io`). To pin an exact image instead of the moving `:v<version>` tag, set `lxc_velociraptor_template_image` to `…@sha256:<digest>` in your inventory. Verify the release first if you want to: [build-a-template.md §5](build-a-template.md#5-verifying-a-release-by-hand).
-- The node can reach `github.com` to fetch the release asset once (or place the file in `/var/lib/vz/template/cache/` yourself).
+- The node can reach `ghcr.io` to pull the image once (or place the template in its `local` cache, `/var/lib/vz/template/cache/`, yourself).
 - An admin PVE API credential in the environment (`PROXMOX_TOKEN_ID` + `PROXMOX_TOKEN_SECRET`, or `PROXMOX_PASSWORD`).
 - The collection installed where the play runs: `ansible-galaxy collection install -r requirements.yml` (the play runs **on the node**, as
   root).
@@ -109,6 +109,6 @@ need it (`pct exec <vmid> -- tar -C /var/lib/velociraptor -czf - . > velocirapto
   `velociraptor.yml`.
 - **Upgrade.** Raise `lxc_velociraptor_version` and `lxc_velociraptor_binary_checksum` in `templates/velociraptor/template.yml` (the sha256
   of the new release's `velociraptor-v<new>-linux-amd64.gz`) and raise `lxc_template_version`, publish it with the Templates workflow
-  (`velociraptor/v<new>`), pin the new template checksum, and recreate the CT from the new release
+  (`velociraptor/v<new>`), and recreate the CT from the new release (no checksum to pin: the image digest is the identity)
   (`--tags destroy -e lxc_guest_confirm_destroy=true`, then the play). Back the datastore up first and restore it into the new CT before the
   play if you want the clients and hunts to carry over.

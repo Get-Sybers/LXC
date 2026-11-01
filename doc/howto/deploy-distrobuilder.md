@@ -13,8 +13,8 @@ and from then on every image is one run of the build play.
 
 | Piece | What it is |
 | --- | --- |
-| `templates/distrobuilder` + `.github/workflows/templates.yml` | The released template: Debian 13 with distrobuilder, `debootstrap`, the keys, the compressors, the directories and the baseline baked in; published as the `distrobuilder/v<version>` GitHub Release ([build-a-template.md](build-a-template.md)). |
-| `lxc_guest` role | Fetches the released template into the node's cache by its pinned checksum, creates the CT from it (unprivileged, `nesting=1`, ownership-marked), reaches it over `pct exec`, re-asserts the baseline inside it. |
+| `templates/distrobuilder` + `.github/workflows/templates.yml` | The released template: Debian 13 with distrobuilder, `debootstrap`, the keys, the compressors, the directories and the baseline baked in; published as the signed OCI image `ghcr.io/<owner>/lxc/distrobuilder:v<version>` in GHCR, tagged `distrobuilder/v<version>` in git ([build-a-template.md](build-a-template.md)). No GitHub Release is created. |
+| `lxc_guest` role | Pulls the image from GHCR into the node's cache with Proxmox's OCI support (the image digest is its identity; a checksum-pinned release tarball is the fallback), creates the CT from it (unprivileged, `nesting=1`, ownership-marked), reaches it over `pct exec`, re-asserts the baseline inside it. |
 | `lxc_distrobuilder` role + `deploy-distrobuilder.yml` | `bake` is what the template carries; `container` hands the placement to `lxc_guest`; `server` asserts the markers and the baked tools and places the definitions inside the CT. |
 | `build-distrobuilder-image.yml` | `connect` reaches the running CT; `build` runs `distrobuilder build-lxc` on one definition and pulls the tarballs onto the node. |
 | `inventory/group_vars/all/distrobuilder.yml` | The placement: node, CT id, `net0`, the released template's checksum; and the image definitions. |
@@ -26,7 +26,7 @@ and from then on every image is one run of the build play.
   repository carries only the template, `inventory/example/`; your copies are untracked.
 - The template is pulled from `ghcr.io/get-sybers/lxc/distrobuilder` by the play (Proxmox's OCI support). The package must be **public**, or the node logged in to GHCR (`skopeo login ghcr.io`). To pin an exact image instead of the moving `:v<version>` tag, set `lxc_distrobuilder_template_image` to `…@sha256:<digest>` in your inventory. Verify the release first if you want to:
   [build-a-template.md §5](build-a-template.md#5-verifying-a-release-by-hand).
-- The node can reach `github.com` to fetch the release asset once (or place the file in `/var/lib/vz/template/cache/` yourself); the CT
+- The node can reach `ghcr.io` to pull the image once (or place the template in its `local` cache, `/var/lib/vz/template/cache/`, yourself); the CT
   can reach the distribution archives the definitions name (`deb.debian.org`, a keyserver) when it builds.
 - Room on the rootfs storage: the CT's rootfs is `32` GB by default, because a build unpacks a whole distribution into the cache and
   packs it again.
@@ -118,8 +118,8 @@ ansible-playbook playbooks/deploy-distrobuilder.yml --tags destroy -e lxc_guest_
   `--disable-overlay`, and distrobuilder copies the source rootfs with `rsync` instead.
 - **What comes out.** `build-lxc` produces a plain rootfs tarball and an LXC metadata tarball with a `SHA256SUMS`. It is your artifact —
   for an LXC or Incus host, or for `pct create` by hand — and not a released template of this collection: `lxc_guest` creates guests only
-  from the templates under `templates/`, baked in GitHub Actions and pinned by checksum (premise rule 9).
+  from the templates under `templates/`, baked in GitHub Actions and published as OCI images in GHCR (premise rule 9).
 - **Secrets hygiene.** There are none: the box holds definitions and images. Definitions arrive from a file you hold or a URL you pinned.
 - **Upgrade.** Raise `lxc_distrobuilder_version` (and `lxc_distrobuilder_go_toolchain` when the new `go.mod` asks for a newer one) in
-  `templates/distrobuilder/template.yml`, publish it with the Templates workflow (`distrobuilder/v<new>`), pin the new template checksum, and recreate the CT from the new
+  `templates/distrobuilder/template.yml`, publish it with the Templates workflow (`distrobuilder/v<new>`), and recreate the CT (no checksum to pin: the image digest is the identity) from the new
   release (`--tags destroy -e lxc_guest_confirm_destroy=true`, then the deploy play). Pull the images you want to keep first.
