@@ -13,8 +13,8 @@ the unit.
 
 | Piece | What it is |
 | --- | --- |
-| `templates/semaphore` + `.github/workflows/templates.yml` | The released template: Debian 13 with the package, the tools, the service user, the unit and the baseline baked in; published as the `semaphore/v<version>` GitHub Release ([build-a-template.md](build-a-template.md)). |
-| `lxc_guest` role | Fetches the released template into the node's cache by its pinned checksum, creates the CT from it (unprivileged, ownership-marked), reaches it over `pct exec`, re-asserts the baseline inside it. |
+| `templates/semaphore` + `.github/workflows/templates.yml` | The released template: Debian 13 with the package, the tools, the service user, the unit and the baseline baked in; published as the signed OCI image `ghcr.io/<owner>/lxc/semaphore:v<version>` in GHCR, tagged `semaphore/v<version>` in git ([build-a-template.md](build-a-template.md)). No GitHub Release is created. |
+| `lxc_guest` role | Pulls the image from GHCR into the node's cache with Proxmox's OCI support (the image digest is its identity; a checksum-pinned release tarball is the fallback), creates the CT from it (unprivileged, ownership-marked), reaches it over `pct exec`, re-asserts the baseline inside it. |
 | `lxc_semaphore` role + `deploy-semaphore.yml` | `bake` is what the template carries; `container` hands the placement to `lxc_guest`; `server` writes `config.json`, migrates, creates the administrator and starts the baked `semaphore` unit inside the CT. |
 | `inventory/group_vars/all/semaphore.yml` | The placement: node, CT id, `net0`, the external URL, the released template's checksum. |
 | `inventory/secrets/semaphore.yml` (vaulted) | The administrator's initial password and the three keys (cookie signing, cookie encryption, access-key encryption). |
@@ -25,7 +25,7 @@ the unit.
   `inventory/group_vars/all/lxc.yml` and `inventory/group_vars/all/semaphore.yml` (node names, rootfs storage, the CT id). The
   repository carries only the template, `inventory/example/`; your copies are untracked.
 - The template is pulled from `ghcr.io/get-sybers/lxc/semaphore` by the play (Proxmox's OCI support). The package must be **public**, or the node logged in to GHCR (`skopeo login ghcr.io`). To pin an exact image instead of the moving `:v<version>` tag, set `lxc_semaphore_template_image` to `…@sha256:<digest>` in your inventory. Verify the release first if you want to: [build-a-template.md §5](build-a-template.md#5-verifying-a-release-by-hand).
-- The node can reach `github.com` to fetch the release asset once (or place the file in `/var/lib/vz/template/cache/` yourself).
+- The node can reach `ghcr.io` to pull the image once (or place the template in its `local` cache, `/var/lib/vz/template/cache/`, yourself).
 - An admin PVE API credential in the environment (`PROXMOX_TOKEN_ID` + `PROXMOX_TOKEN_SECRET`, or `PROXMOX_PASSWORD`).
 - The collection installed where the play runs: `ansible-galaxy collection install -r requirements.yml` (the play runs **on the node**, as
   root).
@@ -104,6 +104,6 @@ ansible-playbook playbooks/deploy-semaphore.yml --tags destroy -e lxc_guest_conf
 - **Secrets hygiene.** `config.json` is `0640` root-owned, readable by the service user; the tasks that assemble and write it, and the one
   that creates the administrator, are `no_log`. The initial password lives only in the vaulted `semaphore.yml`.
 - **Upgrade.** Raise `lxc_semaphore_version` and `lxc_semaphore_package_checksum` in `templates/semaphore/template.yml` (the `.deb`'s line
-  in the release's `checksums.txt`), publish it with the Templates workflow (`semaphore/v<new>`), pin the new template checksum, and recreate the CT from the new release
+  in the release's `checksums.txt`), publish it with the Templates workflow (`semaphore/v<new>`), and recreate the CT from the new release (no checksum to pin: the image digest is the identity)
   (`--tags destroy -e lxc_guest_confirm_destroy=true`, then the play). Back the database up first, or restore it into the new CT before the
   play: `server` migrates whatever database it finds.

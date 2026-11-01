@@ -53,7 +53,7 @@ coverage under [`extensions/molecule/`](extensions/molecule) (see [Testing](#tes
 
 ### Templates
 
-Every container is created from a template built here and published as a GitHub Release ([`doc/howto/build-a-template.md`](doc/howto/build-a-template.md)).
+Every container is created from a template built here and published as a signed OCI image in GHCR ([`doc/howto/build-a-template.md`](doc/howto/build-a-template.md)).
 One directory per template under [`templates/`](templates/README.md):
 
 | Template | Release tag | Carries |
@@ -65,9 +65,9 @@ One directory per template under [`templates/`](templates/README.md):
 | [`ghost9`](templates/ghost9/README.md) | `ghost9/v<template release>` | Debian 13, the GHOSTS stack (PostgreSQL, the .NET API, the Angular UI on nginx, n8n, Grafana) built from source as native `systemd` services, the baseline (no `sshd`) |
 
 [`playbooks/bake-template.yml`](playbooks/bake-template.yml) bakes a manifest into an artifact; [`.github/workflows/templates.yml`](.github/workflows/templates.yml)
-runs it on demand only, behind the `templates` environment's required reviewer, and publishes the `<name>/v<version>` release with a
-checksum, a cosign signature and a provenance attestation.
-On the node, `lxc_guest` fetches the release by the checksum the inventory pins.
+runs it on demand only, behind the `templates` environment's required reviewer, and publishes the signed, attested OCI image
+`ghcr.io/<owner>/lxc/<name>:v<version>` in GHCR, tagging `<name>/v<version>` in git (no GitHub Release).
+On the node, `lxc_guest` pulls the image into the cache with Proxmox's OCI support (the checksum-pinned tarball is the fallback).
 
 ### Playbooks
 

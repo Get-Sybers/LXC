@@ -1,7 +1,7 @@
 # templates/ — one directory per LXC template
 
 Every container this collection creates is built from a template that was baked here, in a GitHub Actions workflow, and published as a
-GitHub Release. A directory under `templates/` is the complete definition of one template; nothing about a template lives anywhere else.
+signed, attested OCI image in GHCR. A directory under `templates/` is the complete definition of one template; nothing about a template lives anywhere else.
 
 ```text
 templates/
@@ -19,9 +19,9 @@ The manifest's keys are documented in [`doc/reference/template-manifest.md`](../
    steps inside it over `community.general.chroot`, writes `/etc/get-sybers-lxc-template` (name, version, base), seals the result as a
    `.tar.zst`, and writes its `.sha256`. [`.github/workflows/templates.yml`](../.github/workflows/templates.yml) runs this on demand only:
    a run is started by hand for one template, waits for the `templates` environment's required reviewer, and, when asked to publish,
-   creates the `<name>/v<version>` tag and GitHub Release with a cosign signature and a build provenance attestation.
-2. **Pin** — the inventory records the released artifact's URL and `sha256:` (`lxc_<service>_template_url` /
-   `lxc_<service>_template_checksum`).
+   pushes the `ghcr.io/<owner>/lxc/<name>:v<version>` OCI image (cosign-signed, provenance-attested) and tags `<name>/v<version>` in git; no GitHub Release is created.
+2. **Pin** — the role/inventory records the image ref `lxc_<service>_template_image` (`ghcr.io/<owner>/lxc/<name>:v<version>`); the
+   release tarball URL and `sha256:` (`lxc_<service>_template_url` / `lxc_<service>_template_checksum`) are the fallback.
 3. **Fetch** — on the node, `lxc_guest` downloads the artifact into the template cache with that checksum when it is not already there.
    A missing or empty checksum is refused; nothing unverified reaches the cache.
 4. **Create** — `pct create` from the cached template, exactly as for any Proxmox template. The service role's `server` entry point then
