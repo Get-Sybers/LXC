@@ -92,12 +92,23 @@
       {{ (__lxc_ghost9_range_vms['proxmox_vms'] | default([]))
          | selectattr('name', 'defined') | selectattr('name', 'search', '-ghosts$')
          | map(attribute='name') | list }}
+- name: "container | Resolve the declared range VNets (proxmaxxing's sdn_range_vnets when shared, else the node's live SDN)"
+  ansible.builtin.set_fact:
+    __lxc_ghost9_range_declared_vnets: >-
+      {{ (lxc_ghost9_range_sdn_range_vnets | map(attribute='number') | map('string')
+            | map('regex_replace', '^', 'r') | list)
+         if (lxc_ghost9_range_sdn_range_vnets | length > 0)
+         else __lxc_ghost9_range_vnets }}
+    __lxc_ghost9_range_vnet_source: >-
+      {{ "proxmaxxing's declared sdn_range_vnets"
+         if (lxc_ghost9_range_sdn_range_vnets | length > 0)
+         else '/etc/pve/sdn/vnets.cfg on ' ~ __lxc_ghost9_range_node }}
 - name: "container | The range's SDN VNet is declared"
   ansible.builtin.assert:
-    that: lxc_ghost9_range_bridge in __lxc_ghost9_range_vnets
+    that: lxc_ghost9_range_bridge in __lxc_ghost9_range_declared_vnets
     fail_msg: >-
-      VNet '{{ lxc_ghost9_range_bridge }}' is not declared in /etc/pve/sdn/vnets.cfg
-      (declared: {{ __lxc_ghost9_range_vnets | join(', ') or 'none' }}). Either the
+      VNet '{{ lxc_ghost9_range_bridge }}' is not declared in {{ __lxc_ghost9_range_vnet_source }}
+      (declared: {{ __lxc_ghost9_range_declared_vnets | join(', ') or 'none' }}). Either the
       range number is wrong or the range's VNet has not been created — Ludus does
       not auto-create SDN VNets in cluster mode.
     quiet: true

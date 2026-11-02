@@ -98,6 +98,10 @@ argument_specs:
         type: str
         default: proxmox_cluster
         description: "The group lxc_preflight admits a node from when `pvecm nodes` does not list it (a single node)."
+      lxc_ghost9_range_sdn_range_vnets:
+        type: list
+        default: []
+        description: "Range VNets proxmaxxing declares (proxmox_config via lxc.yml); the VNet is validated against it, else the node's live SDN."
   baseline:
     short_description: "Run lxc_guest's hardened baseline inside the range's CT with this role's marker path."
     description:

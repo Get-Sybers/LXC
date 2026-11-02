@@ -1,0 +1,16 @@
+---
+changed:
+  - >-
+    The example inventory's ``lxc.yml`` projects the Proxmox SDN facts from the
+    ``proxmox_config`` master too — ``lxc_sdn_zone``, ``lxc_vxlan_tag_base`` and
+    ``lxc_sdn_range_vnets`` (the per-range VNets) — via the same
+    ``lxc_proxmox_config`` the node and bridge come from, each empty when the
+    cluster inventory is absent.
+  - >-
+    ``lxc_ghost9_range`` validates a range's VNet against proxmaxxing's declared
+    ``sdn_range_vnets`` (``lxc_ghost9_range_sdn_range_vnets``, from
+    ``lxc_sdn_range_vnets``) rather than the node's live
+    ``/etc/pve/sdn/vnets.cfg``, which is now only the fallback when the shared
+    cluster inventory is not present. The bridge-exists and MTU reads are
+    unchanged (net0 still pins the live bridge MTU). Requires
+    ``get_sybers.cluster`` to carry ``sdn_range_vnets`` in ``proxmox_config``.

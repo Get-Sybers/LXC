@@ -36,6 +36,11 @@ lxc_ghost9_range_group: ghost9
 # lxc_preflight admits a node `pvecm nodes` does not list (a single node) when it
 # is a member of this group; the container entry point declares the node in it.
 lxc_ghost9_range_cluster_group: proxmox_cluster
+# The range VNets proxmaxxing declares (get_sybers.cluster's proxmox_config, via
+# lxc.yml): the container step validates this range's VNet against this declared
+# source of truth. Empty when run without the shared cluster inventory — the
+# container step then falls back to the node's live /etc/pve/sdn/vnets.cfg.
+lxc_ghost9_range_sdn_range_vnets: "{{ lxc_sdn_range_vnets | default([]) }}"
 # --- Derived placement (computed defaults; override only to leave the convention) --
 lxc_ghost9_range_bridge: "r{{ lxc_ghost9_range_number }}"
 lxc_ghost9_range_subnet_prefix: "10.{{ lxc_ghost9_range_number }}.{{ lxc_ghost9_range_vlan }}"
