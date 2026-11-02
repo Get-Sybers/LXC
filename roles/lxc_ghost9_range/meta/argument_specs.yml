@@ -96,7 +96,7 @@ argument_specs:
         description: "The play group the CT is added to; the baseline and server plays target it."
       lxc_ghost9_range_cluster_group:
         type: str
-        default: proxmox_nodes
+        default: proxmox_cluster
         description: "The group lxc_preflight admits a node from when `pvecm nodes` does not list it (a single node)."
   baseline:
     short_description: "Run lxc_guest's hardened baseline inside the range's CT with this role's marker path."
@@ -156,4 +156,4 @@ argument_specs:
         default: ghost9
       lxc_ghost9_range_cluster_group:
         type: str
-        default: proxmox_nodes
+        default: proxmox_cluster

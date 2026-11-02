@@ -5,7 +5,7 @@ lxc_preflight_delegate_to: "{{ inventory_hostname }}"
 # The inventory group the Proxmox nodes belong to (a host not yet in `pvecm
 # nodes` — a single node, or one joining — is still admitted when it is a
 # member of this group).
-lxc_preflight_cluster_group: proxmox_nodes
+lxc_preflight_cluster_group: proxmox_cluster
 # --- facts and record (playbooks/preflight.yml) -----------------------------
 # Where the inventory lives (the directory ansible.cfg points -i at); record
 # writes group_vars/all/default.yml under it.

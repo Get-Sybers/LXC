@@ -35,7 +35,7 @@ lxc_ghost9_range_allow_ghosts_vm: false
 lxc_ghost9_range_group: ghost9
 # lxc_preflight admits a node `pvecm nodes` does not list (a single node) when it
 # is a member of this group; the container entry point declares the node in it.
-lxc_ghost9_range_cluster_group: proxmox_nodes
+lxc_ghost9_range_cluster_group: proxmox_cluster
 # --- Derived placement (computed defaults; override only to leave the convention) --
 lxc_ghost9_range_bridge: "r{{ lxc_ghost9_range_number }}"
 lxc_ghost9_range_subnet_prefix: "10.{{ lxc_ghost9_range_number }}.{{ lxc_ghost9_range_vlan }}"
