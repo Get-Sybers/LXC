@@ -1,0 +1,16 @@
+---
+added:
+  - >-
+    The collection declares a dependency on ``get_sybers.cluster``, the
+    Proxmox-cluster tier that owns the single ``proxmox_config`` master this
+    collection's inventory projects from. It is bounded in ``galaxy.yml``
+    (``>=0.1.0,<1.0.0``) and pinned in ``requirements.yml`` to an exact commit
+    of the ``proxmaxxing`` repository, which builds it — no release tag is cut
+    yet, so the pin moves to a ``vX.Y.Z`` tag once one is published.
+trivial:
+  - >-
+    ``scripts/check_pins.py`` gains the git-sourced dependency handling the
+    ``proxmaxxing`` repository's copy already carries (the fqcn is read from the
+    repo URL and a full commit SHA is accepted as an exact pin), and maps the
+    ``proxmaxxing`` repository to the ``get_sybers.cluster`` collection it builds
+    so the bound check covers it however it is sourced.
