@@ -1,0 +1,10 @@
+---
+changed:
+  - >-
+    The ``get_sybers.cluster`` git pin in ``requirements.yml`` moves to the
+    current ``proxmaxxing`` ``main`` commit, which carries ``sdn_range_vnets``
+    in the ``proxmox_config`` master. The previous commit predated that key, so
+    ``lxc_ghost9_range``'s range-VNet validation would have silently fallen back
+    to the node's live ``/etc/pve/sdn``; with the bumped pin it validates
+    against proxmaxxing's declared source as intended. Still a commit SHA (no
+    release tag exists yet); it moves to a ``vX.Y.Z`` tag once one is cut.
