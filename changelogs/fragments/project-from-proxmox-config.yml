@@ -1,0 +1,13 @@
+---
+changed:
+  - >-
+    The example inventory's ``lxc.yml`` projects the Proxmox-owned facts from
+    ``get_sybers.cluster``'s single ``proxmox_config`` master when the shared
+    inventory provides it: ``lxc_node`` reads ``proxmox_config.node`` and
+    ``lxc_bridge`` reads ``proxmox_config.interface``, each falling back to the
+    discovered ``lxc_site`` record when the cluster collection is absent (used
+    on its own, the template still stands alone). ``proxmox_config`` is a
+    ``host_var`` of the master and the deploy plays run on ``localhost``, so it
+    is read as a fact of that host (``hostvars[cluster_master_node]``).
+    ``lxc_storage`` is deliberately left on the node's recorded rootfs storage
+    rather than the cluster's guest pool (``proxmox_config.vm_storage_pool``).

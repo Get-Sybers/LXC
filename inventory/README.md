@@ -58,9 +58,15 @@ API credential) is identical in both templates. This collection layers its own
   `get_sybers.cluster`'s own `ghost9.yml` (the `g9_*` PVE-token identity) in a
   shared `group_vars/all/`.
 
-Projecting this collection's `lxc.yml` from that `proxmox_config` master is a
-separate step; today `lxc.yml` points at the discovered `lxc_site` record (below).
-Used on its own, without the cluster collection, the template still stands alone.
+`lxc.yml` **projects from that `proxmox_config` master**: `lxc_node` reads
+`proxmox_config.node` and `lxc_bridge` reads `proxmox_config.interface`, each
+falling back to the discovered `lxc_site` record (below) when the cluster
+collection is not present. `proxmox_config` is a `host_var` of the master and
+the deploy plays run on `localhost`, so it is read as a fact of that host
+(`hostvars[cluster_master_node]`). `lxc_storage` is deliberately left on the
+node's recorded rootfs storage rather than the cluster's guest pool
+(`proxmox_config.vm_storage_pool`). Used on its own, without the cluster
+collection, the fallbacks apply and the template still stands alone.
 
 ## Groups
 
@@ -75,8 +81,9 @@ Used on its own, without the cluster collection, the template still stands alone
 `lxc_site`, with the node's name and cluster, its management network (the interface carrying the default route, address, prefix,
 gateway, resolvers), the bridges, the storages that hold container rootfs (and the one proposed as the default) and templates, the
 cached templates, and the guest ids in use cluster-wide with the next free one. The template ships it as a skeleton so the keys exist
-before the first run. Every other file is **desired state**, written by hand; `lxc.yml` points `lxc_node`, `lxc_storage` and
-`lxc_bridge` at the record by default and is where another storage or bridge is chosen. Never edit the record: re-run the play.
+before the first run. Every other file is **desired state**, written by hand; `lxc.yml` resolves `lxc_node` and `lxc_bridge` from the
+shared `proxmox_config` master (falling back to this record) and points `lxc_storage` at the record, and is where another storage or
+bridge is chosen. Never edit the record: re-run the play.
 
 ```sh
 ansible-playbook playbooks/preflight.yml                                    # fill or refresh the record in place

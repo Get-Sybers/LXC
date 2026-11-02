@@ -3,10 +3,22 @@
 # defined once here, overridable per guest through that role's own inputs.
 # Copied into place by `make config`; the copy is untracked.
 
-# The node a container is created on unless its role says otherwise: the node
-# playbooks/preflight.yml ran on, from the As-Is record (default.yml). pct is
-# node-local, so the deploy plays run on it.
-lxc_node: "{{ lxc_site['node'] }}"
+# get_sybers.cluster's single proxmox_config master as seen from here, when the
+# shared inventory provides it. proxmox_config is a host_var of the
+# proxmox_master and the deploy plays run on localhost, so it is read as a fact
+# of that host (hostvars[cluster_master_node]); it is {} when this collection is
+# used on its own, so the lxc_site fallbacks below apply. The direction is
+# one-way: this collection reads proxmox_config, never the reverse.
+lxc_proxmox_config: >-
+  {{ hostvars[cluster_master_node]['proxmox_config']
+     if (cluster_master_node is defined and cluster_master_node in hostvars
+         and 'proxmox_config' in hostvars[cluster_master_node])
+     else {} }}
+# The node a container is created on unless its role says otherwise. From the
+# master's proxmox_config (proxmox_config.node) when the shared inventory is
+# present; otherwise the node playbooks/preflight.yml ran on (the As-Is record).
+# pct is node-local, so the deploy plays run on it.
+lxc_node: "{{ lxc_proxmox_config['node'] | default(lxc_site['node']) }}"
 # The template a guest is created from when its role names none. Every service
 # role names its own released template (templates/<name>), so this is the
 # fallback only; it is fetched into the cache by lxc_guest when a URL and a
@@ -22,15 +34,18 @@ lxc_template_cache_dir: /var/lib/vz/template/cache
 lxc_template_release_base: https://github.com/get-sybers/lxc/releases/download
 # Registry the template OCI images are pulled from; point at a mirror if needed.
 lxc_template_registry_base: ghcr.io/get-sybers/lxc
-# Rootfs storage for every guest. Default: the one preflight recorded
-# (default.yml lists every storage that holds containers; the shared Ceph
-# pool for HA, a local ZFS or LVM-thin pool otherwise). Name another to
+# Rootfs storage for every guest. Deliberately the storage preflight recorded
+# (default.yml's rootdir_default), NOT the cluster's guest pool
+# (proxmox_config.vm_storage_pool): a container defaults to the node's recorded
+# rootfs — a local ZFS or LVM-thin pool, or the shared Ceph pool when that is
+# the node default — rather than inheriting the VM guest pool. Name another to
 # override the choice.
 lxc_storage: "{{ lxc_site['storage']['rootdir_default'] }}"
-# The management bridge a guest's net0 sits on by default: the interface that
-# carries the node's default route, as preflight recorded it (vmbr0 on a
-# stock Proxmox install).
-lxc_bridge: "{{ lxc_site['management']['interface'] }}"
+# The management bridge a guest's net0 sits on by default. From the master's
+# proxmox_config (proxmox_config.interface) when the shared inventory is
+# present; otherwise the interface that carries the node's default route, as
+# preflight recorded it (vmbr0 on a stock Proxmox install).
+lxc_bridge: "{{ lxc_proxmox_config['interface'] | default(lxc_site['management']['interface']) }}"
 # The marker lxc_guest's baseline writes inside a guest and every service role
 # asserts before configuring anything.
 lxc_baseline_marker_path: /etc/get-sybers-lxc-baseline
