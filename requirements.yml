@@ -20,7 +20,7 @@ collections:
   # full SHA is a valid exact pin); raise it to a `vX.Y.Z` tag once one is cut.
   - name: https://github.com/get-sybers/proxmaxxing.git
     type: git
-    version: "9f16573dae2534594fdad2ce91a200d6b02b4be4"
+    version: "7ec4fc09a3b82aa98d9749c176daf93288ee0d65"
   # Test and build tooling, not runtime dependencies of the roles: molecule's
   # docker driver drives the Debian test container through community.docker and
   # syncs the scenario context with ansible.posix.synchronize; the template bake
