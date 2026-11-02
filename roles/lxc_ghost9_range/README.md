@@ -2,7 +2,7 @@ The GHOSTS ("ghost9") server of one Ludus range: `lxc_ghost9`'s `container`, `ba
 range's VNet. The CT attaches to `r<N>` with the range's VLAN tag, takes `10.<N>.<vlan>.<octet>/24` with the range router (`.254`)
 as gateway and nameserver, carries the bridge's MTU (SDN VXLAN at 1450 on a cluster, 1500 on a single node), is numbered
 `<vmid base> + N`, named `r<N>-<suffix>` and placed in the `GHOST9` pool. Before `lxc_ghost9` runs, the role checks what `lxc_guest`
-does not: the VNet is declared in `/etc/pve/sdn/vnets.cfg`, its bridge exists on this node, its MTU is readable, and no
+does not: the VNet is declared (in proxmaxxing's `sdn_range_vnets` via `proxmox_config` when the shared inventory is present, else the node's live `/etc/pve/sdn/vnets.cfg`), its bridge exists on this node, its MTU is readable, and no
 Ludus-managed `*-ghosts` VM competes for the address; afterwards it reads the CT config back through the PVE API and asserts
 bridge, tag, address, gateway and MTU. The node is reached only through the PVE API and `lxc_guest` (the premise's rule 4).
 
@@ -47,6 +47,7 @@ Every input is in [`defaults/main.yml`](defaults/main.yml) and typed in [`meta/a
 | `lxc_ghost9_range_allow_ghosts_vm` | `false` | allow a Ludus `*-ghosts` VM to coexist |
 | `lxc_ghost9_range_group` | `ghost9` | the play group the CT joins |
 | `lxc_ghost9_range_cluster_group` | `proxmox_cluster` | the group `lxc_preflight` admits a single node from |
+| `lxc_ghost9_range_sdn_range_vnets` | `{{ lxc_sdn_range_vnets \| default([]) }}` | range VNets proxmaxxing declares (`proxmox_config` via `lxc.yml`); the VNet is validated against it, else the node's live SDN |
 
 The PVE API credential is the collection's `pve_api_*` set (`pve_api_host`, `pve_api_user`, `pve_api_token_id` + `pve_api_token_secret`
 or `pve_api_password`, `pve_validate_certs`), and the service secrets are `lxc_ghost9`'s own (`lxc_ghost9_db_password`,

@@ -46,6 +46,14 @@ lxc_storage: "{{ lxc_site['storage']['rootdir_default'] }}"
 # present; otherwise the interface that carries the node's default route, as
 # preflight recorded it (vmbr0 on a stock Proxmox install).
 lxc_bridge: "{{ lxc_proxmox_config['interface'] | default(lxc_site['management']['interface']) }}"
+# The Proxmox SDN facts, from the same proxmox_config master: the zone the range
+# VNets live in, the VXLAN tag base, and the per-range VNets Ludus hands out
+# (number N -> VNet rN) — the declared source of truth a range's VNet is checked
+# against. Empty/0 when this collection runs without the cluster inventory, so a
+# consumer falls back (e.g. lxc_ghost9_range then checks the node's live SDN).
+lxc_sdn_zone: "{{ lxc_proxmox_config['sdn_zone'] | default('') }}"
+lxc_vxlan_tag_base: "{{ lxc_proxmox_config['vxlan_tag_base'] | default(0) }}"
+lxc_sdn_range_vnets: "{{ lxc_proxmox_config['sdn_range_vnets'] | default([]) }}"
 # The marker lxc_guest's baseline writes inside a guest and every service role
 # asserts before configuring anything.
 lxc_baseline_marker_path: /etc/get-sybers-lxc-baseline
