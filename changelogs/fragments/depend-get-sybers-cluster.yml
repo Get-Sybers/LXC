@@ -1,0 +1,10 @@
+---
+added:
+  - >-
+    The collection imports ``get_sybers.cluster``, the Proxmox-cluster tier that
+    owns the single ``proxmox_config`` master this collection's inventory
+    projects from. It is first-party and consumed from its git repository
+    (``proxmaxxing``, which builds it), so it is pinned in ``requirements.yml``
+    as a git source rather than declared in ``galaxy.yml``. No release tag is
+    cut yet, so the pin is an exact commit SHA on ``main`` and moves to a
+    ``vX.Y.Z`` tag once one is published.

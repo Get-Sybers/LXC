@@ -10,6 +10,17 @@ collections:
   - name: onepassword.connect
     version: "2.4.0"
     source: https://galaxy.ansible.com
+  # get_sybers.cluster owns the Proxmox-cluster tier and the single proxmox_config
+  # master this collection's inventory projects from. It is first-party and
+  # consumed from its git repository (not Galaxy), so it is imported here rather
+  # than declared in galaxy.yml — a galaxy.yml dependency resolves from a Galaxy
+  # server, which a git-only collection cannot satisfy. The repository is
+  # `proxmaxxing`; the collection it builds is get_sybers.cluster. No release tag
+  # is cut yet, so it is pinned to an exact commit SHA on main (standards §13: a
+  # full SHA is a valid exact pin); raise it to a `vX.Y.Z` tag once one is cut.
+  - name: https://github.com/get-sybers/proxmaxxing.git
+    type: git
+    version: "9f16573dae2534594fdad2ce91a200d6b02b4be4"
   # Test and build tooling, not runtime dependencies of the roles: molecule's
   # docker driver drives the Debian test container through community.docker and
   # syncs the scenario context with ansible.posix.synchronize; the template bake
