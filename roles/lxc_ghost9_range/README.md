@@ -47,7 +47,7 @@ Every input is in [`defaults/main.yml`](defaults/main.yml) and typed in [`meta/a
 | `lxc_ghost9_range_allow_ghosts_vm` | `false` | allow a Ludus `*-ghosts` VM to coexist |
 | `lxc_ghost9_range_group` | `ghost9` | the play group the CT joins |
 | `lxc_ghost9_range_cluster_group` | `proxmox_cluster` | the group `lxc_preflight` admits a single node from |
-| `lxc_ghost9_range_sdn_range_vnets` | `{{ lxc_sdn_range_vnets }}` | range VNets proxmaxxing declares (`proxmox_config` via `lxc.yml`); the VNet is validated against it, else the node's live SDN |
+| `lxc_ghost9_range_sdn_range_vnets` | `{{ lxc_sdn_range_vnets \| default([]) }}` | range VNets proxmaxxing declares (`proxmox_config` via `lxc.yml`); the VNet is validated against it, else the node's live SDN |
 
 The PVE API credential is the collection's `pve_api_*` set (`pve_api_host`, `pve_api_user`, `pve_api_token_id` + `pve_api_token_secret`
 or `pve_api_password`, `pve_validate_certs`), and the service secrets are `lxc_ghost9`'s own (`lxc_ghost9_db_password`,
