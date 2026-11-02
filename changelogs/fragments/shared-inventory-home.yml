@@ -1,0 +1,18 @@
+---
+changed:
+  - >-
+    The inventory is adopted as the single config home shared with
+    ``get_sybers.cluster``: the Proxmox node group is renamed from
+    ``proxmox_nodes`` to ``proxmox_cluster`` (the name the cluster collection
+    uses), so ``lxc_preflight_cluster_group`` and
+    ``lxc_ghost9_range_cluster_group`` now default to ``proxmox_cluster`` and
+    both collections admit nodes from one host set. An inventory that lists a
+    standalone node under ``proxmox_nodes`` renames that group to
+    ``proxmox_cluster``.
+  - >-
+    The GHOSTS placement file ``group_vars/all/ghost9.yml`` is renamed to
+    ``lxc_ghost9.yml`` (its variables are ``lxc_ghost9_*``) so it does not
+    collide with ``get_sybers.cluster``'s own ``ghost9.yml`` (the ``g9_*``
+    PVE-token identity) in a shared ``group_vars/all/``. The variables are
+    unchanged; Ansible loads ``group_vars/all/`` by directory, so the rename is
+    transparent to a run. ``inventory/README.md`` documents the shared home.

@@ -16,7 +16,7 @@ argument_specs:
       lxc_preflight_cluster_group:
         type: str
         required: false
-        default: proxmox_nodes
+        default: proxmox_cluster
         description: "Inventory group of the Proxmox nodes; membership admits a host that `pvecm nodes` does not list."
   facts:
     short_description: "Gather the node facts the desired-state files point at (read-only); sets lxc_preflight_facts."

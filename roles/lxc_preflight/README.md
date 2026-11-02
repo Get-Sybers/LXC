@@ -48,7 +48,7 @@ first preflight run; the live record is untracked like the rest of the site conf
 | Variable | Entry point | Default | Description |
 | --- | --- | --- | --- |
 | `lxc_preflight_delegate_to` | all | `{{ inventory_hostname }}` | The host every check and read executes on; a caller that delegates its own work passes the same value. |
-| `lxc_preflight_cluster_group` | `main` | `proxmox_nodes` | Inventory group of the Proxmox nodes; membership admits a host `pvecm nodes` does not list (a standalone node). |
+| `lxc_preflight_cluster_group` | `main` | `proxmox_cluster` | Inventory group of the Proxmox nodes; membership admits a host `pvecm nodes` does not list (a standalone node). |
 | `lxc_preflight_storage_preference` | `facts` | `[local-zfs, local-lvm, local]` | Storage names preferred, in order, as the default rootfs storage when the node holds more than one that takes containers; else the first local one, else the first. |
 | `lxc_preflight_inventory_dir` | `record` | `{{ inventory_dir }}` | Inventory directory the record is written under. |
 | `lxc_preflight_write` | `record` | `in_place` | `in_place` writes `group_vars/all/default.yml`; `additional` writes the proposal under `discovered/`. |

@@ -19,7 +19,7 @@ inventory/
 │       ├── distrobuilder.yml      #   distrobuilder build-box LXC placement and image definitions
 │       ├── semaphore.yml          #   Semaphore UI LXC placement (secrets stay in secrets/)
 │       ├── velociraptor.yml       #   Velociraptor DFIR server LXC placement (secrets stay in secrets/)
-│       └── ghost9.yml             #   GHOSTS (ghost9) server LXC placement (secrets stay in secrets/)
+│       └── lxc_ghost9.yml         #   GHOSTS (ghost9) server LXC placement (secrets stay in secrets/)
 ├── hosts.yml                      # untracked — your copy
 ├── group_vars/all/*.yml           # untracked — your copies; default.yml is rewritten by preflight.yml
 ├── discovered/                    # untracked — the proposal preflight.yml writes with -e lxc_preflight_write=additional; never loaded
@@ -39,11 +39,34 @@ run time with `-e`, or set in its placement file to make it this site's default.
 again after a node change (a new storage, a new bridge, a new cluster member); a second run is `changed=0`. `ansible.cfg` ignores
 `example/`, `discovered/` and `secrets/` as inventory sources, so the template and a proposal are never loaded by mistake.
 
+## Shared with `get_sybers.cluster`
+
+This is the **same inventory** the sibling `get_sybers.cluster` collection
+(the `proxmaxxing` repository) consumes — one config home both collections run
+against, not two. `get_sybers.cluster` owns the host set and the Proxmox-cluster
+facts: its `hosts.yml` declares the `proxmox_cluster` nodes (and the
+`proxmox_master`), its `host_vars/<master>/proxmox_config.yml` is the single
+master of the Proxmox-owned facts, and `group_vars/all/proxmox_api.yml` (the PVE
+API credential) is identical in both templates. This collection layers its own
+`group_vars/all/` files on top — the `lxc_*` placement files and the discovered
+`lxc_site` record. To keep the two composable in one directory:
+
+- the node group is **`proxmox_cluster`** (the name `get_sybers.cluster` uses),
+  so `lxc_preflight`/`lxc_ghost9_range` admit nodes from the shared host set;
+- this collection's service-placement file for GHOSTS is **`lxc_ghost9.yml`**
+  (its vars are `lxc_ghost9_*`), so it does not collide with
+  `get_sybers.cluster`'s own `ghost9.yml` (the `g9_*` PVE-token identity) in a
+  shared `group_vars/all/`.
+
+Projecting this collection's `lxc.yml` from that `proxmox_config` master is a
+separate step; today `lxc.yml` points at the discovered `lxc_site` record (below).
+Used on its own, without the cluster collection, the template still stands alone.
+
 ## Groups
 
 | Group | Members | Meaning |
 | --- | --- | --- |
-| `proxmox_nodes` | empty by default | a clustered node is admitted by `pvecm nodes`; list a standalone node here so `lxc_preflight` admits it |
+| `proxmox_cluster` | empty by default | a clustered node is admitted by `pvecm nodes`; list a standalone node here so `lxc_preflight` admits it. Same group name `get_sybers.cluster` uses, so the two collections share one host set |
 | `controller` | `localhost` | the node-side plays (run on the node) and the API-client plays; declared so they receive `group_vars/all` |
 
 ## As-Is versus desired state
