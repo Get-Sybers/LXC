@@ -38,11 +38,6 @@ dependencies:
   # lxc_onepassword_item mirrors credentials into the self-hosted 1Password
   # Connect server via onepassword.connect.generic_item.
   "onepassword.connect": ">=2.4.0,<3.0.0"
-  # get_sybers.cluster owns the Proxmox-cluster tier and the single proxmox_config
-  # master this collection projects from (inventory/group_vars lxc.yml, reconciled
-  # against the same shared inventory). Bound only here; the exact pin is in
-  # requirements.yml (git — it is not published to Galaxy).
-  "get_sybers.cluster": ">=0.1.0,<1.0.0"
 build_ignore:
   - .git*
   - .github

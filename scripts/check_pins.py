@@ -1,8 +1,7 @@
 """ansible-standards §2/§3/§13 pin check.
 Fails (exit 1) unless:
 - every galaxy.yml dependency has a requirements.yml entry pinned to one
-    exact X.Y.Z that lies inside the galaxy.yml bound (a git-sourced dependency
-    counts: its fqcn is read from the repo URL and its tag is the version);
+    exact X.Y.Z that lies inside the galaxy.yml bound;
 - every requirements.yml collection pin is exact (no ranges, '*', 'latest'),
     and every git-sourced one points at a tag or full commit SHA, never a
     branch; with --resolve-git the ref is checked with `git ls-remote`;
@@ -48,23 +47,14 @@ def floor_of(spec: SpecifierSet) -> Version | None:
     return min(floors) if floors else None
 
 
-def check_requirements(root: Path, resolve_git: bool) -> tuple[dict[str, str], set[str]]:
-    """Return ({fqcn: exact_version}, {fqcn pinned by commit SHA}).
-
-    Galaxy and git-tag entries contribute an exact version keyed by their fully
-    qualified collection name (a git entry's fqcn is read from the repo URL, e.g.
-    .../community.proxmox.git -> community.proxmox) so the galaxy.yml bound check
-    covers them identically however they are sourced. A git entry pinned to a
-    commit SHA has no derivable version, so it only records that the fqcn is
-    pinned.
-    """
+def check_requirements(root: Path, resolve_git: bool) -> dict[str, str]:
+    """Return {fqcn: exact_version} for Galaxy-sourced collections."""
     req = load(root / "requirements.yml")
     pins: dict[str, str] = {}
-    sha_pinned: set[str] = set()
     collections = req.get("collections") or []
     if not isinstance(collections, list):
         err("requirements.yml: 'collections' must be a list")
-        return pins, sha_pinned
+        return pins
     for entry in collections:
         if isinstance(entry, str):
             err(f"requirements.yml: '{entry}' has no version pin (bare string entry)")
@@ -77,15 +67,12 @@ def check_requirements(root: Path, resolve_git: bool) -> tuple[dict[str, str], s
             continue
         version = str(version)
         if kind == "git":
-            fqcn = git_fqcn(name)
             if SHA.match(version):
                 if resolve_git:
                     check_git_sha(name, version)
-                sha_pinned.add(fqcn)
             elif TAG.match(version):
                 if resolve_git:
                     check_git_tag(name, version)
-                pins[fqcn] = version.lstrip("v")
             else:
                 err(f"requirements.yml: {name} version '{version}' is a branch or range; pin a tag or commit SHA")
             continue
@@ -96,31 +83,12 @@ def check_requirements(root: Path, resolve_git: bool) -> tuple[dict[str, str], s
             err(f"requirements.yml: {name} version '{version}' is not an exact X.Y.Z")
             continue
         pins[name] = version
-    return pins, sha_pinned
+    return pins
 
 
 def git_url(name: str) -> str:
     url = name[4:] if name.startswith("git+") else name
     return url.split("#", 1)[0]
-
-
-# First-party collections whose repository basename differs from the collection
-# they build. The ansible-collections/* repos are named after their collection,
-# so the URL basename is the fqcn; ours are not (the proxmaxxing repo builds
-# get_sybers.cluster), so map them explicitly. Offline, so the pre-commit hook
-# (no --resolve-git) resolves the fqcn too.
-GIT_FQCN_OVERRIDES = {
-    "proxmaxxing": "get_sybers.cluster",
-}
-
-
-def git_fqcn(name: str) -> str:
-    """The fully qualified collection name a git source installs as, read from the
-    repo URL: .../ansible-collections/community.proxmox.git -> community.proxmox;
-    a first-party repo whose basename differs is mapped by GIT_FQCN_OVERRIDES."""
-    seg = git_url(name).rstrip("/").rsplit("/", 1)[-1]
-    repo = seg[:-4] if seg.endswith(".git") else seg
-    return GIT_FQCN_OVERRIDES.get(repo, repo)
 
 
 def check_git_tag(name: str, tag: str) -> None:
@@ -149,7 +117,7 @@ def check_git_sha(name: str, sha: str) -> None:
         err(f"requirements.yml: commit {sha} not fetchable from {url} ({out.stderr.strip()})")
 
 
-def check_galaxy(root: Path, pins: dict[str, str], sha_pinned: set[str]) -> None:
+def check_galaxy(root: Path, pins: dict[str, str]) -> None:
     galaxy = load(root / "galaxy.yml")
     deps = galaxy.get("dependencies") or {}
     if not isinstance(deps, dict):
@@ -169,14 +137,11 @@ def check_galaxy(root: Path, pins: dict[str, str], sha_pinned: set[str]) -> None
             err(f"galaxy.yml: {fqcn} spec '{spec_text}' has no upper bound (<next-major)")
         pin = pins.get(fqcn)
         if pin is None:
-            if fqcn in sha_pinned:
-                print(f"check_pins: note: {fqcn} is git-pinned by commit SHA; galaxy.yml bound not numerically verified", file=sys.stderr)
-            else:
-                err(f"requirements.yml: no exact pin for galaxy.yml dependency {fqcn}")
+            err(f"requirements.yml: no exact pin for galaxy.yml dependency {fqcn}")
             continue
         if not spec.contains(Version(pin), prereleases=False):
             err(f"requirements.yml: {fqcn} pin {pin} is outside the galaxy.yml bound '{spec_text}'")
-    for fqcn in list(pins) + sorted(sha_pinned):
+    for fqcn in pins:
         if fqcn not in deps:
             print(f"check_pins: note: {fqcn} is pinned but not a galaxy.yml dependency (test-only?)", file=sys.stderr)
 
@@ -222,8 +187,8 @@ def main() -> int:
     parser.add_argument("--root", default=".", help="collection root (default: .)")
     args = parser.parse_args()
     root = Path(args.root)
-    pins, sha_pinned = check_requirements(root, args.resolve_git)
-    check_galaxy(root, pins, sha_pinned)
+    pins = check_requirements(root, args.resolve_git)
+    check_galaxy(root, pins)
     check_runtime_and_roles(root)
     if errors:
         print(f"check_pins: FAIL ({len(errors)} problem(s))", file=sys.stderr)
