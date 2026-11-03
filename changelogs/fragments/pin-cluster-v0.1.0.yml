@@ -1,0 +1,6 @@
+---
+changed:
+  - >-
+    The ``get_sybers.cluster`` git pin in ``requirements.yml`` moves from the
+    ``main`` commit SHA to the immutable ``v0.1.0`` release tag now that
+    proxmaxxing has cut it. Same commit, a cleaner reference.
