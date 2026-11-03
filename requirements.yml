@@ -15,12 +15,11 @@ collections:
   # consumed from its git repository (not Galaxy), so it is imported here rather
   # than declared in galaxy.yml — a galaxy.yml dependency resolves from a Galaxy
   # server, which a git-only collection cannot satisfy. The repository is
-  # `proxmaxxing`; the collection it builds is get_sybers.cluster. No release tag
-  # is cut yet, so it is pinned to an exact commit SHA on main (standards §13: a
-  # full SHA is a valid exact pin); raise it to a `vX.Y.Z` tag once one is cut.
+  # `proxmaxxing`; the collection it builds is get_sybers.cluster. Pinned to the
+  # `v0.1.0` release tag (standards §13: an immutable tag is a valid exact pin).
   - name: https://github.com/get-sybers/proxmaxxing.git
     type: git
-    version: "7ec4fc09a3b82aa98d9749c176daf93288ee0d65"
+    version: "v0.1.0"
   # Test and build tooling, not runtime dependencies of the roles: molecule's
   # docker driver drives the Debian test container through community.docker and
   # syncs the scenario context with ansible.posix.synchronize; the template bake
