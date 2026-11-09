@@ -147,7 +147,16 @@
 - name: "bake | Copy the full API config tree over the published one (publish omits most of it)"
   ansible.builtin.command:
     argv: [cp, -a, "{{ lxc_ghost9_source_dir }}/src/Ghosts.Api/config/.", "{{ lxc_ghost9_api_root }}/config/"]
-    creates: "{{ lxc_ghost9_api_root }}/config/SeedData/seed.json"
+    creates: "{{ lxc_ghost9_api_root }}/config/countries.txt"
+# GHOSTS seeds its bundled sample data — 26 fictional machines, 21 NPCs, training
+# scenarios and their history — into the database at first API start whenever this
+# file is present. seed.json's own header documents the opt-out: delete it. A range
+# server must come up carrying only the hosts its own clients register, so the baked
+# image ships without it.
+- name: "bake | Drop the GHOSTS sample seed data so a fresh server has no fictional machines or NPCs"
+  ansible.builtin.file:
+    path: "{{ lxc_ghost9_api_root }}/config/SeedData/seed.json"
+    state: absent
 - name: "bake | The API log directory (the service user writes NLog here, relative to CWD)"
   ansible.builtin.file:
     path: "{{ lxc_ghost9_api_root }}/logs"
