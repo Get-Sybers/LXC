@@ -1,0 +1,9 @@
+---
+fixed:
+  - >-
+    A freshly deployed ``ghost9`` server no longer comes up populated with
+    GHOSTS' bundled sample data. GHOSTS seeds ``config/SeedData/seed.json``
+    (26 fictional machines, 21 NPCs, training scenarios and their history) into
+    the database at first API start; the bake now drops that file — GHOSTS'
+    documented opt-out — so a new server starts with an empty datastore and
+    shows only the hosts its own clients register.
