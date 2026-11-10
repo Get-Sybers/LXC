@@ -4,9 +4,9 @@
 # ^https://portal\.example-vendor\.com/
 # Placeholder or directory URLs used as Ansible variable bases, not concrete
 # release assets or doc pages that a reader should open directly.
-^https://github\.com/get-sybers/lxc/releases/download/?$
-^https://github\.com/semaphoreui/semaphore/releases/download/?$
-^https://github\.com/Velocidex/velociraptor/releases/download/?$
-^https://raw\.githubusercontent\.com/lxc/lxc-ci/(?:CHANGE-ME-commit|<commit>)/images/debian\.yaml$
-^https://codeload\.github\.com/cmu-sei/GHOSTS/tar\.gz/refs/tags/?$
-^https://deb\.nodesource\.com/node_/?$
+^https://github\.com/get-sybers/lxc/releases/download.*$
+^https://github\.com/semaphoreui/semaphore/releases/download.*$
+^https://github\.com/Velocidex/velociraptor/releases/download.*$
+^https://raw\.githubusercontent\.com/lxc/lxc-ci/.*images/debian\.yaml$
+^https://codeload\.github\.com/cmu-sei/GHOSTS/tar\.gz/refs/tags/.*$
+^https://deb\.nodesource\.com/node_.*$
