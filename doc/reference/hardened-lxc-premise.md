@@ -40,7 +40,7 @@ One sentence governs the rest: **a container has no door of its own — the node
 - **It is not a Ludus range asset.** Range containers (the GHOSTS LXC in `get_sybers.range`) are deliberately *unhardened* — that tier's
   premise is "robust, not hardened". They stay in the Ludus source tree and never come here.
 - **It is not the cluster tier.** Node-level operations (Ceph, SDN, the credential vault, Ludus) stay in `get_sybers.cluster`
-  (`get-sybers/proxmox`). This collection needs only a node, a template, a bridge and an admin PVE API credential from that tier.
+  (`get-sybers/proxmaxxing`). This collection needs only a node, a template, a bridge and an admin PVE API credential from that tier.
 - **`nesting=1` is not a breach.** Debian 13's systemd 257 needs nested namespaces to boot; the feature is per-guest input
   (`lxc_guest_features`) and the container stays unprivileged. A *container runtime* inside the guest is the thing rule 3 refuses. The more permissive `with-nesting` AppArmor profile this selects is offset by the per-service systemd sandbox and dropped capabilities (rule 11) and the default-deny firewall (rule 10).
 - **An image builder is not a container runtime.** The `distrobuilder` box builds rootfs tarballs: it chroots into a rootfs it is

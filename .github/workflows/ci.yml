@@ -2,7 +2,7 @@
 # CI for the get_sybers.lxc collection (the cluster collection's docs/03, docs/04).
 #
 # Self-contained rather than calling the org's reusable workflows, mirroring
-# get-sybers/proxmox so the two collections' gates stay identical; every action
+# get-sybers/proxmaxxing so the two collections' gates stay identical; every action
 # is hash-pinned (pinact bumps them), and the runner's own python3 is used
 # wherever no action is needed.
 #

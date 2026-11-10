@@ -17,7 +17,7 @@ fragments.
   `lxc_onepassword_connect`, `lxc_onepassword_item`, the two plays, the
   hardened-LXC premise (`doc/reference/hardened-lxc-premise.md`) and its detector
   (`scripts/check_lxc_boundary.py`). The 1Password content moved here from
-  `get-sybers/proxmox` (`get_sybers.cluster`); see
+  `get-sybers/proxmaxxing` (`get_sybers.cluster`); see
   `changelogs/fragments/initial-import.yml`.
 - Templates built in GitHub Actions and published as GitHub Releases
   (`templates/`, `playbooks/bake-template.yml`, the `Templates` workflow,

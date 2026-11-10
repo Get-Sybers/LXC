@@ -33,7 +33,7 @@ The templates document what they carry: [`templates/`](../templates/README.md).
 ## Project and community
 
 `get_sybers.lxc` is free software under the [GNU Affero General Public License v3.0](../LICENSE). It is part of the Get-Sybers lab,
-alongside the cluster tier in [get-sybers/proxmox](https://github.com/get-sybers/proxmox) that supplies the node, the storage, the
+alongside the cluster tier in [get-sybers/proxmaxxing](https://github.com/get-sybers/proxmaxxing) that supplies the node, the storage, the
 bridge and the API credential this tier builds on.
 
 - [Contribute to the project](../CONTRIBUTING.md)

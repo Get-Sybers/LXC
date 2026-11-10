@@ -2,7 +2,7 @@
 
 Mirror the lab's authentication credentials (API keys and passwords) into a self-hosted
 [1Password Connect](https://developer.1password.com/docs/connect/) server. 1Password is a **mirror only**: the authoritative stores in the
-cluster tier (PocketBase and the ZFS file vault, `get-sybers/proxmox`) are left exactly as they are.
+cluster tier (PocketBase and the ZFS file vault, `get-sybers/proxmaxxing`) are left exactly as they are.
 
 The Connect server runs **natively in a hardened Debian LXC under `systemd`** — no Docker, no OCI runtime, no SSH. The `connect-api` and
 `connect-sync` images are single Go binaries; the template bake extracts those binaries straight from the pinned official images (via the

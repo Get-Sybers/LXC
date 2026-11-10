@@ -6,7 +6,7 @@ operators need to put data into it, an API-client role. A container is touched o
 collection: the premise is [`doc/reference/hardened-lxc-premise.md`](doc/reference/hardened-lxc-premise.md), and `scripts/check_lxc_boundary.py` is its
 detector.
 
-This content moved here from the cluster collection (`get_sybers.cluster`, [get-sybers/proxmox](https://github.com/get-sybers/proxmox)),
+This content moved here from the cluster collection (`get_sybers.cluster`, [get-sybers/proxmaxxing](https://github.com/get-sybers/proxmaxxing)),
 which keeps the node-level operations (Ceph, SDN, the credential vault, Ludus) this tier builds on.
 
 Licence: `AGPL-3.0-only` (see [`LICENSE`](LICENSE), declared in [`galaxy.yml`](galaxy.yml)).
