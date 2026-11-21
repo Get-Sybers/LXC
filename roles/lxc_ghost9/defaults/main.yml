@@ -135,9 +135,10 @@ lxc_ghost9_template_marker: "{{ lxc_template_marker_path }}"
 # firewall, so the model is reachable only from inside the CT. After the
 # model pull, a systemd drop-in restricts the service to loopback traffic.
 lxc_ghost9_ollama_enabled: false
-lxc_ghost9_ollama_version: "0.9.0"
+lxc_ghost9_ollama_version: "0.40.17"
 lxc_ghost9_ollama_checksum: ""
 lxc_ghost9_ollama_model: "gemma4:31b"
+lxc_ghost9_ollama_model_archive: ""
 lxc_ghost9_ollama_host: "127.0.0.1"
 lxc_ghost9_ollama_port: 11434
 lxc_ghost9_ollama_user: ollama
