@@ -354,7 +354,9 @@ argument_specs:
         type: str
         required: false
         default: ""
-        description: "URL of a tar.zst archive of the Ollama model directory; when set, the model is loaded from this archive instead of pulled from the registry."
+        description: >-
+          URL of a tar.zst archive of the Ollama model directory; when set the model is loaded
+          from this archive instead of pulled from the registry.
       lxc_ghost9_ollama_host:
         type: str
         required: false
