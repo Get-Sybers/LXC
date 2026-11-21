@@ -90,6 +90,7 @@ lxc_ghost9_bake_packages:
   - nginx
   - postgresql
   - grafana
+  - zstd
 
 # --- Service layout inside the CT (all native systemd services) --------------
 lxc_ghost9_root: /opt/ghost9
@@ -136,6 +137,8 @@ lxc_ghost9_template_marker: "{{ lxc_template_marker_path }}"
 # model pull, a systemd drop-in restricts the service to loopback traffic.
 lxc_ghost9_ollama_enabled: false
 lxc_ghost9_ollama_version: "0.40.17"
+lxc_ghost9_ollama_url: >-
+  https://github.com/ollama/ollama/releases/download/v{{ lxc_ghost9_ollama_version }}/ollama-linux-{{ lxc_ghost9_arch }}.tar.zst
 lxc_ghost9_ollama_checksum: ""
 lxc_ghost9_ollama_model: "gemma4:31b"
 lxc_ghost9_ollama_model_archive: ""

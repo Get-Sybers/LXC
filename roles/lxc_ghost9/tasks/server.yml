@@ -179,39 +179,69 @@
   ansible.builtin.meta: flush_handlers
 
 # --- Ollama: install, start, pull the model, lock down networking ------------
-- name: "server | Install zstd (required for Ollama and model archive extraction)"
-  ansible.builtin.apt:
-    name: zstd
-    state: present
+- name: "server | Assert zstd is present (baked into the template image)"
+  ansible.builtin.command:
+    argv: [dpkg-query, -W, -f, '${Status}', zstd]
+  register: __lxc_ghost9_zstd_check
+  changed_when: false
+  failed_when: "'install ok installed' not in __lxc_ghost9_zstd_check.stdout"
   when: lxc_ghost9_ollama_enabled
+- name: "server | Preflight: CT memory for the Ollama model"
+  ansible.builtin.command:
+    argv: [grep, MemTotal, /proc/meminfo]
+  register: __lxc_ghost9_memtotal
+  changed_when: false
+  when: lxc_ghost9_ollama_enabled
+- name: "server | CT needs sufficient memory for the Ollama model"
+  ansible.builtin.assert:
+    that: (__lxc_ghost9_memtotal.stdout | regex_search('(\d+)') | int) >= 16777216
+    fail_msg: >-
+      This CT has {{ (__lxc_ghost9_memtotal.stdout | regex_search('(\d+)') | int) // 1024 }}MB
+      RAM. Large Ollama models need much more (gemma4:31b ~48GB, gemma4:12b
+      ~16GB). Raise lxc_ghost9_memory_mb in the inventory.
+    quiet: true
+  when: lxc_ghost9_ollama_enabled
+- name: "server | Rootfs should be large enough for the model archive"
+  ansible.builtin.assert:
+    that: lxc_ghost9_rootfs_gb | int >= 40
+    fail_msg: >-
+      lxc_ghost9_rootfs_gb is {{ lxc_ghost9_rootfs_gb }}. The model archive
+      is downloaded and extracted in place, so the CT needs at least double the
+      archive size plus headroom (~50GB for gemma4:31b). Raise
+      lxc_ghost9_rootfs_gb in the inventory.
+    quiet: true
+  when: lxc_ghost9_ollama_enabled and lxc_ghost9_ollama_model_archive | default('') | length > 0
 - name: "server | The Ollama release checksum must be pinned"
   ansible.builtin.assert:
     that: lxc_ghost9_ollama_checksum | length > 0
     fail_msg: >-
       lxc_ghost9_ollama_checksum is empty. Pin it to the sha256 of
-      ollama-linux-{{ lxc_ghost9_arch }}.tgz from the v{{ lxc_ghost9_ollama_version }} release.
+      ollama-linux-{{ lxc_ghost9_arch }}.tar.zst from the v{{ lxc_ghost9_ollama_version }} release.
     quiet: true
   when: lxc_ghost9_ollama_enabled
-- name: "server | Download the Ollama release tarball"
-  ansible.builtin.get_url:
-    url: "https://github.com/ollama/ollama/releases/download/v{{ lxc_ghost9_ollama_version }}/ollama-linux-{{ lxc_ghost9_arch }}.tar.zst"
-    dest: "/var/tmp/ollama.tar.zst"
-    checksum: "{{ lxc_ghost9_ollama_checksum }}"
-    owner: root
-    group: root
-    mode: "0644"
+- name: "server | Check if Ollama is already installed"
+  ansible.builtin.stat:
+    path: /usr/local/bin/ollama
+  register: __lxc_ghost9_ollama_bin
   when: lxc_ghost9_ollama_enabled
-- name: "server | Extract the Ollama release"
-  ansible.builtin.command:
-    argv: [tar, --zstd, -xf, /var/tmp/ollama.tar.zst, -C, /usr/local]
-  args:
-    creates: /usr/local/bin/ollama
-  when: lxc_ghost9_ollama_enabled
-- name: "server | Remove the Ollama tarball"
-  ansible.builtin.file:
-    path: /var/tmp/ollama.tar.zst
-    state: absent
-  when: lxc_ghost9_ollama_enabled
+- name: "server | Download, extract and clean up Ollama"
+  when: lxc_ghost9_ollama_enabled and not (__lxc_ghost9_ollama_bin.stat.exists | default(false))
+  block:
+    - name: "server | Download the Ollama release tarball"
+      ansible.builtin.get_url:
+        url: "{{ lxc_ghost9_ollama_url }}"
+        dest: "/var/tmp/ollama.tar.zst"
+        checksum: "{{ lxc_ghost9_ollama_checksum }}"
+        owner: root
+        group: root
+        mode: "0644"
+    - name: "server | Extract the Ollama release"
+      ansible.builtin.command:
+        argv: [tar, --zstd, -xf, /var/tmp/ollama.tar.zst, -C, /usr/local]
+    - name: "server | Remove the Ollama tarball"
+      ansible.builtin.file:
+        path: /var/tmp/ollama.tar.zst
+        state: absent
 - name: "server | The Ollama service user"
   ansible.builtin.user:
     name: "{{ lxc_ghost9_ollama_user }}"
