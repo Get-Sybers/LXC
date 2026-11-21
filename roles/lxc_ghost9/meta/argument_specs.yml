@@ -25,7 +25,7 @@ argument_specs:
       lxc_ghost9_template_version:
         type: str
         required: false
-        default: "0.1.1"
+        default: "0.1.4"
         description: "This repository's release of the ghost9 template (the manifest's lxc_template_version, X.Y.Z); server refuses a guest baked at another."
       lxc_ghost9_template_name:
         type: str
@@ -179,7 +179,7 @@ argument_specs:
         type: bool
         required: false
         default: false
-        description: "Install the Ollama binary into the template. When true the server pulls the model at deploy time."
+        description: "Install Ollama and pull the model at deploy time (server.yml); the template stays minimal."
       lxc_ghost9_ollama_version:
         type: str
         required: false
@@ -256,7 +256,7 @@ argument_specs:
       lxc_ghost9_template_version:
         type: str
         required: false
-        default: "0.1.1"
+        default: "0.1.4"
       lxc_ghost9_api_root:
         type: str
         required: false
