@@ -183,7 +183,7 @@ argument_specs:
       lxc_ghost9_ollama_version:
         type: str
         required: false
-        default: "0.9.0"
+        default: "0.40.17"
         description: "Pinned Ollama release version."
       lxc_ghost9_ollama_checksum:
         type: str
@@ -350,6 +350,11 @@ argument_specs:
         required: false
         default: "gemma4:31b"
         description: "Ollama model tag to pull at deploy time (GHOSTS upstream default)."
+      lxc_ghost9_ollama_model_archive:
+        type: str
+        required: false
+        default: ""
+        description: "URL of a tar.zst archive of the Ollama model directory; when set, the model is loaded from this archive instead of pulled from the registry."
       lxc_ghost9_ollama_host:
         type: str
         required: false

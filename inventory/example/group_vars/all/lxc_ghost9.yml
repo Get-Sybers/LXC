@@ -25,8 +25,8 @@ lxc_ghost9_public_hostname: "CHANGE-ME"
 #   lxc_ghost9_cores: 8
 # lxc_ghost9_ollama_enabled: true
 # lxc_ghost9_ollama_model: "gemma4:31b"
-# Pin the release checksum (sha256:... of ollama-linux-amd64.tgz):
-# lxc_ghost9_ollama_checksum: "sha256:ae9cebd61552d6cf3c527cb88e3a4865a25f22950aa8bb5328887ffd96cfd22a"
+# Pin the release checksum (sha256:... of ollama-linux-amd64.tar.zst):
+# lxc_ghost9_ollama_checksum: "sha256:1df9d6228bac5a22e420b242708c0d10e5b886db97bab99d446a41760f4e79af"
 # Created from the GHCR OCI image ghcr.io/get-sybers/lxc/ghost9, pulled by the
 # play with Proxmox's OCI support. Make the package public (or log the node in:
 # skopeo login ghcr.io). Pin an exact image with lxc_ghost9_template_image: <ref>@sha256:<digest>.

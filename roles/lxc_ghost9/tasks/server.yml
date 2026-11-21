@@ -179,6 +179,11 @@
   ansible.builtin.meta: flush_handlers
 
 # --- Ollama: install, start, pull the model, lock down networking ------------
+- name: "server | Install zstd (required for Ollama and model archive extraction)"
+  ansible.builtin.apt:
+    name: zstd
+    state: present
+  when: lxc_ghost9_ollama_enabled
 - name: "server | The Ollama release checksum must be pinned"
   ansible.builtin.assert:
     that: lxc_ghost9_ollama_checksum | length > 0
@@ -189,23 +194,22 @@
   when: lxc_ghost9_ollama_enabled
 - name: "server | Download the Ollama release tarball"
   ansible.builtin.get_url:
-    url: "https://github.com/ollama/ollama/releases/download/v{{ lxc_ghost9_ollama_version }}/ollama-linux-{{ lxc_ghost9_arch }}.tgz"
-    dest: "/var/tmp/ollama.tgz"
+    url: "https://github.com/ollama/ollama/releases/download/v{{ lxc_ghost9_ollama_version }}/ollama-linux-{{ lxc_ghost9_arch }}.tar.zst"
+    dest: "/var/tmp/ollama.tar.zst"
     checksum: "{{ lxc_ghost9_ollama_checksum }}"
     owner: root
     group: root
     mode: "0644"
   when: lxc_ghost9_ollama_enabled
-- name: "server | Extract the Ollama binary"
-  ansible.builtin.unarchive:
-    src: /var/tmp/ollama.tgz
-    remote_src: true
-    dest: /usr/local
+- name: "server | Extract the Ollama release"
+  ansible.builtin.command:
+    argv: [tar, --zstd, -xf, /var/tmp/ollama.tar.zst, -C, /usr/local]
+  args:
     creates: /usr/local/bin/ollama
   when: lxc_ghost9_ollama_enabled
 - name: "server | Remove the Ollama tarball"
   ansible.builtin.file:
-    path: /var/tmp/ollama.tgz
+    path: /var/tmp/ollama.tar.zst
     state: absent
   when: lxc_ghost9_ollama_enabled
 - name: "server | The Ollama service user"
@@ -246,7 +250,33 @@
     port: "{{ lxc_ghost9_ollama_port }}"
     timeout: 30
   when: lxc_ghost9_ollama_enabled
-- name: "server | Pull the Ollama model ({{ lxc_ghost9_ollama_model }})"
+- name: "server | Load the Ollama model from the local archive"
+  when: lxc_ghost9_ollama_enabled and lxc_ghost9_ollama_model_archive | default('') | length > 0
+  block:
+    - name: "server | Download the model archive from Nexus"
+      ansible.builtin.get_url:
+        url: "{{ lxc_ghost9_ollama_model_archive }}"
+        dest: /var/tmp/ollama-model.tar.zst
+        owner: root
+        group: root
+        mode: "0644"
+    - name: "server | Extract the model archive into the Ollama data directory"
+      ansible.builtin.command:
+        argv: [tar, --zstd, -xf, /var/tmp/ollama-model.tar.zst, -C, "{{ lxc_ghost9_ollama_home }}"]
+      args:
+        creates: "{{ lxc_ghost9_ollama_home }}/models/manifests"
+    - name: "server | Fix model directory ownership"
+      ansible.builtin.file:
+        path: "{{ lxc_ghost9_ollama_home }}/models"
+        state: directory
+        owner: "{{ lxc_ghost9_ollama_user }}"
+        group: "{{ lxc_ghost9_ollama_user }}"
+        recurse: true
+    - name: "server | Remove the model archive"
+      ansible.builtin.file:
+        path: /var/tmp/ollama-model.tar.zst
+        state: absent
+- name: "server | Pull the Ollama model from the registry ({{ lxc_ghost9_ollama_model }})"
   ansible.builtin.command:
     argv: [ollama, pull, "{{ lxc_ghost9_ollama_model }}"]
   register: __lxc_ghost9_ollama_pull
@@ -255,7 +285,7 @@
     OLLAMA_HOST: "{{ lxc_ghost9_ollama_host }}:{{ lxc_ghost9_ollama_port }}"
   async: 1800
   poll: 30
-  when: lxc_ghost9_ollama_enabled
+  when: lxc_ghost9_ollama_enabled and lxc_ghost9_ollama_model_archive | default('') | length == 0
 - name: "server | Ollama lockdown drop-in directory"
   ansible.builtin.file:
     path: /etc/systemd/system/ollama.service.d
