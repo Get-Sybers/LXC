@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+# Applied after the model pull completes; restricts the Ollama process to
+# loopback so the endpoint is reachable only from inside the CT. Port 11434
+# is also excluded from the in-guest nftables allow list. Together the two
+# layers ensure the model serves only the local GHOSTS stack, never the
+# wider network.
+[Service]
+IPAddressAllow=localhost
+IPAddressDeny=any

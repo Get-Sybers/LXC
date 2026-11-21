@@ -32,15 +32,32 @@
     - { name: grafana, url: "http://127.0.0.1:{{ lxc_ghost9_grafana_port }}/api/health" }
   loop_control:
     label: "{{ item['name'] }}"
+- name: "verify | Probe the Ollama API"
+  ansible.builtin.uri:
+    url: "http://{{ lxc_ghost9_ollama_host }}:{{ lxc_ghost9_ollama_port }}/api/tags"
+    method: GET
+    status_code: [200]
+  register: __lxc_ghost9_ollama_probe
+  until: (__lxc_ghost9_ollama_probe.status | default(-1)) == 200
+  retries: 10
+  delay: 3
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  when: lxc_ghost9_ollama_enabled
 - name: "verify | Assert the GHOSTS stack is healthy"
   ansible.builtin.assert:
     that:
       - (__lxc_ghost9_api_probe.status | default(-1)) == 200
       - __lxc_ghost9_svc_probe.results | map(attribute='status') | select('ne', 200) | list | length == 0
+      - not lxc_ghost9_ollama_enabled or (__lxc_ghost9_ollama_probe.status | default(-1)) == 200
     fail_msg: >-
       The GHOSTS stack is not fully healthy. API /test
       = {{ __lxc_ghost9_api_probe.status | default('n/a') }};
-      {% for r in __lxc_ghost9_svc_probe.results %}{{ r['item']['name'] }}={{ r['status'] | default('n/a') }} {% endfor %}.
-      Inspect `journalctl -u ghosts-api -u ghosts-n8n -u grafana-server -u nginx` inside the CT.
-    success_msg: "GHOSTS is healthy — API/DB, UI, n8n and Grafana all answer."
+      {% for r in __lxc_ghost9_svc_probe.results %}{{ r['item']['name'] }}={{ r['status'] | default('n/a') }} {% endfor %}{% if lxc_ghost9_ollama_enabled %};
+      Ollama={{ __lxc_ghost9_ollama_probe.status | default('n/a') }}{% endif %}.
+      Inspect `journalctl -u ghosts-api -u ghosts-n8n -u grafana-server -u nginx{% if lxc_ghost9_ollama_enabled %} -u ollama{% endif %}` inside the CT.
+    success_msg: >-
+      GHOSTS is healthy — API/DB, UI, n8n and Grafana all answer{% if lxc_ghost9_ollama_enabled %};
+      Ollama is serving {{ lxc_ghost9_ollama_model }}{% endif %}.
     quiet: true

@@ -127,6 +127,29 @@ lxc_ghost9_firewall_allow:
 lxc_ghost9_baseline_marker: "{{ lxc_baseline_marker_path }}"
 lxc_ghost9_template_marker: "{{ lxc_template_marker_path }}"
 
+# --- Ollama LLM backend (optional; baked when enabled) ----------------------
+# When enabled the bake installs the Ollama binary and the server pulls the
+# model at deploy time. The API environment receives the animator settings
+# that point the GHOSTS content-creation engine at the local Ollama. The
+# endpoint binds to loopback only; port 11434 is NOT opened in the in-guest
+# firewall, so the model is reachable only from inside the CT. After the
+# model pull, a systemd drop-in restricts the service to loopback traffic.
+lxc_ghost9_ollama_enabled: false
+lxc_ghost9_ollama_version: "0.9.0"
+lxc_ghost9_ollama_checksum: ""
+lxc_ghost9_ollama_model: "qwen3:14b"
+lxc_ghost9_ollama_host: "127.0.0.1"
+lxc_ghost9_ollama_port: 11434
+lxc_ghost9_ollama_user: ollama
+lxc_ghost9_ollama_home: /var/lib/ollama
+# Extra API environment variables written to api.env when Ollama is enabled.
+# ASP.NET __ convention; override the dict to match a different GHOSTS release.
+lxc_ghost9_ollama_api_env:
+  AnimatorSettings__IsEnabled: "true"
+  AnimatorSettings__Llm__Provider: "ollama"
+  AnimatorSettings__Llm__BaseUrl: "http://{{ lxc_ghost9_ollama_host }}:{{ lxc_ghost9_ollama_port }}"
+  AnimatorSettings__Llm__Model: "{{ lxc_ghost9_ollama_model }}"
+
 # --- Secrets (SECRET): the vaulted secrets file ------------------------------
 # server refuses to run while any of these is empty; they come from the vaulted
 # inventory/secrets/ghost9.yml passed with -e (never the inventory;

@@ -177,6 +177,49 @@
     - nginx
 - name: "server | Apply the firewall reload and any pending restarts"
   ansible.builtin.meta: flush_handlers
+
+# --- Ollama: start, pull the model, lock down networking ---------------------
+- name: "server | Enable and start Ollama"
+  ansible.builtin.systemd_service:
+    name: ollama
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: lxc_ghost9_ollama_enabled
+- name: "server | Wait for Ollama to accept connections"
+  ansible.builtin.wait_for:
+    host: "{{ lxc_ghost9_ollama_host }}"
+    port: "{{ lxc_ghost9_ollama_port }}"
+    timeout: 30
+  when: lxc_ghost9_ollama_enabled
+- name: "server | Pull the Ollama model ({{ lxc_ghost9_ollama_model }})"
+  ansible.builtin.command:
+    argv: [ollama, pull, "{{ lxc_ghost9_ollama_model }}"]
+  register: __lxc_ghost9_ollama_pull
+  changed_when: "'up to date' not in (__lxc_ghost9_ollama_pull.stderr | default('') ~ __lxc_ghost9_ollama_pull.stdout | default(''))"
+  environment:
+    OLLAMA_HOST: "{{ lxc_ghost9_ollama_host }}:{{ lxc_ghost9_ollama_port }}"
+  async: 1800
+  poll: 30
+  when: lxc_ghost9_ollama_enabled
+- name: "server | Ollama lockdown drop-in directory"
+  ansible.builtin.file:
+    path: /etc/systemd/system/ollama.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: lxc_ghost9_ollama_enabled
+- name: "server | Lock Ollama to loopback after the model pull"
+  ansible.builtin.template:
+    src: ollama-lockdown.conf.j2
+    dest: /etc/systemd/system/ollama.service.d/10-lockdown.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart ollama
+  when: lxc_ghost9_ollama_enabled
+
 - name: "server | Provision n8n (owner, workflows, API key)"
   ansible.builtin.include_tasks: provision_n8n.yml
 - name: "server | Enable and start the GHOSTS API"
