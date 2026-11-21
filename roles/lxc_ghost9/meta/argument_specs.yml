@@ -348,8 +348,8 @@ argument_specs:
       lxc_ghost9_ollama_model:
         type: str
         required: false
-        default: "qwen3:14b"
-        description: "Ollama model tag to pull at deploy time."
+        default: "gemma4:31b"
+        description: "Ollama model tag to pull at deploy time (GHOSTS upstream default)."
       lxc_ghost9_ollama_host:
         type: str
         required: false
