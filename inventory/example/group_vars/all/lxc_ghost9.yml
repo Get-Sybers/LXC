@@ -20,11 +20,11 @@ lxc_ghost9_public_hostname: "CHANGE-ME"
 # --- Ollama LLM backend (optional) -------------------------------------------
 # Set to true to install Ollama and pull a model at deploy time (server.yml).
 # The endpoint binds to loopback only; the model is reachable only from inside
-# the CT. Bump memory and cores when enabling (Qwen3 14B needs ~16 GB RAM):
-#   lxc_ghost9_memory_mb: 16384
+# the CT. Bump memory and cores when enabling (Gemma4 31B needs ~20 GB RAM):
+#   lxc_ghost9_memory_mb: 20480
 #   lxc_ghost9_cores: 8
 # lxc_ghost9_ollama_enabled: true
-# lxc_ghost9_ollama_model: "qwen3:14b"
+# lxc_ghost9_ollama_model: "gemma4:31b"
 # Pin the release checksum (sha256:... of ollama-linux-amd64.tgz):
 # lxc_ghost9_ollama_checksum: "sha256:ae9cebd61552d6cf3c527cb88e3a4865a25f22950aa8bb5328887ffd96cfd22a"
 # Created from the GHCR OCI image ghcr.io/get-sybers/lxc/ghost9, pulled by the
