@@ -243,6 +243,56 @@
     owner: root
     group: root
 
+# --- Ollama LLM backend (when enabled) ----------------------------------------
+- name: "bake | The Ollama release checksum must be pinned"
+  ansible.builtin.assert:
+    that: lxc_ghost9_ollama_checksum | length > 0
+    fail_msg: >-
+      lxc_ghost9_ollama_checksum is empty. Pin it to the sha256 of
+      ollama-linux-{{ lxc_ghost9_arch }}.tgz from the v{{ lxc_ghost9_ollama_version }} release.
+    quiet: true
+  when: lxc_ghost9_ollama_enabled
+- name: "bake | Download the Ollama release tarball"
+  ansible.builtin.get_url:
+    url: "https://github.com/ollama/ollama/releases/download/v{{ lxc_ghost9_ollama_version }}/ollama-linux-{{ lxc_ghost9_arch }}.tgz"
+    dest: "{{ lxc_ghost9_stage_dir }}/ollama.tgz"
+    checksum: "{{ lxc_ghost9_ollama_checksum }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: lxc_ghost9_ollama_enabled
+- name: "bake | Extract the Ollama binary"
+  ansible.builtin.unarchive:
+    src: "{{ lxc_ghost9_stage_dir }}/ollama.tgz"
+    remote_src: true
+    dest: /usr/local
+    creates: /usr/local/bin/ollama
+  when: lxc_ghost9_ollama_enabled
+- name: "bake | The Ollama service user"
+  ansible.builtin.user:
+    name: "{{ lxc_ghost9_ollama_user }}"
+    home: "{{ lxc_ghost9_ollama_home }}"
+    system: true
+    create_home: true
+    shell: /usr/sbin/nologin
+  when: lxc_ghost9_ollama_enabled
+- name: "bake | Ollama data directory"
+  ansible.builtin.file:
+    path: "{{ lxc_ghost9_ollama_home }}"
+    state: directory
+    owner: "{{ lxc_ghost9_ollama_user }}"
+    group: "{{ lxc_ghost9_ollama_user }}"
+    mode: "0750"
+  when: lxc_ghost9_ollama_enabled
+- name: "bake | Install the Ollama systemd unit"
+  ansible.builtin.template:
+    src: ollama.service.j2
+    dest: /etc/systemd/system/ollama.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: lxc_ghost9_ollama_enabled
+
 # --- Enable every service for multi-user.target (chroot-safe) ---------------
 - name: "bake | The multi-user.target.wants directory"
   ansible.builtin.file:
@@ -259,6 +309,14 @@
     owner: root
     group: root
   loop: [ghosts-api, ghosts-n8n]
+- name: "bake | Enable the Ollama unit"
+  ansible.builtin.file:
+    src: /etc/systemd/system/ollama.service
+    dest: /etc/systemd/system/multi-user.target.wants/ollama.service
+    state: link
+    owner: root
+    group: root
+  when: lxc_ghost9_ollama_enabled
 - name: "bake | Enable the packaged services (postgresql, nginx, grafana-server)"
   ansible.builtin.file:
     src: "/usr/lib/systemd/system/{{ item }}.service"
@@ -293,3 +351,4 @@
     - /root/.nuget
     - /root/.dotnet
     - /root/.npm
+    - /root/.ollama

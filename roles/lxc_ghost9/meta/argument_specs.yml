@@ -175,6 +175,29 @@ argument_specs:
         elements: str
         required: false
         default: [ca-certificates, curl, gpg, git, nginx, postgresql, grafana]
+      lxc_ghost9_ollama_enabled:
+        type: bool
+        required: false
+        default: false
+        description: "Install the Ollama binary into the template. When true the server pulls the model at deploy time."
+      lxc_ghost9_ollama_version:
+        type: str
+        required: false
+        default: "0.9.0"
+        description: "Pinned Ollama release version."
+      lxc_ghost9_ollama_checksum:
+        type: str
+        required: false
+        default: ""
+        description: "sha256 of ollama-linux-<arch>.tgz from the pinned release; required when ollama is enabled."
+      lxc_ghost9_ollama_user:
+        type: str
+        required: false
+        default: "ollama"
+      lxc_ghost9_ollama_home:
+        type: str
+        required: false
+        default: "/var/lib/ollama"
       lxc_ghost9_source_root:
         type: str
         required: false
@@ -317,6 +340,39 @@ argument_specs:
         type: str
         required: false
         description: "Marker the bake writes. Computed default: the collection variable lxc_template_marker_path."
+      lxc_ghost9_ollama_enabled:
+        type: bool
+        required: false
+        default: false
+        description: "Start Ollama, pull the model and lock the endpoint to loopback."
+      lxc_ghost9_ollama_model:
+        type: str
+        required: false
+        default: "qwen3:14b"
+        description: "Ollama model tag to pull at deploy time."
+      lxc_ghost9_ollama_host:
+        type: str
+        required: false
+        default: "127.0.0.1"
+        description: "Ollama bind address; loopback keeps the model reachable only from inside the CT."
+      lxc_ghost9_ollama_port:
+        type: int
+        required: false
+        default: 11434
+      lxc_ghost9_ollama_user:
+        type: str
+        required: false
+        default: "ollama"
+      lxc_ghost9_ollama_home:
+        type: str
+        required: false
+        default: "/var/lib/ollama"
+      lxc_ghost9_ollama_api_env:
+        type: dict
+        required: false
+        description: >-
+          Extra API environment variables appended to api.env when Ollama is enabled.
+          ASP.NET __ convention; override to match a different GHOSTS release.
       lxc_ghost9_db_password:
         type: str
         required: false

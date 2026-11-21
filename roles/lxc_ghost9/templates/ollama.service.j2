@@ -1,0 +1,45 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Ollama LLM server (GHOSTS content generation)
+Documentation=https://github.com/ollama/ollama
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ lxc_ghost9_ollama_user }}
+Group={{ lxc_ghost9_ollama_user }}
+Environment=OLLAMA_HOST={{ lxc_ghost9_ollama_host }}:{{ lxc_ghost9_ollama_port }}
+Environment=OLLAMA_MODELS={{ lxc_ghost9_ollama_home }}/models
+Environment=HOME={{ lxc_ghost9_ollama_home }}
+ExecStart=/usr/local/bin/ollama serve
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+ReadWritePaths={{ lxc_ghost9_ollama_home }}
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
