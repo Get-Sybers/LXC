@@ -238,6 +238,7 @@
     - name: "server | Extract the Ollama release"
       ansible.builtin.command:
         argv: [tar, --zstd, -xf, /var/tmp/ollama.tar.zst, -C, /usr/local]
+      changed_when: true
     - name: "server | Remove the Ollama tarball"
       ansible.builtin.file:
         path: /var/tmp/ollama.tar.zst
