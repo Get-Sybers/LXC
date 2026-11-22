@@ -179,13 +179,79 @@
   ansible.builtin.meta: flush_handlers
 
 # --- Ollama: install, start, pull the model, lock down networking ------------
-- name: "server | Assert zstd is present (baked into the template image)"
-  ansible.builtin.command:
-    argv: [dpkg-query, -W, -f, '${Status}', zstd]
-  register: __lxc_ghost9_zstd_check
-  changed_when: false
-  failed_when: "'install ok installed' not in __lxc_ghost9_zstd_check.stdout"
+- name: "server | Ensure zstd is present to extract the Ollama binary and model archive (.tar.zst)"
   when: lxc_ghost9_ollama_enabled
+  block:
+    - name: "server | Is zstd already present (baked into the template image)?"
+      ansible.builtin.command:
+        argv: [dpkg-query, -W, -f, '${Status}', zstd]
+      register: __lxc_ghost9_zstd_check
+      changed_when: false
+      failed_when: false
+    - name: "server | Install zstd from the apt proxy when the template does not carry it"
+      when: "'install ok installed' not in (__lxc_ghost9_zstd_check.stdout | default(''))"
+      block:
+        - name: "server | An apt proxy is required: an isolated range has no public Debian mirror"
+          ansible.builtin.assert:
+            that: lxc_ghost9_apt_proxy_base | length > 0
+            fail_msg: >-
+              zstd is not present in this template image and
+              lxc_ghost9_apt_proxy_base is unset, so there is no reachable Debian
+              mirror to install it from (the range CT reaches only the range).
+              Bake zstd into the template, or set lxc_ghost9_apt_proxy_base to the
+              range's Nexus apt proxy base (e.g. http://<nexus>:8081/repository).
+            quiet: true
+        - name: "server | Read the guest's distro codename for the apt suite"
+          ansible.builtin.slurp:
+            src: /etc/os-release
+          register: __lxc_ghost9_osrelease
+        - name: "server | Derive the apt suite from the codename"
+          ansible.builtin.set_fact:
+            __lxc_ghost9_apt_suite: >-
+              {{ ((__lxc_ghost9_osrelease.content | b64decode).splitlines()
+                  | select('match', 'VERSION_CODENAME=') | list | first | default(''))
+                 | split('=') | last }}
+        - name: "server | The codename was read"
+          ansible.builtin.assert:
+            that: __lxc_ghost9_apt_suite | length > 0
+            fail_msg: >-
+              Could not read VERSION_CODENAME from the guest's /etc/os-release to
+              build the apt suite for the Nexus Debian proxy.
+            quiet: true
+        - name: "server | A one-line apt list pointing only at the range Debian proxy"
+          ansible.builtin.copy:
+            dest: /etc/apt/ghost9-zstd.list
+            owner: root
+            group: root
+            mode: "0644"
+            content: >
+              deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg]
+              {{ lxc_ghost9_apt_proxy_base }}/{{ lxc_ghost9_apt_debian_repo }}
+              {{ __lxc_ghost9_apt_suite }} {{ lxc_ghost9_apt_components }}
+        - name: "server | Refresh apt metadata from the range proxy only (not the template's public mirrors)"
+          ansible.builtin.command:
+            argv:
+              - apt-get
+              - -o
+              - Dir::Etc::sourcelist=/etc/apt/ghost9-zstd.list
+              - -o
+              - Dir::Etc::sourceparts=/dev/null
+              - -o
+              - APT::Get::List-Cleanup=0
+              - update
+          changed_when: true
+        - name: "server | Install zstd from the range proxy"
+          ansible.builtin.command:
+            argv:
+              - apt-get
+              - -o
+              - Dir::Etc::sourcelist=/etc/apt/ghost9-zstd.list
+              - -o
+              - Dir::Etc::sourceparts=/dev/null
+              - install
+              - -y
+              - zstd
+          changed_when: true
 - name: "server | Preflight: CT memory for the Ollama model"
   ansible.builtin.command:
     argv: [grep, MemTotal, /proc/meminfo]
