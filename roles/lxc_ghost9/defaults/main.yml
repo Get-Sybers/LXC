@@ -154,6 +154,19 @@ lxc_ghost9_ollama_api_env:
   AnimatorSettings__Llm__BaseUrl: "http://{{ lxc_ghost9_ollama_host }}:{{ lxc_ghost9_ollama_port }}"
   AnimatorSettings__Llm__Model: "{{ lxc_ghost9_ollama_model }}"
 
+# --- zstd for the Ollama archives (deploy-time, range-aware) -----------------
+# The Ollama binary and the model archive are .tar.zst, so the server needs zstd
+# to extract them. A released template is expected to carry zstd (bake_packages)
+# — the fast path. When it does not (e.g. an image built before zstd was baked)
+# the server installs it with apt. An internet-isolated range has no public
+# Debian mirror, so the only reachable one is the range's Nexus apt proxy: set its
+# base here or in the inventory, e.g. "http://<nexus>:8081/repository". Empty keeps
+# the fast path and the server fails with guidance if zstd is absent and no proxy
+# is set. The suite is read from the guest's /etc/os-release at run time.
+lxc_ghost9_apt_proxy_base: ""
+lxc_ghost9_apt_debian_repo: debian-proxy
+lxc_ghost9_apt_components: main
+
 # --- Secrets (SECRET): the vaulted secrets file ------------------------------
 # server refuses to run while any of these is empty; they come from the vaulted
 # inventory/secrets/ghost9.yml passed with -e (never the inventory;

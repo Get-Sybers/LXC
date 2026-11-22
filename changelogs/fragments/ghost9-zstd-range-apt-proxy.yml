@@ -1,0 +1,15 @@
+---
+fixed:
+  - >-
+    The ``ghost9`` server now installs ``zstd`` from a Debian apt proxy when the
+    template image does not already carry it, instead of failing at deploy time.
+    The Ollama binary and the model archive are ``.tar.zst``, so ``zstd`` is
+    required to extract them; a template built before ``zstd`` was added to the
+    bake lacks it, and an internet-isolated range (VLAN 90) has no public Debian
+    mirror to install it from. Set ``lxc_ghost9_apt_proxy_base`` to the range's
+    Nexus apt proxy (e.g. ``http://<nexus>:8081/repository``) and the server
+    writes a one-line source for it (signed-by the baked ``debian-archive``
+    keyring, suite read from the guest's ``/etc/os-release``) and installs
+    ``zstd`` from there only, ignoring the template's unreachable public mirrors.
+    A template that already carries ``zstd`` keeps the fast path and needs no
+    proxy; with neither, the server fails with guidance.

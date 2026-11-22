@@ -27,6 +27,10 @@ lxc_ghost9_public_hostname: "CHANGE-ME"
 # lxc_ghost9_ollama_model: "gemma4:31b"
 # Pin the release checksum (sha256:... of ollama-linux-amd64.tar.zst):
 # lxc_ghost9_ollama_checksum: "sha256:1df9d6228bac5a22e420b242708c0d10e5b886db97bab99d446a41760f4e79af"
+# On an internet-isolated range (no public Debian mirror) the Ollama/model archives
+# are .tar.zst; if the template does not carry zstd, set the range's Nexus apt proxy
+# base so the server can install it:
+# lxc_ghost9_apt_proxy_base: "http://NEXUS-HOST:8081/repository"
 # Created from the GHCR OCI image ghcr.io/get-sybers/lxc/ghost9, pulled by the
 # play with Proxmox's OCI support. Make the package public (or log the node in:
 # skopeo login ghcr.io). Pin an exact image with lxc_ghost9_template_image: <ref>@sha256:<digest>.
